@@ -8,7 +8,7 @@
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)
 
-**Professional Performance Testing Dashboard for K6 Tests**
+**Enterprise-Grade Performance Testing Dashboard with Clean Architecture**
 
 [Features](#-features) • [Architecture](#-architecture) • [Installation](#-installation) • [Usage](#-usage) • [Technology Stack](#-technology-stack)
 
@@ -23,7 +23,7 @@
 - [Architecture](#-architecture)
 - [Technology Stack](#-technology-stack)
 - [Project Structure](#-project-structure)
-- [Components Deep Dive](#-components-deep-dive)
+- [Backend Architecture Deep Dive](#-backend-architecture-deep-dive)
 - [Installation & Setup](#-installation--setup)
 - [Configuration](#-configuration)
 - [Usage Guide](#-usage-guide)
@@ -33,17 +33,28 @@
 
 ## 🎯 Overview
 
-K6 Performance Dashboard is a comprehensive, enterprise-grade web application designed to visualize, manage, and analyze K6 performance test results. The dashboard seamlessly integrates with the [k6-tests repository](https://github.com/dar-kow/k6-tests) to provide real-time test execution, advanced analytics, and professional PDF reporting capabilities.
+K6 Performance Dashboard is a comprehensive, enterprise-grade web application built with **Clean Architecture principles** for visualizing, managing, and analyzing K6 performance test results. The dashboard seamlessly integrates with the [k6-tests repository](https://github.com/dar-kow/k6-tests) to provide real-time test execution, advanced analytics, and professional PDF reporting capabilities.
+
+### 🏗️ Architecture Highlights
+
+- **Clean Architecture**: Complete separation of concerns with Domain → Application → Infrastructure → Presentation layers
+- **SOLID Principles**: Dependency inversion, single responsibility, and interface segregation
+- **Type Safety**: Full TypeScript implementation with strict mode
+- **Dependency Injection**: Centralized IoC container for service management
+- **Domain-Driven Design**: Rich domain entities with business logic
+- **Error Handling**: Domain-specific errors with proper HTTP status codes
 
 ### Why This Solution?
 
-Traditional performance testing often lacks proper visualization and real-time monitoring capabilities. This dashboard bridges that gap by providing:
+Traditional performance testing often lacks proper visualization and architectural structure. This dashboard provides:
 
+- **Enterprise-grade architecture** following Clean Architecture principles
 - **Real-time test execution monitoring** with live terminal output
 - **Advanced data visualization** with interactive charts and graphs
 - **Professional PDF reports** for stakeholder communication
 - **Multi-environment support** with custom token management
 - **Historical data analysis** for performance trend tracking
+- **Maintainable codebase** with proper separation of concerns
 
 ## 🚀 Features
 
@@ -81,58 +92,131 @@ Traditional performance testing often lacks proper visualization and real-time m
 
 ## 🏗 Architecture
 
-### System Design
+### Clean Architecture Overview
 
 ```mermaid
 graph TB
-    subgraph "K6 Dashboard System"
-        subgraph "Frontend (React + TypeScript)"
-            UI[User Interface]
-            Charts[Interactive Charts]
-            PDF[PDF Generator]
-            WS_Client[WebSocket Client]
+    subgraph "Clean Architecture Layers"
+        subgraph "Presentation Layer"
+            Controllers[Controllers]
+            Middleware[Middleware]
+            Routes[API Routes]
+            Validation[Input Validation]
         end
         
-        subgraph "Backend (Node.js + Express)"
-            API[REST API]
+        subgraph "Application Layer"
+            UseCases[Use Cases]
+            DTOs[DTOs & Mappers]
+            AppServices[Application Services]
+        end
+        
+        subgraph "Domain Layer (Core)"
+            Entities[Domain Entities]
+            ValueObjects[Value Objects]
+            Interfaces[Domain Interfaces]
+            DomainServices[Domain Services]
+        end
+        
+        subgraph "Infrastructure Layer"
+            Repositories[File System Repositories]
+            ExternalServices[External Services]
+            WebSocket[WebSocket Infrastructure]
+            ProcessExecution[K6 Process Execution]
+        end
+    end
+    
+    Controllers --> UseCases
+    UseCases --> Entities
+    UseCases --> Interfaces
+    Repositories --> Interfaces
+    ExternalServices --> Interfaces
+    
+    subgraph "External Systems"
+        K6Binary[K6 Binary]
+        FileSystem[File System]
+        Frontend[React Frontend]
+    end
+    
+    ProcessExecution --> K6Binary
+    Repositories --> FileSystem
+    Controllers --> Frontend
+```
+
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph "Frontend (React + TypeScript)"
+        UI[User Interface]
+        Charts[Interactive Charts]
+        PDF[PDF Generator]
+        WS_Client[WebSocket Client]
+    end
+    
+    subgraph "Backend (Clean Architecture)"
+        subgraph "Presentation Layer"
+            API[REST Controllers]
             WS_Server[WebSocket Server]
-            Runner[Test Runner Service]
-            Results[Results Service]
+            ErrorHandler[Error Handler]
         end
         
-        subgraph "External Integration"
-            K6_Repo[k6-tests Repository]
-            K6_Binary[K6 Binary]
+        subgraph "Application Layer"
+            TestUseCases[Test Use Cases]
+            ResultUseCases[Result Use Cases]
+            ExecutionUseCases[Execution Use Cases]
         end
+        
+        subgraph "Domain Layer"
+            TestEntities[Test Entities]
+            ExecutionEntities[Execution Entities]
+            DomainInterfaces[Domain Interfaces]
+        end
+        
+        subgraph "Infrastructure Layer"
+            FileRepos[File Repositories]
+            ProcessService[Process Service]
+            NotificationService[Notification Service]
+        end
+    end
+    
+    subgraph "External Integration"
+        K6_Repo[k6-tests Repository]
+        K6_Binary[K6 Binary]
     end
     
     UI --> API
     UI --> WS_Client
     WS_Client --> WS_Server
-    API --> Runner
-    API --> Results
-    Runner --> K6_Binary
+    API --> TestUseCases
+    API --> ResultUseCases
+    API --> ExecutionUseCases
+    
+    TestUseCases --> TestEntities
+    ResultUseCases --> TestEntities
+    ExecutionUseCases --> ExecutionEntities
+    
+    TestUseCases --> FileRepos
+    ExecutionUseCases --> ProcessService
+    ExecutionUseCases --> NotificationService
+    
+    ProcessService --> K6_Binary
     K6_Binary --> K6_Repo
-    Results --> FileSystem[(Test Results)]
+    FileRepos --> FileSystem[(Test Results)]
 ```
 
-### Data Flow
+### Data Flow with Clean Architecture
 
 1. **Test Execution Flow**
-   - User selects test configuration in UI
-   - Request sent to backend API
-   - Backend spawns K6 process with selected parameters
-   - K6 executes tests from k6-tests repository
-   - Real-time output streamed via WebSocket
-   - Results saved to filesystem
+   - User action → Controller → Use Case → Domain Service → Infrastructure Service
+   - ExecuteTestUseCase validates business rules and delegates to TestExecutionService
+   - K6TestExecutionService spawns process and streams output via NotificationService
+   - Results persisted via Repository pattern
 
 2. **Results Analysis Flow**
-   - Backend scans results directory
-   - Frontend requests available test runs
-   - User selects specific run for analysis
-   - Backend loads and parses JSON results
-   - Frontend renders interactive visualizations
-   - PDF reports generated on demand
+   - Controller → GetTestDirectoriesUseCase → TestResultRepository
+   - Domain entities (TestDirectory, TestFile) encapsulate business logic
+   - Mappers transform entities to DTOs for API responses
+   - Clean separation between domain logic and presentation concerns
 
 ## 💻 Technology Stack
 
@@ -149,15 +233,31 @@ graph TB
 | **React Router** | Navigation | 6.x |
 | **Axios** | HTTP Client | 1.x |
 
-### Backend Technologies
+### Backend Technologies (Clean Architecture)
 
 | Technology | Purpose | Version |
 |------------|---------|---------|
 | **Node.js** | Runtime Environment | 18.x |
+| **TypeScript** | Type Safety & Strict Mode | 5.x |
 | **Express** | Web Framework | 4.x |
-| **TypeScript** | Type Safety | 5.x |
 | **Socket.io** | WebSocket Server | 4.x |
+| **dotenv** | Environment Configuration | 16.x |
+| **Jest** | Testing Framework | 29.x |
+| **ESLint + Prettier** | Code Quality & Formatting | Latest |
 | **K6** | Load Testing Tool | 0.43.x |
+
+### Architecture & Design Patterns
+
+| Pattern/Principle | Implementation |
+|------------------|----------------|
+| **Clean Architecture** | Layered structure with dependency inversion |
+| **SOLID Principles** | Dependency injection, interface segregation |
+| **Repository Pattern** | Data access abstraction |
+| **Use Case Pattern** | Business logic encapsulation |
+| **Dependency Injection** | IoC container for service management |
+| **Domain-Driven Design** | Rich domain entities with business logic |
+| **Strategy Pattern** | Different test execution strategies |
+| **Observer Pattern** | WebSocket notifications |
 
 ### Infrastructure & DevOps
 
@@ -176,143 +276,359 @@ k6-dashboard/
 │   ├── public/                   # Static assets
 │   ├── src/
 │   │   ├── api/                  # API client modules
-│   │   │   └── results.ts        # Results API endpoints
 │   │   ├── components/           # Reusable UI components
-│   │   │   ├── charts/           # Chart components
-│   │   │   │   ├── AreaChart.tsx
-│   │   │   │   ├── BarChart.tsx
-│   │   │   │   ├── LineChart.tsx
-│   │   │   │   ├── MultiBarChart.tsx
-│   │   │   │   ├── MultiLineChart.tsx
-│   │   │   │   └── PieChart.tsx
-│   │   │   ├── DirectorySelector.tsx
-│   │   │   ├── Layout.tsx
-│   │   │   ├── MetricCard.tsx
-│   │   │   ├── StatusCard.tsx
-│   │   │   ├── SummaryCard.tsx
-│   │   │   ├── TerminalOutput.tsx
-│   │   │   ├── TestResultDetail.tsx
-│   │   │   ├── TestResultTabs.tsx
-│   │   │   ├── TestRunComparison.tsx
-│   │   │   ├── TestRunSelector.tsx
-│   │   │   └── TestSelector.tsx
 │   │   ├── context/              # React context providers
-│   │   │   ├── ExportPDFButton.tsx
-│   │   │   ├── PDFReportGenerator.tsx
-│   │   │   ├── SingleTestPDFReport.tsx
-│   │   │   └── TestResultContext.tsx
 │   │   ├── pages/                # Page components
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── TestResults.tsx
-│   │   │   └── TestRunner.tsx
 │   │   ├── types/                # TypeScript type definitions
-│   │   │   └── testResults.ts
 │   │   ├── App.tsx               # Main application component
 │   │   └── index.tsx             # Application entry point
 │   ├── package.json
 │   └── tsconfig.json
 │
-├── backend/                      # Node.js backend application
+├── backend/                      # Clean Architecture Backend
 │   ├── src/
-│   │   ├── routes/               # API route handlers
-│   │   │   ├── results.ts
-│   │   │   ├── runner.ts
-│   │   │   └── tests.ts
-│   │   ├── services/             # Business logic services
-│   │   │   ├── resultsService.ts
-│   │   │   ├── runnerService.ts
-│   │   │   └── testsService.ts
-│   │   ├── websocket/            # WebSocket configuration
-│   │   │   └── socket.ts
-│   │   └── index.ts              # Server entry point
-│   ├── package.json
-│   └── tsconfig.json
+│   │   ├── core/                 # 🏛️ DOMAIN LAYER (Core Business Logic)
+│   │   │   ├── entities/         # Domain entities with business logic
+│   │   │   │   ├── TestDirectory.ts
+│   │   │   │   ├── TestFile.ts
+│   │   │   │   ├── TestConfig.ts
+│   │   │   │   ├── TestExecution.ts
+│   │   │   │   ├── enums.ts      # Domain enums
+│   │   │   │   └── index.ts
+│   │   │   ├── value-objects/    # Value objects and commands
+│   │   │   │   ├── Commands.ts   # Execute commands
+│   │   │   │   ├── Events.ts     # Domain events
+│   │   │   │   ├── TestOutput.ts # Test output value object
+│   │   │   │   └── index.ts
+│   │   │   ├── interfaces/       # Domain interfaces (contracts)
+│   │   │   │   ├── common/       # Common interfaces
+│   │   │   │   │   ├── IConfig.ts
+│   │   │   │   │   └── ILogger.ts
+│   │   │   │   ├── external/     # External service interfaces
+│   │   │   │   │   ├── IFileSystem.ts
+│   │   │   │   │   └── IProcessExecutor.ts
+│   │   │   │   ├── repositories/ # Repository interfaces
+│   │   │   │   │   ├── ITestRepository.ts
+│   │   │   │   │   └── ITestResultRepository.ts
+│   │   │   │   ├── services/     # Service interfaces
+│   │   │   │   │   ├── ITestExecutionService.ts
+│   │   │   │   │   └── INotificationService.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── use-cases/        # Business use cases
+│   │   │   │   ├── test-execution/
+│   │   │   │   │   ├── ExecuteTestUseCase.ts
+│   │   │   │   │   ├── ExecuteAllTestsUseCase.ts
+│   │   │   │   │   ├── StopTestUseCase.ts
+│   │   │   │   │   └── GetRunningTestsUseCase.ts
+│   │   │   │   ├── test-results/
+│   │   │   │   │   ├── GetTestDirectoriesUseCase.ts
+│   │   │   │   │   ├── GetTestFilesUseCase.ts
+│   │   │   │   │   └── GetTestResultUseCase.ts
+│   │   │   │   ├── tests/
+│   │   │   │   │   └── GetAvailableTestsUseCase.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── errors/           # Domain-specific errors
+│   │   │   │   ├── BaseError.ts
+│   │   │   │   ├── DomainErrors.ts
+│   │   │   │   └── index.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── application/          # 🔧 APPLICATION LAYER (Use Cases & DTOs)
+│   │   │   ├── dto/              # Data Transfer Objects
+│   │   │   │   ├── TestExecutionDto.ts
+│   │   │   │   ├── TestResultDto.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── mappers/          # Entity ↔ DTO mappers
+│   │   │   │   ├── TestExecutionMapper.ts
+│   │   │   │   ├── TestResultMapper.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── services/         # Application services
+│   │   │   │   └── TestExecutionApplicationService.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── infrastructure/       # 🏗️ INFRASTRUCTURE LAYER (External Concerns)
+│   │   │   ├── external/         # External service implementations
+│   │   │   │   ├── NodeFileSystem.ts
+│   │   │   │   └── NodeProcessExecutor.ts
+│   │   │   ├── repositories/     # Repository implementations
+│   │   │   │   ├── FileSystemTestRepository.ts
+│   │   │   │   └── FileSystemTestResultRepository.ts
+│   │   │   ├── websocket/        # WebSocket infrastructure
+│   │   │   │   ├── SocketIONotificationService.ts
+│   │   │   │   └── WebSocketHandler.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── presentation/         # 🌐 PRESENTATION LAYER (API & Web)
+│   │   │   ├── controllers/      # HTTP controllers
+│   │   │   │   ├── TestController.ts
+│   │   │   │   ├── TestResultController.ts
+│   │   │   │   ├── TestRunnerController.ts
+│   │   │   │   └── HealthController.ts
+│   │   │   ├── middleware/       # Express middleware
+│   │   │   │   ├── ErrorHandler.ts
+│   │   │   │   ├── RequestLogger.ts
+│   │   │   │   ├── ValidationMiddleware.ts
+│   │   │   │   └── SecurityMiddleware.ts
+│   │   │   ├── routes/           # API routes
+│   │   │   │   ├── TestRoutes.ts
+│   │   │   │   ├── TestResultRoutes.ts
+│   │   │   │   ├── TestRunnerRoutes.ts
+│   │   │   │   └── HealthRoutes.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── shared/               # 🔗 SHARED UTILITIES
+│   │   │   ├── types/            # Shared type definitions
+│   │   │   ├── utils/            # Utility functions
+│   │   │   ├── constants/        # Application constants
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── config/               # ⚙️ CONFIGURATION
+│   │   │   ├── Environment.ts    # Environment configuration
+│   │   │   ├── Logger.ts         # Logging configuration
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── container.ts          # 📦 Dependency Injection Container
+│   │   ├── app.ts                # 🚀 Application setup
+│   │   └── server.ts             # 🎯 Entry point
+│   │
+│   ├── tests/                    # 🧪 Test suite
+│   │   ├── unit/                 # Unit tests
+│   │   ├── integration/          # Integration tests
+│   │   ├── setup.ts              # Test setup
+│   │   └── jest.setup.ts         # Jest configuration
+│   │
+│   ├── .env.example              # Environment variables template
+│   ├── .eslintrc.js              # ESLint configuration
+│   ├── jest.config.js            # Jest configuration
+│   ├── nodemon.json              # Development server config
+│   ├── package.json              # Dependencies and scripts
+│   ├── start.sh                  # Startup script
+│   └── tsconfig.json             # TypeScript configuration
 │
 ├── docker/                       # Docker configuration
-│   ├── Dockerfile.frontend
-│   ├── Dockerfile.backend
-│   └── nginx.conf
-│
 ├── k6-tests/                     # Cloned from github.com/dar-kow/k6-tests
-│   ├── config/
-│   ├── helpers/
-│   ├── tests/
-│   └── ...
-│
 ├── results/                      # Test results storage
-│   ├── sequential_*/             # Sequential test runs
-│   ├── parallel_*/               # Parallel test runs
-│   └── *.json                    # Individual test results
-│
 ├── docker-compose.yml            # Docker orchestration
 └── README.md                     # This file
 ```
 
-## 🔧 Components Deep Dive
+## 🏛️ Backend Architecture Deep Dive
 
-### Frontend Components
+### Clean Architecture Layers
 
-#### Dashboard Page
-The main dashboard provides an executive overview of test performance:
-- **Health Status Indicators**: Visual representation of system health
-- **Key Metrics Summary**: Total requests, average response time, error rates
-- **Interactive Charts**: Response time comparison, request volume analysis
-- **Performance Trends**: Historical data visualization
-- **Quick Actions**: Direct links to test runner and detailed results
+#### 1. 🏛️ Domain Layer (Core)
+The heart of the application containing business logic:
 
-#### Test Runner
-Advanced test execution interface with:
-- **Environment Toggle**: Switch between PROD/DEV environments
-- **Token Management Modal**: Secure token input and storage
-- **Profile Selection**: Choose from predefined load profiles
-- **Real-time Terminal**: Live output with ANSI color support
-- **Progress Tracking**: Visual K6 progress bars
-- **Stop Functionality**: Graceful test interruption
-
-#### Test Results Browser
-Comprehensive results analysis interface:
-- **Directory Navigation**: Browse test runs by date and type
-- **Tab-based Navigation**: Switch between multiple test results
-- **Detailed Metrics Tables**: Response times, throughput, error rates
-- **Performance Charts**: Visual representation of test data
-- **Export Capabilities**: Generate PDF reports on demand
-
-### Backend Services
-
-#### Runner Service
-Manages test execution lifecycle:
+**Entities**: Rich domain objects with business behavior
 ```typescript
-// Spawns K6 process with configuration
-runTest(test: string, profile: string, environment: string, token: string)
+// TestDirectory.ts - Domain entity with business logic
+export class TestDirectory {
+  constructor(
+    public readonly name: string,
+    public readonly path: string,
+    public readonly date: Date,
+    public readonly type: "directory" | "virtual" = "directory"
+  ) {}
 
-// Manages running processes
-stopTest(testId: string)
+  isVirtual(): boolean {
+    return this.type === "virtual" || this.name.endsWith(".json");
+  }
 
-// Streams output via WebSocket
-processK6Output(data: string)
+  getTestType(): string {
+    if (this.isVirtual()) return "Individual Test";
+    if (this.isSequential()) return "Sequential Run";
+    return "Test Run";
+  }
+}
 ```
 
-#### Results Service
-Handles test result management:
+**Value Objects**: Immutable objects representing domain concepts
 ```typescript
-// Scans and returns available test directories
-getResultDirectories(): TestDirectory[]
+// Commands.ts - Value objects for operations
+export class ExecuteTestCommand {
+  constructor(
+    public readonly testName: string,
+    public readonly profile: TestProfile,
+    public readonly environment: Environment,
+    public readonly customToken?: string
+  ) {}
 
-// Retrieves test files from directory
-getResultFiles(directory: string): TestFile[]
-
-// Loads and parses test results
-getTestResult(directory: string, file: string): TestResult
+  getTestId(): string {
+    return `${this.testName}-${Date.now()}`;
+  }
+}
 ```
 
-### PDF Report Generation
+**Use Cases**: Business operations and rules
+```typescript
+// ExecuteTestUseCase.ts - Business logic
+export class ExecuteTestUseCase {
+  constructor(
+    private readonly testRepository: ITestRepository,
+    private readonly testExecutionService: ITestExecutionService,
+    private readonly logger: ILogger
+  ) {}
 
-The PDF generator creates professional reports with:
-- **Executive Summary**: High-level performance overview
-- **Detailed Metrics**: Comprehensive performance data
-- **Visual Charts**: Rendered charts in PDF format
-- **Multi-page Layout**: Organized sections for clarity
-- **Branding Support**: Customizable headers and footers
+  async execute(command: ExecuteTestCommand): Promise<TestExecution> {
+    // Validate test exists
+    const test = await this.testRepository.findByName(command.testName);
+    if (!test) {
+      throw new TestNotFoundError(command.testName);
+    }
+
+    // Execute business logic
+    return await this.testExecutionService.executeTest(command);
+  }
+}
+```
+
+#### 2. 🔧 Application Layer
+Orchestrates domain objects and external services:
+
+**DTOs**: Data contracts for external communication
+```typescript
+export interface TestExecutionResponseDto {
+  message: string;
+  testId: string;
+  config: {
+    test?: string;
+    profile: string;
+    environment: string;
+    hasCustomToken: boolean;
+  };
+}
+```
+
+**Mappers**: Transform between domain and external representations
+```typescript
+export class TestExecutionMapper {
+  static toResponseDto(execution: TestExecution, message: string): TestExecutionResponseDto {
+    return {
+      message,
+      testId: execution.testId,
+      config: {
+        test: execution.testName !== "all-tests" ? execution.testName : undefined,
+        profile: execution.profile as string,
+        environment: execution.environment as string,
+        hasCustomToken: !!execution.customToken?.trim(),
+      },
+    };
+  }
+}
+```
+
+#### 3. 🏗️ Infrastructure Layer
+Implements external concerns:
+
+**Repository Implementations**: Data access
+```typescript
+export class FileSystemTestResultRepository implements ITestResultRepository {
+  async findAll(): Promise<TestDirectory[]> {
+    const resultsDir = await this.findResultsDirectory();
+    const entries = await this.fileSystem.readDir(resultsDir);
+    
+    return entries
+      .filter(entry => entry.isDirectory())
+      .map(entry => new TestDirectory(entry.name, entry.path, this.extractDate(entry.name)));
+  }
+}
+```
+
+**External Service Adapters**: Process execution, file system
+```typescript
+export class NodeProcessExecutor implements IProcessExecutor {
+  spawn(command: string, args: string[], options: ProcessOptions): IChildProcess {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      stdio: options.stdio || ['pipe', 'pipe', 'pipe'],
+    });
+
+    return {
+      pid: child.pid || 0,
+      stdout: child.stdout,
+      stderr: child.stderr,
+      // ... adapter methods
+    };
+  }
+}
+```
+
+#### 4. 🌐 Presentation Layer
+Handles HTTP concerns:
+
+**Controllers**: HTTP request/response handling
+```typescript
+export class TestRunnerController {
+  constructor(
+    private readonly executeTestUseCase: ExecuteTestUseCase,
+    private readonly logger: ILogger
+  ) {}
+
+  executeTest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const dto: TestExecutionRequestDto = req.body;
+      const command = new ExecuteTestCommand(/* ... */);
+      const execution = await this.executeTestUseCase.execute(command);
+      const response = TestExecutionMapper.toResponseDto(execution, 'Test started successfully');
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+```
+
+### Dependency Injection Container
+
+```typescript
+export class DIContainer {
+  private readonly services = new Map<string, any>();
+
+  static getInstance(): DIContainer {
+    if (!DIContainer.instance) {
+      DIContainer.instance = new DIContainer();
+    }
+    return DIContainer.instance;
+  }
+
+  private registerServices(): void {
+    // Configuration and Logger
+    const config = new Environment();
+    const logger = new ConsoleLogger(config.getLogLevel());
+    
+    // External services
+    this.register<IFileSystem>('fileSystem', new NodeFileSystem());
+    this.register<IProcessExecutor>('processExecutor', new NodeProcessExecutor());
+    
+    // Repositories
+    this.register<ITestRepository>('testRepository', 
+      new FileSystemTestRepository(
+        this.get<IFileSystem>('fileSystem'),
+        this.get<IConfig>('config'),
+        this.get<ILogger>('logger')
+      )
+    );
+    
+    // Use cases
+    this.register('executeTestUseCase',
+      new ExecuteTestUseCase(
+        this.get<ITestRepository>('testRepository'),
+        this.get<ITestExecutionService>('testExecutionService'),
+        this.get<ILogger>('logger')
+      )
+    );
+  }
+}
+```
+
+### Benefits of Clean Architecture Implementation
+
+1. **Testability**: Easy unit testing with mocked dependencies
+2. **Maintainability**: Changes isolated to specific layers
+3. **Scalability**: Easy to add new features following established patterns
+4. **Flexibility**: Can swap implementations (e.g., database instead of file system)
+5. **Domain Focus**: Business logic separated from technical concerns
 
 ## 🛠 Installation & Setup
 
@@ -341,32 +657,104 @@ open http://localhost
 
 ### Local Development Setup
 
+#### Backend Setup
 ```bash
-# Backend setup
 cd backend
-npm install
-npm run dev
 
-# Frontend setup (new terminal)
+# Install dependencies
+npm install
+
+# Create environment configuration
+cp .env.example .env
+
+# Edit .env file with your paths:
+# K6_TESTS_DIR=../k6-tests
+# RESULTS_DIR=../k6-tests/results
+# NODE_ENV=development
+# LOG_LEVEL=debug
+
+# Run in development mode
+npm run dev
+```
+
+#### Frontend Setup
+```bash
+# In a new terminal
 cd frontend
 npm install
 npm start
+```
+
+### Development Tools
+
+#### Path debugging
+```bash
+# Run path debug script
+cd backend
+node debug-paths.js
+```
+
+#### Check configuration
+```bash
+# Visit debug endpoints
+curl http://localhost:4000/debug/config
+curl http://localhost:4000/debug/paths
+curl http://localhost:4000/debug/dates
 ```
 
 ## ⚙️ Configuration
 
 ### Environment Variables
 
-#### Backend Configuration
+#### Backend Configuration (.env)
 ```env
-NODE_ENV=production
+# Server Configuration
+NODE_ENV=development
 PORT=4000
-FRONTEND_URL=http://localhost
+FRONTEND_URL=http://localhost:3000
+
+# K6 Tests Configuration
+# Path to k6-tests directory (relative to backend/ or absolute)
+K6_TESTS_DIR=../k6-tests
+
+# Results Configuration  
+# Path to test results directory
+RESULTS_DIR=../k6-tests/results
+
+# Logging Level (debug, info, warn, error)
+LOG_LEVEL=debug
+
+# Production Example:
+# NODE_ENV=production
+# K6_TESTS_DIR=/app/k6-tests
+# RESULTS_DIR=/app/results
+# LOG_LEVEL=info
 ```
 
 #### Frontend Configuration
 ```env
 REACT_APP_API_URL=http://localhost:4000/api
+```
+
+### TypeScript Configuration
+
+#### Backend (tsconfig.json)
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@core/*": ["core/*"],
+      "@infrastructure/*": ["infrastructure/*"],
+      "@application/*": ["application/*"],
+      "@presentation/*": ["presentation/*"]
+    }
+  }
+}
 ```
 
 ### K6 Test Configuration
@@ -421,34 +809,62 @@ The dashboard automatically integrates with the k6-tests repository structure:
 
 ### REST Endpoints
 
+All endpoints follow Clean Architecture principles with proper error handling and validation.
+
 #### Test Management
 ```http
 GET /api/tests
-Returns available test configurations
+Returns: TestConfigDto[]
+Description: Get available test configurations
 
 POST /api/run/test
-Execute individual test
-Body: { test, profile, environment, customToken, testId }
+Body: TestExecutionRequestDto
+Returns: TestExecutionResponseDto
+Description: Execute individual test
 
 POST /api/run/all
-Execute all tests sequentially
-Body: { profile, environment, customToken, testId }
+Body: TestExecutionRequestDto (without test field)
+Returns: TestExecutionResponseDto
+Description: Execute all tests sequentially
 
 POST /api/run/stop
-Stop running test
-Body: { testId }
+Body: StopTestRequestDto
+Returns: StopTestResponseDto
+Description: Stop running test
+
+GET /api/run/status
+Returns: RunningTestsResponseDto
+Description: Get currently running tests
 ```
 
 #### Results Management
 ```http
 GET /api/results
-Returns all test run directories
+Returns: TestDirectoryDto[]
+Description: Get all test run directories
 
 GET /api/results/:directory
-Returns test files in directory
+Returns: TestFileDto[]
+Description: Get test files in directory
 
 GET /api/results/:directory/:file
-Returns specific test result data
+Returns: TestResult
+Description: Get specific test result data
+```
+
+#### Health & Debug
+```http
+GET /health
+Returns: HealthStatus
+Description: Application health check
+
+GET /debug/config
+Returns: ConfigDebugInfo
+Description: Current configuration (dev only)
+
+GET /debug/paths
+Returns: PathDebugInfo
+Description: File path resolution debug (dev only)
 ```
 
 ### WebSocket Events
@@ -461,41 +877,209 @@ Returns specific test result data
 
 #### Server → Client
 ```javascript
-'testOutput': { type: 'log'|'error'|'complete'|'stopped', data: string }
-'resultsUpdated': { message, testName, resultFile, timestamp }
+'testOutput': { 
+  type: 'log'|'error'|'complete'|'stopped', 
+  data: string,
+  testId: string,
+  timestamp: Date
+}
+
+'resultsUpdated': { 
+  message: string,
+  testName?: string,
+  resultFile?: string,
+  timestamp: string
+}
+
+'connection_established': {
+  message: string,
+  socketId: string,
+  timestamp: string
+}
 ```
 
 ## 🔨 Development
 
 ### Code Style Guidelines
 
-- **TypeScript**: Strict mode enabled
-- **React**: Functional components with hooks
-- **Styling**: Tailwind CSS utility classes
-- **State Management**: React Context API
-- **Testing**: Jest + React Testing Library
+- **TypeScript**: Strict mode enabled with comprehensive type checking
+- **Clean Architecture**: Maintain layer separation and dependency direction
+- **SOLID Principles**: Follow dependency inversion and interface segregation
+- **Testing**: Jest with high coverage requirements
+- **Linting**: ESLint + Prettier for consistent code style
+
+### Development Scripts
+
+```bash
+# Backend development
+npm run dev          # Start with hot reload
+npm run build        # Build TypeScript
+npm run test         # Run test suite
+npm run test:watch   # Watch mode testing
+npm run test:coverage # Generate coverage report
+npm run lint         # Check code quality
+npm run lint:fix     # Auto-fix linting issues
+
+# Debugging
+npm run debug:paths  # Debug path resolution
+```
 
 ### Adding New Features
 
-1. **New Chart Type**
-   - Create component in `frontend/src/components/charts/`
-   - Follow existing chart component patterns
-   - Update dashboard to include new visualization
+#### 1. New Use Case
+```typescript
+// 1. Define interface in core/interfaces/
+export interface INewFeatureService {
+  performAction(params: ActionParams): Promise<ActionResult>;
+}
 
-2. **New Test Integration**
-   - Add test file to k6-tests repository
-   - Update backend test discovery logic
-   - Add UI support in test runner
+// 2. Create use case in core/use-cases/
+export class NewFeatureUseCase {
+  constructor(
+    private readonly service: INewFeatureService,
+    private readonly logger: ILogger
+  ) {}
+
+  async execute(command: NewFeatureCommand): Promise<NewFeatureResult> {
+    // Business logic here
+  }
+}
+
+// 3. Implement service in infrastructure/
+export class NewFeatureService implements INewFeatureService {
+  async performAction(params: ActionParams): Promise<ActionResult> {
+    // Implementation
+  }
+}
+
+// 4. Add controller in presentation/
+export class NewFeatureController {
+  constructor(private readonly useCase: NewFeatureUseCase) {}
+  
+  handleRequest = async (req: Request, res: Response) => {
+    // HTTP handling
+  };
+}
+
+// 5. Register in DI container
+this.register('newFeatureUseCase', new NewFeatureUseCase(/*...*/));
+```
+
+#### 2. New Repository Implementation
+```typescript
+// 1. Define interface in core/interfaces/repositories/
+export interface INewRepository {
+  findById(id: string): Promise<Entity | null>;
+  save(entity: Entity): Promise<void>;
+}
+
+// 2. Implement in infrastructure/repositories/
+export class DatabaseNewRepository implements INewRepository {
+  async findById(id: string): Promise<Entity | null> {
+    // Database implementation
+  }
+}
+
+// 3. Register in container with proper dependencies
+```
+
+### Testing Strategy
+
+#### Unit Tests
+```typescript
+describe('ExecuteTestUseCase', () => {
+  let useCase: ExecuteTestUseCase;
+  let mockRepository: jest.Mocked<ITestRepository>;
+  let mockExecutionService: jest.Mocked<ITestExecutionService>;
+
+  beforeEach(() => {
+    mockRepository = {
+      findByName: jest.fn(),
+      findAll: jest.fn(),
+      exists: jest.fn(),
+    };
+
+    mockExecutionService = {
+      executeTest: jest.fn(),
+      stopTest: jest.fn(),
+      getRunningTests: jest.fn(),
+      isTestRunning: jest.fn(),
+    };
+
+    useCase = new ExecuteTestUseCase(
+      mockRepository,
+      mockExecutionService,
+      mockLogger
+    );
+  });
+
+  it('should execute test when test exists', async () => {
+    // Arrange
+    const command = new ExecuteTestCommand('test-name', TestProfile.LIGHT, Environment.PROD);
+    const mockTest = new TestConfig('test-name', 'Test Description', '/path/to/test');
+    const mockExecution = new TestExecution('test-id', 'test-name', TestProfile.LIGHT, Environment.PROD);
+
+    mockRepository.findByName.mockResolvedValue(mockTest);
+    mockExecutionService.executeTest.mockResolvedValue(mockExecution);
+
+    // Act
+    const result = await useCase.execute(command);
+
+    // Assert
+    expect(mockRepository.findByName).toHaveBeenCalledWith('test-name');
+    expect(mockExecutionService.executeTest).toHaveBeenCalledWith(command);
+    expect(result).toBe(mockExecution);
+  });
+
+  it('should throw TestNotFoundError when test does not exist', async () => {
+    // Arrange
+    const command = new ExecuteTestCommand('non-existent', TestProfile.LIGHT, Environment.PROD);
+    mockRepository.findByName.mockResolvedValue(null);
+
+    // Act & Assert
+    await expect(useCase.execute(command)).rejects.toThrow(TestNotFoundError);
+  });
+});
+```
+
+#### Integration Tests
+```typescript
+describe('TestRunner Integration', () => {
+  let app: Application;
+  let request: supertest.SuperTest<supertest.Test>;
+
+  beforeAll(async () => {
+    app = new Application();
+    await app.start();
+    request = supertest(app.getExpressApp());
+  });
+
+  it('should execute test via API', async () => {
+    const response = await request
+      .post('/api/run/test')
+      .send({
+        test: 'load-test',
+        profile: 'LIGHT',
+        environment: 'PROD'
+      })
+      .expect(200);
+
+    expect(response.body).toHaveProperty('testId');
+    expect(response.body.config.test).toBe('load-test');
+  });
+});
+```
 
 ### Building for Production
 
 ```bash
-# Frontend build
-cd frontend
-npm run build
-
 # Backend build
 cd backend
+npm run build
+npm run test
+
+# Frontend build  
+cd frontend
 npm run build
 
 # Docker build
@@ -514,14 +1098,45 @@ docker-compose -f docker-compose.prod.yml up -d
 ### Manual Deployment
 
 1. **Backend Deployment**
-   - Build TypeScript files
-   - Set production environment variables
-   - Use PM2 or similar process manager
+   ```bash
+   cd backend
+   npm run build
+   cp .env.example .env.production
+   # Edit .env.production with production values
+   NODE_ENV=production npm start
+   ```
 
 2. **Frontend Deployment**
-   - Build React application
-   - Serve with Nginx or similar
-   - Configure reverse proxy for API
+   ```bash
+   cd frontend
+   npm run build
+   # Serve build/ directory with Nginx or similar
+   ```
+
+### Environment-Specific Configuration
+
+#### Development
+```env
+NODE_ENV=development
+LOG_LEVEL=debug
+K6_TESTS_DIR=../k6-tests
+RESULTS_DIR=../k6-tests/results
+```
+
+#### Production
+```env
+NODE_ENV=production
+LOG_LEVEL=info
+K6_TESTS_DIR=/app/k6-tests
+RESULTS_DIR=/app/results
+```
+
+#### Docker
+```env
+NODE_ENV=production
+K6_TESTS_DIR=/k6-tests
+RESULTS_DIR=/results
+```
 
 ### CI/CD Pipeline
 
@@ -534,37 +1149,109 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Deploy to VPS
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Test Backend
         run: |
-          ssh user@server 'cd /app && docker-compose pull && docker-compose up -d'
+          cd backend
+          npm install
+          npm run test:coverage
+          npm run build
+      
+      - name: Test Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run test -- --coverage --watchAll=false
+          npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to Production
+        run: |
+          ssh user@server 'cd /app && git pull && docker-compose up -d --build'
 ```
 
 ## 📊 Performance Considerations
 
-- **Result Caching**: Implement Redis for frequently accessed results
-- **File System Optimization**: Regular cleanup of old test results
-- **WebSocket Scaling**: Consider Socket.io Redis adapter for multiple instances
-- **PDF Generation**: Offload to background job queue for large reports
+- **Clean Architecture Benefits**: Clear separation allows for targeted optimizations
+- **Caching Strategy**: Implement Redis adapter for frequently accessed test results
+- **File System Optimization**: Regular cleanup of old test results via scheduled use case
+- **WebSocket Scaling**: Socket.io Redis adapter for horizontal scaling
+- **PDF Generation**: Background job queue for large report generation
+- **Database Migration**: Easy to switch from file system to database with repository pattern
 
 ## 🔒 Security Best Practices
 
-- **Token Management**: Tokens stored in browser localStorage with encryption
-- **Input Validation**: All user inputs validated on backend
-- **CORS Configuration**: Strict origin validation
-- **File Access**: Restricted to designated directories only
-- **Process Isolation**: K6 processes run with limited permissions
+- **Input Validation**: All inputs validated at presentation layer
+- **Domain Validation**: Business rules enforced in use cases
+- **Error Handling**: Domain errors don't leak infrastructure details
+- **Token Management**: Secure token handling with environment isolation
+- **File Access**: Repository pattern restricts access to designated directories
+- **Process Isolation**: K6 processes run with limited permissions through infrastructure layer
+- **CORS Configuration**: Strict origin validation in presentation layer
+
+## 🧪 Testing Architecture
+
+The clean architecture enables comprehensive testing at each layer:
+
+### Testing Pyramid
+
+```mermaid
+graph TB
+    subgraph "Testing Layers"
+        E2E[E2E Tests]
+        Integration[Integration Tests]
+        Unit[Unit Tests]
+    end
+    
+    subgraph "Architecture Layers"
+        Presentation[Presentation Layer]
+        Application[Application Layer]
+        Domain[Domain Layer]
+        Infrastructure[Infrastructure Layer]
+    end
+    
+    E2E --> Presentation
+    Integration --> Application
+    Unit --> Domain
+    Integration --> Infrastructure
+```
+
+- **Unit Tests**: Domain entities, value objects, use cases (isolated)
+- **Integration Tests**: Repository implementations, external services
+- **E2E Tests**: Full API workflows through presentation layer
 
 ## 🤝 Contributing
 
+### Development Workflow
+
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+3. Follow Clean Architecture principles
+4. Write tests for all layers
+5. Ensure TypeScript strict mode compliance
+6. Commit with conventional commits (`git commit -m 'feat: add amazing feature'`)
+7. Push to branch (`git push origin feature/amazing-feature`)
+8. Open Pull Request
+
+### Code Review Guidelines
+
+- Verify proper layer separation
+- Check dependency direction (inward only)
+- Ensure comprehensive test coverage
+- Validate TypeScript strict compliance
+- Review error handling at all layers
 
 ## 📝 License
 
@@ -572,17 +1259,19 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) by Robert C. Martin
 - [K6](https://k6.io/) for the excellent load testing tool
 - [Grafana Labs](https://grafana.com/) for maintaining K6
+- [TypeScript](https://www.typescriptlang.org/) community for exceptional tooling
 - [React](https://reactjs.org/) community for the amazing ecosystem
-- All contributors who help improve this dashboard
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for the Performance Testing Community**
+**Built with ❤️ for the Performance Testing Community**  
+**Following Clean Architecture & SOLID Principles**
 
-[Report Bug](https://github.com/your-username/k6-dashboard/issues) • [Request Feature](https://github.com/your-username/k6-dashboard/issues)
+[Report Bug](https://github.com/your-username/k6-dashboard/issues) • [Request Feature](https://github.com/your-username/k6-dashboard/issues) • [Architecture Guide](./docs/ARCHITECTURE.md)
 
 </div>
