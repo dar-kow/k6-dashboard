@@ -77,3 +77,8 @@ results/
 # Temporary files
 tmp/
 temp/
+
+backend-refactor.md
+
+k6-tests/
+logo.sh
