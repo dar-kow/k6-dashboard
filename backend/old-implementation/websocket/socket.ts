@@ -1,5 +1,5 @@
 import { Server as SocketIOServer } from 'socket.io';
-import { stopTest } from '../../src/services/runnerService.js';
+import { stopTest } from '../services/runnerService.js';
 
 let io: SocketIOServer;
 
