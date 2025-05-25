@@ -4,7 +4,7 @@
   "description": "Clean Architecture K6 Dashboard Backend",
   "type": "module",
   "main": "dist/server.js",
- "scripts": {
+  "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",

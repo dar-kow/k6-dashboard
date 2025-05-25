@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
+    "module": "ES2022", 
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
@@ -32,6 +32,6 @@
       "@config/*": ["config/*"]
     }
   },
-  "include": ["src/**/*", "old-implementation/routes", "old-implementation/websocket", "old-implementation/routes", "old-implementation/routes", "old-implementation/routes"],
-  "exclude": ["node_modules", "dist", "tests/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests/**/*", "old-implementation/**/*"]
 }
