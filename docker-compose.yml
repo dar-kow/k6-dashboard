@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     image: node:18-alpine
@@ -26,9 +24,8 @@ services:
         - K6_TESTS_REPO_URL=${K6_TESTS_REPO_URL:-https://github.com/dar-kow/k6-tests.git}
     container_name: k6-dashboard-backend
     volumes:
-      - ./backend:/app
       - k6-tests-volume:/k6-tests
-      - ./results:/results
+      - results-volume:/results
     ports:
       - "4000:4000"
     environment:
@@ -42,6 +39,7 @@ services:
 
 volumes:
   k6-tests-volume:
+  results-volume:
 
 
 networks:

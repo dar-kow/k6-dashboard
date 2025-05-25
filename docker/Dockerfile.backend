@@ -16,7 +16,7 @@ RUN curl -L https://github.com/grafana/k6/releases/download/v0.43.1/k6-v0.43.1-l
 COPY backend/package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY backend/ ./
@@ -25,11 +25,10 @@ COPY backend/ ./
 ARG K6_TESTS_REPO_URL=https://github.com/dar-kow/k6-tests.git
 RUN git clone ${K6_TESTS_REPO_URL} /k6-tests
 
-# Copy and make start script executable
-COPY backend/start.sh ./start.sh
-RUN chmod +x ./start.sh
+# Make sure results directory exists
+RUN mkdir -p /results
 
 EXPOSE 4000
 
-# Use our start script
-CMD ["./start.sh"]
+# Start the application
+CMD ["npm", "run", "dev"]
