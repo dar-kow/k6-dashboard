@@ -22,24 +22,55 @@ export class TestRunnerController {
   executeTest = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: TestExecutionRequestDto = req.body;
-      this.logger.info('Executing test', {
+
+      // Log incoming request data
+      this.logger.info('Executing test - incoming request:', {
+        body: dto,
         test: dto.test,
         profile: dto.profile,
+        environment: dto.environment,
+        customToken: dto.customToken ? '***SET***' : 'NOT_SET',
+        testId: dto.testId,
+      });
+
+      // Validate and map parameters
+      const mappedProfile = TestExecutionMapper.validateAndMapProfile(dto.profile);
+      const mappedEnvironment = TestExecutionMapper.validateAndMapEnvironment(dto.environment);
+
+      this.logger.info('Mapped parameters:', {
+        originalProfile: dto.profile,
+        mappedProfile,
+        originalEnvironment: dto.environment,
+        mappedEnvironment,
       });
 
       const command = new ExecuteTestCommand(
         dto.test!,
-        TestExecutionMapper.validateAndMapProfile(dto.profile),
-        TestExecutionMapper.validateAndMapEnvironment(dto.environment),
+        mappedProfile,
+        mappedEnvironment,
         dto.customToken,
         dto.testId
       );
 
+      this.logger.info('Created ExecuteTestCommand:', {
+        testName: command.testName,
+        profile: command.profile,
+        environment: command.environment,
+        hasCustomToken: !!command.customToken,
+        testId: command.getTestId(),
+      });
+
       const execution = await this.executeTestUseCase.execute(command);
       const response = TestExecutionMapper.toResponseDto(execution, 'Test started successfully');
 
+      this.logger.info('Test execution started successfully:', {
+        testId: execution.testId,
+        response,
+      });
+
       res.json(response);
     } catch (error) {
+      this.logger.error('Error in executeTest controller:', error as Error);
       next(error);
     }
   };
@@ -47,14 +78,40 @@ export class TestRunnerController {
   executeAllTests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: TestExecutionRequestDto = req.body;
-      this.logger.info('Executing all tests', { profile: dto.profile });
+
+      // Log incoming request data
+      this.logger.info('Executing all tests - incoming request:', {
+        body: dto,
+        profile: dto.profile,
+        environment: dto.environment,
+        customToken: dto.customToken ? '***SET***' : 'NOT_SET',
+        testId: dto.testId,
+      });
+
+      // Validate and map parameters
+      const mappedProfile = TestExecutionMapper.validateAndMapProfile(dto.profile);
+      const mappedEnvironment = TestExecutionMapper.validateAndMapEnvironment(dto.environment);
+
+      this.logger.info('Mapped parameters for all tests:', {
+        originalProfile: dto.profile,
+        mappedProfile,
+        originalEnvironment: dto.environment,
+        mappedEnvironment,
+      });
 
       const command = new ExecuteAllTestsCommand(
-        TestExecutionMapper.validateAndMapProfile(dto.profile),
-        TestExecutionMapper.validateAndMapEnvironment(dto.environment),
+        mappedProfile,
+        mappedEnvironment,
         dto.customToken,
         dto.testId
       );
+
+      this.logger.info('Created ExecuteAllTestsCommand:', {
+        profile: command.profile,
+        environment: command.environment,
+        hasCustomToken: !!command.customToken,
+        testId: command.getTestId(),
+      });
 
       const execution = await this.executeAllTestsUseCase.execute(command);
       const response = TestExecutionMapper.toResponseDto(
@@ -62,8 +119,14 @@ export class TestRunnerController {
         'All tests started successfully'
       );
 
+      this.logger.info('All tests execution started successfully:', {
+        testId: execution.testId,
+        response,
+      });
+
       res.json(response);
     } catch (error) {
+      this.logger.error('Error in executeAllTests controller:', error as Error);
       next(error);
     }
   };
