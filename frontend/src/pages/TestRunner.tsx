@@ -3,6 +3,8 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import TerminalOutput from '../components/TerminalOutput';
 import { useTestResults } from '../context/TestResultContext';
+import { refreshTestsFromRepo, getRepoStatus, GitRefreshResponse, GitStatusResponse } from '../api/git';
+import SystemInfoCard from '../components/SystemInfoCard';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
 // Extract the base URL without the /api path for socket.io
@@ -128,10 +130,14 @@ const TestRunner: React.FC = () => {
     const [showStopConfirmation, setShowStopConfirmation] = useState<boolean>(false);
     const [runningTestId, setRunningTestId] = useState<string | null>(null);
 
-    // New states for environment and token management
+    // States for environment and token management
     const [environment, setEnvironment] = useState<'PROD' | 'DEV'>('PROD');
     const [customToken, setCustomToken] = useState<string>('');
     const [isTokenModalOpen, setIsTokenModalOpen] = useState<boolean>(false);
+
+    // Git integration states
+    const [repoStatus, setRepoStatus] = useState<GitStatusResponse | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
     const socketRef = useRef<Socket | null>(null);
 
@@ -147,6 +153,20 @@ const TestRunner: React.FC = () => {
                 console.error('Error parsing saved config:', err);
             }
         }
+    }, []);
+
+    // Load repository status
+    useEffect(() => {
+        const loadRepoStatus = async () => {
+            try {
+                const status = await getRepoStatus();
+                setRepoStatus(status);
+            } catch (err) {
+                console.error('Error loading repo status:', err);
+            }
+        };
+
+        loadRepoStatus();
     }, []);
 
     // Save environment config to localStorage
@@ -170,6 +190,43 @@ const TestRunner: React.FC = () => {
         setCustomToken(token);
         saveConfig(environment, token);
         setOutput(prev => [...prev, `🔑 Custom token ${token ? 'updated' : 'cleared'}`]);
+    };
+
+    // Handle refresh tests from repository
+    const handleRefreshTests = async () => {
+        setIsRefreshing(true);
+        setOutput(prev => [...prev, '🔄 Refreshing tests from repository...']);
+
+        try {
+            const response = await refreshTestsFromRepo();
+
+            if (response.success) {
+                setOutput(prev => [...prev, `✅ ${response.message || 'Success'}`]);
+                if (response.output && typeof response.output === 'string') {
+                    setOutput(prev => [...prev, response.output as string]);
+                }
+
+                // Reload available tests
+                const testResponse = await axios.get(`${API_URL}/tests`);
+                setTests(testResponse.data);
+
+                // Reload repo status
+                const status = await getRepoStatus();
+                setRepoStatus(status);
+
+                setOutput(prev => [...prev, '🔄 Available tests refreshed']);
+            } else {
+                setOutput(prev => [...prev, `❌ ${response.message || 'Unknown error'}`]);
+                if (response.error && typeof response.error === 'string') {
+                    setOutput(prev => [...prev, `Error: ${response.error as string}`]);
+                }
+            }
+        } catch (err: any) {
+            console.error('Error refreshing tests:', err);
+            setOutput(prev => [...prev, `❌ Failed to refresh tests: ${err.message || 'Unknown error'}`]);
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
     // Load available tests
@@ -281,32 +338,44 @@ const TestRunner: React.FC = () => {
         setOutput([`🚀 Starting test: ${selectedTest} with profile: ${selectedProfile} on ${environment}`]);
         setError(null);
 
+        // Log parameters being sent
+        const testParams = {
+            testId: testId,
+            test: selectedTest,
+            profile: selectedProfile,
+            environment: environment,
+            customToken: customToken
+        };
+
+        console.log('🚀 Starting test with parameters:', testParams);
+        setOutput([
+            `🚀 Starting test: ${selectedTest} with profile: ${selectedProfile} on ${environment}`,
+            `📋 Test Parameters: ${JSON.stringify(testParams, null, 2)}`
+        ]);
+        setError(null);
+
         // Auto-enable auto-scroll when starting new test
         setAutoScroll(true);
 
         try {
             // Send directly through socket for real-time feedback
             if (socketRef.current && socketConnected) {
-                socketRef.current.emit('test_request', {
-                    testId: testId,
-                    test: selectedTest,
-                    profile: selectedProfile,
-                    environment: environment,
-                    customToken: customToken
-                });
+                console.log('📡 Sending test request via socket:', testParams);
+                socketRef.current.emit('test_request', testParams);
             }
 
             // Also make the HTTP request with environment and token info
-            await axios.post(`${API_URL}/run/test`, {
-                testId: testId,
-                test: selectedTest,
-                profile: selectedProfile,
-                environment: environment,
-                customToken: customToken
-            });
+            console.log('🌐 Making HTTP request to:', `${API_URL}/run/test`);
+            const response = await axios.post(`${API_URL}/run/test`, testParams);
+
+            console.log('✅ HTTP response received:', response.data);
+            setOutput(prev => [...prev, `✅ Test started successfully: ${response.data.message || 'Success'}`]);
+
         } catch (err: any) {
-            console.error('Error starting test:', err);
-            setError(`Failed to start test execution: ${err.message}`);
+            console.error('❌ Error starting test:', err);
+            const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
+            setError(`Failed to start test execution: ${errorMessage}`);
+            setOutput(prev => [...prev, `❌ Failed to start test: ${errorMessage}`]);
             setIsRunning(false);
             setRunningTestId(null);
         }
@@ -316,7 +385,20 @@ const TestRunner: React.FC = () => {
         const testId = `all-tests-${Date.now()}`;
         setRunningTestId(testId);
         setIsRunning(true);
-        setOutput([`🚀 Starting all tests sequentially with profile: ${selectedProfile} on ${environment}`]);
+
+        // Log parameters being sent
+        const testParams = {
+            testId: testId,
+            profile: selectedProfile,
+            environment: environment,
+            customToken: customToken
+        };
+
+        console.log('🚀 Starting all tests with parameters:', testParams);
+        setOutput([
+            `🚀 Starting all tests sequentially with profile: ${selectedProfile} on ${environment}`,
+            `📋 Test Parameters: ${JSON.stringify(testParams, null, 2)}`
+        ]);
         setError(null);
 
         // Auto-enable auto-scroll when starting new test
@@ -325,25 +407,25 @@ const TestRunner: React.FC = () => {
         try {
             // Send directly through socket for real-time feedback
             if (socketRef.current && socketConnected) {
+                console.log('📡 Sending all tests request via socket:', testParams);
                 socketRef.current.emit('test_request', {
-                    testId: testId,
-                    test: 'all',
-                    profile: selectedProfile,
-                    environment: environment,
-                    customToken: customToken
+                    ...testParams,
+                    test: 'all'
                 });
             }
 
             // Also make the HTTP request with environment and token info
-            await axios.post(`${API_URL}/run/all`, {
-                testId: testId,
-                profile: selectedProfile,
-                environment: environment,
-                customToken: customToken
-            });
+            console.log('🌐 Making HTTP request to:', `${API_URL}/run/all`);
+            const response = await axios.post(`${API_URL}/run/all`, testParams);
+
+            console.log('✅ HTTP response received:', response.data);
+            setOutput(prev => [...prev, `✅ All tests started successfully: ${response.data.message || 'Success'}`]);
+
         } catch (err: any) {
-            console.error('Error starting tests:', err);
-            setError(`Failed to start test execution: ${err.message}`);
+            console.error('❌ Error starting tests:', err);
+            const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
+            setError(`Failed to start test execution: ${errorMessage}`);
+            setOutput(prev => [...prev, `❌ Failed to start all tests: ${errorMessage}`]);
             setIsRunning(false);
             setRunningTestId(null);
         }
@@ -406,6 +488,7 @@ const TestRunner: React.FC = () => {
     return (
         <div>
             <h1 className="text-3xl font-bold mb-6">Test Runner</h1>
+            <SystemInfoCard selectedEnvironment={environment} />
 
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
@@ -417,7 +500,7 @@ const TestRunner: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Run Tests</h2>
 
-                    {/* Environment and Token Controls */}
+                    {/* Environment, Token and Repository Controls */}
                     <div className="flex items-center space-x-4">
                         {/* Environment Toggle */}
                         <div className="flex items-center space-x-2">
@@ -457,6 +540,52 @@ const TestRunner: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2m8 0V7a2 2 0 00-2-2H9a2 2 0 00-2 2v2m8 0H9m0 0v6m0-6h8"></path>
                             </svg>
                             <span>{customToken ? 'Token Set' : 'Set Token'}</span>
+                        </button>
+
+                        {/* Repository Status */}
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-gray-700">Repository:</span>
+                            <div className="text-xs">
+                                {repoStatus?.success ? (
+                                    <div className="bg-green-50 border border-green-200 rounded-md px-2 py-1">
+                                        <div className="font-medium text-green-800">
+                                            📦 {repoStatus.lastCommit?.hash || 'Unknown'}
+                                        </div>
+                                        <div className="text-green-600">
+                                            {repoStatus.lastCommit?.author || 'Unknown author'}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-md px-2 py-1">
+                                        <span className="text-yellow-800">No repository</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Refresh Tests Button */}
+                        <button
+                            onClick={handleRefreshTests}
+                            disabled={isRefreshing || isRunning}
+                            className="flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 transition-colors"
+                            title="Refresh tests from Git repository"
+                        >
+                            {isRefreshing ? (
+                                <>
+                                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Refreshing...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    <span>Refresh Tests</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -613,6 +742,9 @@ const TestRunner: React.FC = () => {
                     <p>🎛️ <strong>Terminal controls:</strong> Use auto-scroll toggle and manual scroll buttons below</p>
                     <p>🔄 <strong>Auto-scroll:</strong> {autoScroll ? 'Enabled - shows latest output automatically' : 'Disabled - scroll manually to see new output'}</p>
                     <p>🌐 <strong>Environment:</strong> Running tests against <span className={`font-medium ${environment === 'PROD' ? 'text-blue-600' : 'text-orange-600'}`}>{environment}</span> environment</p>
+                    {repoStatus?.success && (
+                        <p>📦 <strong>Repository:</strong> Latest commit <span className="font-mono text-green-600">{repoStatus.lastCommit?.hash}</span> by {repoStatus.lastCommit?.author}</p>
+                    )}
                     {isRunning && <p>⚠️ <strong>Running:</strong> Use STOP button above to terminate test execution</p>}
                 </div>
 
