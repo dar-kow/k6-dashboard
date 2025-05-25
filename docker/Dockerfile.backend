@@ -1,10 +1,9 @@
-# docker/Dockerfile.backend
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Install curl for downloading k6 and bash for running scripts
-RUN apk add --no-cache curl bash
+# Install system dependencies including git
+RUN apk add --no-cache curl bash git
 
 # Install k6 directly from binary release
 RUN curl -L https://github.com/grafana/k6/releases/download/v0.43.1/k6-v0.43.1-linux-amd64.tar.gz -o k6.tar.gz \
@@ -22,8 +21,9 @@ RUN npm ci --only=production
 # Copy source code
 COPY backend/ ./
 
-# Copy k6 tests
-COPY k6-tests/ ../k6-tests/
+# Clone k6-tests repository (configurable via build arg)
+ARG K6_TESTS_REPO_URL=https://github.com/dar-kow/k6-tests.git
+RUN git clone ${K6_TESTS_REPO_URL} /k6-tests
 
 # Copy and make start script executable
 COPY backend/start.sh ./start.sh
