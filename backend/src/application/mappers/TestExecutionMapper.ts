@@ -21,16 +21,37 @@ export class TestExecutionMapper {
   }
 
   static validateAndMapProfile(profile?: string): TestProfile {
+    console.log('🔍 Mapping profile:', { input: profile, type: typeof profile });
+
     if (!profile || !Object.values(TestProfile).includes(profile as TestProfile)) {
+      console.log('⚠️ Invalid profile, using default LIGHT:', {
+        input: profile,
+        availableProfiles: Object.values(TestProfile),
+      });
       return TestProfile.LIGHT;
     }
-    return profile as TestProfile;
+
+    const mappedProfile = profile as TestProfile;
+    console.log('✅ Profile mapped successfully:', { input: profile, output: mappedProfile });
+    return mappedProfile;
   }
 
   static validateAndMapEnvironment(environment?: string): Environment {
+    console.log('🔍 Mapping environment:', { input: environment, type: typeof environment });
+
     if (!environment || !Object.values(Environment).includes(environment as Environment)) {
+      console.log('⚠️ Invalid environment, using default PROD:', {
+        input: environment,
+        availableEnvironments: Object.values(Environment),
+      });
       return Environment.PROD;
     }
-    return environment as Environment;
+
+    const mappedEnvironment = environment as Environment;
+    console.log('✅ Environment mapped successfully:', {
+      input: environment,
+      output: mappedEnvironment,
+    });
+    return mappedEnvironment;
   }
 }

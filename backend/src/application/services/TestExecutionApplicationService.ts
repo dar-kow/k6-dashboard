@@ -3,6 +3,7 @@ import { INotificationService } from '../../core/interfaces/services/INotificati
 import { IProcessExecutor } from '../../core/interfaces/external/IProcessExecutor';
 import { IConfig } from '../../core/interfaces/common/IConfig';
 import { ILogger } from '../../core/interfaces/common/ILogger';
+import { IFileSystem } from '../../core/interfaces/external/IFileSystem';
 import {
   TestExecution,
   TestOutput,
@@ -16,14 +17,17 @@ import { TestExecutionError } from '../../core';
 export class K6TestExecutionService implements ITestExecutionService {
   private readonly runningProcesses = new Map<string, any>();
   private readonly k6TestsDir: string;
+  private readonly resultsDir: string;
 
   constructor(
     private readonly processExecutor: IProcessExecutor,
     private readonly notificationService: INotificationService,
     private readonly config: IConfig,
-    private readonly logger: ILogger
+    private readonly logger: ILogger,
+    private readonly fileSystem: IFileSystem
   ) {
     this.k6TestsDir = this.config.getK6TestsDir();
+    this.resultsDir = this.config.getResultsDir();
   }
 
   async executeTest(command: ExecuteTestCommand): Promise<TestExecution> {
@@ -37,42 +41,59 @@ export class K6TestExecutionService implements ITestExecutionService {
     );
 
     try {
+      // Ensure results directory exists
+      await this.ensureResultsDirectoryExists();
+
       // Generate timestamp and file paths
       const timestamp = this.generateTimestamp();
       const testFile = `tests/${command.testName}.js`;
       const resultFile = `results/${timestamp}_${command.testName}.json`;
 
+      // Log the parameters being used
+      this.logger.info('Executing test with parameters', {
+        testId,
+        testName: command.testName,
+        profile: command.profile,
+        environment: command.environment,
+        hasCustomToken: !!command.customToken,
+        testFile,
+        resultFile,
+      });
+
       // Send initial notifications
       await this.notifyStart(execution, resultFile);
 
+      // Build k6 command with proper environment variables
+      const k6Args = [
+        'run',
+        testFile,
+        '-e',
+        `PROFILE=${command.profile}`,
+        '-e',
+        `ENVIRONMENT=${command.environment}`,
+        '-e',
+        `CUSTOM_TOKEN=${command.customToken || ''}`,
+        '-e',
+        'LOG_LEVEL=error',
+        '--summary-export',
+        resultFile,
+      ];
+
+      this.logger.info('K6 command arguments', { args: k6Args });
+
       // Spawn K6 process
-      const child = this.processExecutor.spawn(
-        'k6',
-        [
-          'run',
-          testFile,
-          '-e',
-          `PROFILE=${command.profile}`,
-          '-e',
-          `ENVIRONMENT=${command.environment}`,
-          '-e',
-          `CUSTOM_TOKEN=${command.customToken || ''}`,
-          '-e',
-          'LOG_LEVEL=error',
-          '--summary-export',
-          resultFile,
-        ],
-        {
-          cwd: this.k6TestsDir,
-          env: {
-            ...process.env,
-            TERM: 'xterm-256color',
-            NO_COLOR: 'false',
-            K6_ENVIRONMENT: command.environment,
-            K6_CUSTOM_TOKEN: command.customToken || '',
-          },
-        }
-      );
+      const child = this.processExecutor.spawn('k6', k6Args, {
+        cwd: this.k6TestsDir,
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          NO_COLOR: 'false',
+          K6_ENVIRONMENT: command.environment,
+          K6_CUSTOM_TOKEN: command.customToken || '',
+          PROFILE: command.profile,
+          ENVIRONMENT: command.environment,
+        },
+      });
 
       // Store process
       this.runningProcesses.set(testId, child);
@@ -101,10 +122,27 @@ export class K6TestExecutionService implements ITestExecutionService {
     );
 
     try {
+      // Ensure results directory exists
+      await this.ensureResultsDirectoryExists();
+
       // Send initial notifications
       await this.notifySequentialStart(execution);
 
+      // Log the parameters being used
+      this.logger.info('Executing all tests with parameters', {
+        testId,
+        profile: command.profile,
+        environment: command.environment,
+        hasCustomToken: !!command.customToken,
+      });
+
+      // Check if sequential-tests.sh exists, if not create a simple version
       const scriptPath = `${this.k6TestsDir}/sequential-tests.sh`;
+      const scriptExists = await this.fileSystem.exists(scriptPath);
+
+      if (!scriptExists) {
+        await this.createSequentialTestsScript(scriptPath);
+      }
 
       // Spawn sequential tests script
       const child = this.processExecutor.spawn('bash', [scriptPath, command.profile], {
@@ -115,6 +153,8 @@ export class K6TestExecutionService implements ITestExecutionService {
           NO_COLOR: 'false',
           K6_ENVIRONMENT: command.environment,
           K6_CUSTOM_TOKEN: command.customToken || '',
+          PROFILE: command.profile,
+          ENVIRONMENT: command.environment,
         },
       });
 
@@ -175,6 +215,94 @@ export class K6TestExecutionService implements ITestExecutionService {
 
   isTestRunning(testId: string): boolean {
     return this.runningProcesses.has(testId);
+  }
+
+  private async ensureResultsDirectoryExists(): Promise<void> {
+    try {
+      // Ensure both k6-tests/results and configured results directory exist
+      const k6ResultsDir = `${this.k6TestsDir}/results`;
+      const configuredResultsDir = this.resultsDir;
+
+      // Create k6-tests/results directory
+      const k6ResultsExists = await this.fileSystem.exists(k6ResultsDir);
+      if (!k6ResultsExists) {
+        await this.fileSystem.mkdir(k6ResultsDir, true);
+        this.logger.info('Created k6 results directory', { path: k6ResultsDir });
+      }
+
+      // Create configured results directory if different
+      if (configuredResultsDir !== k6ResultsDir) {
+        const configuredResultsExists = await this.fileSystem.exists(configuredResultsDir);
+        if (!configuredResultsExists) {
+          await this.fileSystem.mkdir(configuredResultsDir, true);
+          this.logger.info('Created configured results directory', { path: configuredResultsDir });
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to create results directories', error as Error);
+      throw new TestExecutionError('Failed to create results directories', error as Error);
+    }
+  }
+
+  private async createSequentialTestsScript(scriptPath: string): Promise<void> {
+    const scriptContent = `#!/bin/bash
+
+# Sequential K6 Tests Runner
+# Usage: ./sequential-tests.sh [PROFILE]
+
+PROFILE=\${1:-LIGHT}
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+RESULTS_DIR="results"
+
+echo "🚀 Starting sequential tests with profile: \$PROFILE"
+echo "📁 Results will be saved to: \$RESULTS_DIR"
+
+# Ensure results directory exists
+mkdir -p "\$RESULTS_DIR"
+
+# Find all test files
+TEST_FILES=(\$(find tests/ -name "*.js" -type f | sort))
+
+if [ \${#TEST_FILES[@]} -eq 0 ]; then
+    echo "❌ No test files found in tests/ directory"
+    exit 1
+fi
+
+echo "📋 Found \${#TEST_FILES[@]} test files to execute"
+
+# Execute each test
+for TEST_FILE in "\${TEST_FILES[@]}"; do
+    TEST_NAME=\$(basename "\$TEST_FILE" .js)
+    RESULT_FILE="\$RESULTS_DIR/\${TIMESTAMP}_sequential_\${TEST_NAME}.json"
+    
+    echo ""
+    echo "▶️  Running: \$TEST_NAME"
+    
+    k6 run "\$TEST_FILE" \\
+        -e "PROFILE=\$PROFILE" \\
+        -e "ENVIRONMENT=\$ENVIRONMENT" \\
+        -e "CUSTOM_TOKEN=\$K6_CUSTOM_TOKEN" \\
+        -e "LOG_LEVEL=error" \\
+        --summary-export "\$RESULT_FILE"
+    
+    if [ \$? -eq 0 ]; then
+        echo "✅ \$TEST_NAME completed successfully"
+    else
+        echo "❌ \$TEST_NAME failed"
+    fi
+done
+
+echo ""
+echo "🏁 Sequential tests completed"
+`;
+
+    try {
+      await this.fileSystem.writeFile(scriptPath, scriptContent);
+      this.logger.info('Created sequential tests script', { path: scriptPath });
+    } catch (error) {
+      this.logger.error('Failed to create sequential tests script', error as Error);
+      throw new TestExecutionError('Failed to create sequential tests script', error as Error);
+    }
   }
 
   private setupProcessHandlers(process: any, execution: TestExecution, resultFile: string): void {
