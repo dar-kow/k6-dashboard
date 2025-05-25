@@ -34,6 +34,8 @@ import { TestResultController } from './presentation/controllers/TestResultContr
 import { TestController } from './presentation/controllers/TestController';
 import { TestRunnerController } from './presentation/controllers/TestRunnerController';
 import { HealthController } from './presentation/controllers/HealthController';
+import { GitController } from './presentation/controllers/GitController';
+import { SystemController } from './presentation/controllers/SystemController';
 
 // Middleware
 import { ErrorHandler } from './presentation/middleware/ErrorHandler';
@@ -45,6 +47,8 @@ import { TestRoutes } from './presentation/routes/TestRoutes';
 import { TestRunnerRoutes } from './presentation/routes/TestRunnerRoutes';
 import { HealthRoutes } from './presentation/routes/HealthRoutes';
 import { FileSystemTestResultRepository } from '@infrastructure/repositories/FileSystemTestResultRepository';
+import { GitRoutes } from './presentation/routes/GitRoutes';
+import { SystemRoutes } from './presentation/routes/SystemRoutes';
 
 export class DIContainer {
   private static instance: DIContainer;
@@ -130,7 +134,8 @@ export class DIContainer {
         this.get<IProcessExecutor>('processExecutor'),
         notificationService,
         this.get<IConfig>('config'),
-        this.get<ILogger>('logger')
+        this.get<ILogger>('logger'),
+        this.get<IFileSystem>('fileSystem') // Added IFileSystem dependency
       )
     );
 
@@ -227,6 +232,20 @@ export class DIContainer {
     );
 
     this.register('healthController', new HealthController(this.get<ILogger>('logger')));
+
+    this.register(
+      'gitController',
+      new GitController(
+        this.get<IProcessExecutor>('processExecutor'),
+        this.get<IConfig>('config'),
+        this.get<ILogger>('logger')
+      )
+    );
+
+    this.register(
+      'systemController',
+      new SystemController(this.get<IConfig>('config'), this.get<ILogger>('logger'))
+    );
   }
 
   private registerExecutionControllers(): void {
@@ -254,6 +273,10 @@ export class DIContainer {
     this.register('testRoutes', new TestRoutes(this.get('testController')));
 
     this.register('healthRoutes', new HealthRoutes(this.get('healthController')));
+
+    this.register('gitRoutes', new GitRoutes(this.get('gitController')));
+
+    this.register('systemRoutes', new SystemRoutes(this.get('systemController')));
   }
 
   registerTestRunnerRoutes(): void {

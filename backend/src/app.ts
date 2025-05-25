@@ -191,6 +191,14 @@ export class Application {
         res.sendFile(path.join(__dirname, '../../frontend/build/index.html'));
       });
     }
+
+    // Git management routes
+    const gitRoutes = this.container.get<any>('gitRoutes');
+    this.app.use('/api/git', gitRoutes.getRouter());
+
+    // System information routes
+    const systemRoutes = this.container.get<any>('systemRoutes');
+    this.app.use('/api/system', systemRoutes.getRouter());
   }
 
   private setupErrorHandling(): void {
