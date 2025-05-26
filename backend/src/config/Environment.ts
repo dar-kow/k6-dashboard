@@ -8,12 +8,6 @@ export class Environment implements IConfig {
     const nodeEnv = process.env.NODE_ENV || 'development';
     const isDev = nodeEnv === 'development';
 
-    console.log('Environment initialization:', {
-      nodeEnv,
-      cwd: process.cwd(),
-      isDev,
-    });
-
     this.config = {
       NODE_ENV: nodeEnv,
       PORT: parseInt(process.env.PORT || '4000'),
@@ -21,13 +15,8 @@ export class Environment implements IConfig {
       K6_TESTS_DIR: process.env.K6_TESTS_DIR || this.getDefaultK6TestsDir(),
       RESULTS_DIR: process.env.RESULTS_DIR || this.getDefaultResultsDir(),
       LOG_LEVEL: process.env.LOG_LEVEL || (isDev ? 'debug' : 'info'),
+      REPOSITORIES: this.parseRepositories(),
     };
-
-    console.log('Final configuration:', {
-      K6_TESTS_DIR: this.config.K6_TESTS_DIR,
-      RESULTS_DIR: this.config.RESULTS_DIR,
-      NODE_ENV: this.config.NODE_ENV,
-    });
 
     this.validateConfig();
   }
@@ -72,16 +61,31 @@ export class Environment implements IConfig {
     return this.get<string>('LOG_LEVEL');
   }
 
+  getRepositories(): Array<{ name: string; url: string }> {
+    return this.get<Array<{ name: string; url: string }>>('REPOSITORIES') || [];
+  }
+
+  private parseRepositories(): Array<{ name: string; url: string }> {
+    const reposEnv = process.env.REPOSITORIES;
+    if (!reposEnv) return [];
+
+    try {
+      return JSON.parse(reposEnv);
+    } catch {
+      return [];
+    }
+  }
+
   private getDefaultK6TestsDir(): string {
     if (process.env.NODE_ENV === 'production') {
-      return '/k6-tests'; // Docker path
+      return '/k6-tests';
     }
     return process.cwd().endsWith('/backend') ? '../k6-tests' : './k6-tests';
   }
 
   private getDefaultResultsDir(): string {
     if (process.env.NODE_ENV === 'production') {
-      return '/results'; // Docker volume mount
+      return '/results';
     }
     return process.cwd().endsWith('/backend') ? '../k6-tests/results' : './k6-tests/results';
   }
