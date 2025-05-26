@@ -7,6 +7,7 @@ export class TestExecution {
     public readonly testName: string,
     public readonly profile: TestProfile,
     public readonly environment: Environment,
+    public readonly repository?: string,
     public readonly customToken?: string,
     public readonly startTime: Date = new Date(),
     public status: TestExecutionStatus = TestExecutionStatus.RUNNING

@@ -16,33 +16,52 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
     try {
       const resultsDir = await this.findResultsDirectory();
       this.logger.debug('Using results directory', { resultsDir });
-      console.log(`Using results directory: ${resultsDir}`);
 
       const entries = await this.fileSystem.readDir(resultsDir);
-      console.log(`Found ${entries.length} entries in results directory`);
-
       const directories: TestDirectory[] = [];
       const virtualDirectories: TestDirectory[] = [];
 
-      // Process real directories
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          console.log(`Processing directory: ${entry.name}`);
-          const date = this.extractDateFromDirectoryName(entry.name);
-          directories.push(new TestDirectory(entry.name, entry.path, date, 'directory'));
+      // Check for repository-based structure
+      const reposDir = `${this.config.getK6TestsDir()}/repos`;
+      const repoExists = await this.fileSystem.exists(reposDir);
+
+      if (repoExists) {
+        const repos = await this.fileSystem.readDir(reposDir);
+        for (const repo of repos.filter((r) => r.isDirectory())) {
+          const repoResultsPath = `${reposDir}/${repo.name}/results`;
+          const repoResultsExists = await this.fileSystem.exists(repoResultsPath);
+
+          if (repoResultsExists) {
+            const repoEntries = await this.fileSystem.readDir(repoResultsPath);
+
+            for (const entry of repoEntries) {
+              if (entry.isDirectory()) {
+                const date = this.extractDateFromDirectoryName(entry.name);
+                directories.push(
+                  new TestDirectory(`${repo.name}/${entry.name}`, entry.path, date, 'directory')
+                );
+              } else if (entry.isFile() && entry.name.endsWith('.json')) {
+                const date = this.extractDateFromFileName(entry.name);
+                virtualDirectories.push(
+                  new TestDirectory(`${repo.name}/${entry.name}`, entry.path, date, 'virtual')
+                );
+              }
+            }
+          }
         }
       }
 
-      // Process virtual directories (single JSON files)
+      // Legacy structure
       for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.json')) {
-          console.log(`Processing JSON file: ${entry.name}`);
+        if (entry.isDirectory()) {
+          const date = this.extractDateFromDirectoryName(entry.name);
+          directories.push(new TestDirectory(entry.name, entry.path, date, 'directory'));
+        } else if (entry.isFile() && entry.name.endsWith('.json')) {
           const date = this.extractDateFromFileName(entry.name);
           virtualDirectories.push(new TestDirectory(entry.name, entry.path, date, 'virtual'));
         }
       }
 
-      // Sort by date descending
       const allDirs = [...directories, ...virtualDirectories].sort(
         (a, b) => b.date.getTime() - a.date.getTime()
       );
@@ -53,13 +72,9 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
         total: allDirs.length,
       });
 
-      console.log(
-        `Found ${allDirs.length} result directories (${directories.length} real + ${virtualDirectories.length} virtual)`
-      );
       return allDirs;
     } catch (error) {
       this.logger.error('Error fetching test directories', error as Error);
-      console.error('Error fetching test directories:', error);
       return [];
     }
   }
@@ -67,24 +82,31 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
   async findByDirectory(directory: string): Promise<TestFile[]> {
     const resultsDir = await this.findResultsDirectory();
 
-    if (directory.endsWith('.json')) {
-      // Virtual directory - single file
-      const filePath = `${resultsDir}/${directory}`;
-      const exists = await this.fileSystem.exists(filePath);
+    // Handle repository-based paths
+    const isRepoPath = directory.includes('/');
+    let filePath: string;
 
+    if (isRepoPath) {
+      const [repoName, subPath] = directory.split('/', 2);
+      const repoResultsPath = `${this.config.getK6TestsDir()}/repos/${repoName}/results`;
+      filePath = `${repoResultsPath}/${subPath}`;
+    } else {
+      filePath = `${resultsDir}/${directory}`;
+    }
+
+    if (directory.endsWith('.json') || (isRepoPath && directory.split('/')[1].endsWith('.json'))) {
+      const exists = await this.fileSystem.exists(filePath);
       if (!exists) {
         throw new FileNotFoundError(filePath);
       }
 
-      const match = directory.match(/^\d{8}_\d{6}_(.+)\.json$/);
-      const testName = match ? match[1] : directory.replace('.json', '');
+      const fileName = directory.split('/').pop() || directory;
+      const match = fileName.match(/^\d{8}_\d{6}_(.+)\.json$/);
+      const testName = match ? match[1] : fileName.replace('.json', '');
 
       return [new TestFile(`${testName}.json`, filePath)];
     } else {
-      // Real directory
-      const dirPath = `${resultsDir}/${directory}`;
-      const entries = await this.fileSystem.readDir(dirPath);
-
+      const entries = await this.fileSystem.readDir(filePath);
       return entries
         .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
         .map((entry) => new TestFile(entry.name, entry.path));
@@ -95,12 +117,23 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
     const resultsDir = await this.findResultsDirectory();
     let filePath: string;
 
-    if (directory.endsWith('.json')) {
-      // Virtual directory
-      filePath = `${resultsDir}/${directory}`;
+    const isRepoPath = directory.includes('/');
+
+    if (isRepoPath) {
+      const [repoName, subPath] = directory.split('/', 2);
+      const repoResultsPath = `${this.config.getK6TestsDir()}/repos/${repoName}/results`;
+
+      if (directory.endsWith('.json')) {
+        filePath = `${repoResultsPath}/${subPath}`;
+      } else {
+        filePath = `${repoResultsPath}/${subPath}/${file}`;
+      }
     } else {
-      // Real directory
-      filePath = `${resultsDir}/${directory}/${file}`;
+      if (directory.endsWith('.json')) {
+        filePath = `${resultsDir}/${directory}`;
+      } else {
+        filePath = `${resultsDir}/${directory}/${file}`;
+      }
     }
 
     const exists = await this.fileSystem.exists(filePath);
@@ -122,9 +155,20 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
   async exists(directory: string): Promise<boolean> {
     try {
       const resultsDir = await this.findResultsDirectory();
-      const dirPath = directory.endsWith('.json')
-        ? `${resultsDir}/${directory}`
-        : `${resultsDir}/${directory}`;
+      const isRepoPath = directory.includes('/');
+
+      let dirPath: string;
+      if (isRepoPath) {
+        const [repoName, subPath] = directory.split('/', 2);
+        const repoResultsPath = `${this.config.getK6TestsDir()}/repos/${repoName}/results`;
+        dirPath = directory.endsWith('.json')
+          ? `${repoResultsPath}/${subPath}`
+          : `${repoResultsPath}/${subPath}`;
+      } else {
+        dirPath = directory.endsWith('.json')
+          ? `${resultsDir}/${directory}`
+          : `${resultsDir}/${directory}`;
+      }
 
       return await this.fileSystem.exists(dirPath);
     } catch {
@@ -141,14 +185,11 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
   }
 
   private async findResultsDirectory(): Promise<string> {
-    // Zgodnie ze starym kodem: POSSIBLE_RESULTS_PATHS
     const possiblePaths = [
-      `${this.config.getK6TestsDir()}/results`, // k6-tests/results
-      this.config.getResultsDir(), // z konfiguracji
-      '/results', // Docker volume mount
+      `${this.config.getK6TestsDir()}/results`,
+      this.config.getResultsDir(),
+      '/results',
     ];
-
-    console.log('Checking possible results paths:', possiblePaths);
 
     for (const resultsPath of possiblePaths) {
       try {
@@ -156,21 +197,17 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
         if (exists) {
           const stats = await this.fileSystem.stat(resultsPath);
           if (stats.isDirectory()) {
-            console.log(`Found results directory: ${resultsPath}`);
             return resultsPath;
           }
         }
       } catch (error) {
-        console.log(`Path ${resultsPath} not accessible:`, error);
         continue;
       }
     }
 
-    // If no existing directory found, create the first one
     const defaultPath = possiblePaths[0];
     try {
       await this.fileSystem.mkdir(defaultPath, true);
-      console.log(`Created results directory: ${defaultPath}`);
     } catch (error) {
       console.error(`Failed to create results directory: ${error}`);
     }
