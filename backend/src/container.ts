@@ -1,7 +1,7 @@
+// backend/src/container.ts
 import { Environment } from './config/Environment';
 import { ConsoleLogger } from './config/Logger';
 
-// Core interfaces
 import { IConfig } from './core/interfaces/common/IConfig';
 import { ILogger } from './core/interfaces/common/ILogger';
 import { IFileSystem } from './core/interfaces/external/IFileSystem';
@@ -10,14 +10,15 @@ import { ITestResultRepository } from './core/interfaces/repositories/ITestResul
 import { ITestRepository } from './core/interfaces/repositories/ITestRepository';
 import { ITestExecutionService } from './core/interfaces/services/ITestExecutionService';
 import { INotificationService } from './core/interfaces/services/INotificationService';
+import { IRepositoryService } from './core/interfaces/services/IRepositoryService';
 
-// Infrastructure implementations
 import { NodeFileSystem } from './infrastructure/external/NodeFileSystem';
 import { NodeProcessExecutor } from './infrastructure/external/NodeProcessExecutor';
 import { FileSystemTestRepository } from './infrastructure/repositories/FileSystemTestRepository';
+import { FileSystemTestResultRepository } from './infrastructure/repositories/FileSystemTestResultRepository';
 import { K6TestExecutionService } from './application/services/TestExecutionApplicationService';
+import { GitRepositoryService } from './application/services/GitRepositoryService';
 
-// Use cases
 import {
   ExecuteTestUseCase,
   ExecuteAllTestsUseCase,
@@ -29,22 +30,20 @@ import {
   GetAvailableTestsUseCase,
 } from './core/use-cases';
 
-// Controllers
 import { TestResultController } from './presentation/controllers/TestResultController';
 import { TestController } from './presentation/controllers/TestController';
 import { TestRunnerController } from './presentation/controllers/TestRunnerController';
 import { HealthController } from './presentation/controllers/HealthController';
+import { RepositoryController } from './presentation/controllers/RepositoryController';
 
-// Middleware
 import { ErrorHandler } from './presentation/middleware/ErrorHandler';
 import { RequestLogger } from './presentation/middleware/RequestLogger';
 
-// Routes
 import { TestResultRoutes } from './presentation/routes/TestResultRoutes';
 import { TestRoutes } from './presentation/routes/TestRoutes';
 import { TestRunnerRoutes } from './presentation/routes/TestRunnerRoutes';
 import { HealthRoutes } from './presentation/routes/HealthRoutes';
-import { FileSystemTestResultRepository } from '@infrastructure/repositories/FileSystemTestResultRepository';
+import { RepositoryRoutes } from './presentation/routes/RepositoryRoutes';
 
 export class DIContainer {
   private static instance: DIContainer;
@@ -74,18 +73,25 @@ export class DIContainer {
   }
 
   private registerServices(): void {
-    // Configuration and Logger
     const config = new Environment();
     const logger = new ConsoleLogger(config.getLogLevel());
 
     this.register<IConfig>('config', config);
     this.register<ILogger>('logger', logger);
 
-    // External services
     this.register<IFileSystem>('fileSystem', new NodeFileSystem());
     this.register<IProcessExecutor>('processExecutor', new NodeProcessExecutor());
 
-    // Repositories
+    this.register<IRepositoryService>(
+      'repositoryService',
+      new GitRepositoryService(
+        this.get<IProcessExecutor>('processExecutor'),
+        this.get<IFileSystem>('fileSystem'),
+        this.get<IConfig>('config'),
+        this.get<ILogger>('logger')
+      )
+    );
+
     this.register<ITestResultRepository>(
       'testResultRepository',
       new FileSystemTestResultRepository(
@@ -104,43 +110,31 @@ export class DIContainer {
       )
     );
 
-    // Application services (will be registered after WebSocket setup)
-    // NotificationService will be registered after Socket.IO setup
-
-    // Use cases
     this.registerUseCases();
-
-    // Controllers
     this.registerControllers();
-
-    // Middleware
     this.registerMiddleware();
-
-    // Routes
     this.registerRoutes();
   }
 
   registerNotificationService(notificationService: INotificationService): void {
     this.register<INotificationService>('notificationService', notificationService);
 
-    // Now register test execution service that depends on notification service
     this.register<ITestExecutionService>(
       'testExecutionService',
       new K6TestExecutionService(
         this.get<IProcessExecutor>('processExecutor'),
         notificationService,
+        this.get<IRepositoryService>('repositoryService'),
         this.get<IConfig>('config'),
         this.get<ILogger>('logger')
       )
     );
 
-    // Re-register use cases that depend on test execution service
     this.registerExecutionUseCases();
     this.registerExecutionControllers();
   }
 
   private registerUseCases(): void {
-    // Test result use cases
     this.register(
       'getTestDirectoriesUseCase',
       new GetTestDirectoriesUseCase(
@@ -165,7 +159,6 @@ export class DIContainer {
       )
     );
 
-    // Test use cases
     this.register(
       'getAvailableTestsUseCase',
       new GetAvailableTestsUseCase(
@@ -227,6 +220,16 @@ export class DIContainer {
     );
 
     this.register('healthController', new HealthController(this.get<ILogger>('logger')));
+
+    this.register(
+      'repositoryController',
+      new RepositoryController(
+        this.get<IRepositoryService>('repositoryService'),
+        this.get<IFileSystem>('fileSystem'),
+        this.get<IConfig>('config'),
+        this.get<ILogger>('logger')
+      )
+    );
   }
 
   private registerExecutionControllers(): void {
@@ -244,16 +247,14 @@ export class DIContainer {
 
   private registerMiddleware(): void {
     this.register('errorHandler', new ErrorHandler(this.get<ILogger>('logger')));
-
     this.register('requestLogger', new RequestLogger(this.get<ILogger>('logger')));
   }
 
   private registerRoutes(): void {
     this.register('testResultRoutes', new TestResultRoutes(this.get('testResultController')));
-
     this.register('testRoutes', new TestRoutes(this.get('testController')));
-
     this.register('healthRoutes', new HealthRoutes(this.get('healthController')));
+    this.register('repositoryRoutes', new RepositoryRoutes(this.get('repositoryController')));
   }
 
   registerTestRunnerRoutes(): void {
