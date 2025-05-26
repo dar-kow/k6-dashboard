@@ -7,4 +7,5 @@ export interface IConfig {
   getFrontendUrl(): string;
   getK6TestsDir(): string;
   getResultsDir(): string;
+  getRepositories(): Array<{ name: string; url: string }>;
 }

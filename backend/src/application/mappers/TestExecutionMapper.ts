@@ -6,6 +6,7 @@ export class TestExecutionMapper {
     const config: TestExecutionResponseDto['config'] = {
       profile: execution.profile as string,
       environment: execution.environment as string,
+      repository: execution.repository || 'default',
       hasCustomToken: !!execution.customToken?.trim(),
     };
 
