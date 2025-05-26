@@ -3,23 +3,87 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import TerminalOutput from '../components/TerminalOutput';
 import { useTestResults } from '../context/TestResultContext';
+import { fetchRepositories, cloneRepository, updateRepository, Repository } from '../api/repositories';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
-// Extract the base URL without the /api path for socket.io
 const BASE_URL = API_URL.replace('/api', '');
-
-interface TestConfig {
-    name: string;
-    description: string;
-    file: string;
-}
 
 interface EnvironmentConfig {
     environment: 'PROD' | 'DEV';
     customToken: string;
+    repository: string;
 }
 
-// Modal component for token configuration
+const CloneRepositoryModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onClone: (name: string, url: string) => void;
+}> = ({ isOpen, onClose, onClone }) => {
+    const [name, setName] = useState('');
+    const [url, setUrl] = useState('');
+
+    if (!isOpen) return null;
+
+    const handleClone = () => {
+        if (name.trim() && url.trim()) {
+            onClone(name.trim(), url.trim());
+            setName('');
+            setUrl('');
+            onClose();
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                <h3 className="text-lg font-semibold mb-4">Clone Git Repository</h3>
+
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Repository Name
+                    </label>
+                    <input
+                        type="text"
+                        className="w-full p-3 border border-gray-300 rounded-md"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="my-tests"
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Git URL
+                    </label>
+                    <input
+                        type="text"
+                        className="w-full p-3 border border-gray-300 rounded-md"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="https://github.com/user/repo.git"
+                    />
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleClone}
+                        disabled={!name.trim() || !url.trim()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                    >
+                        Clone Repository
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const TokenConfigModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -79,7 +143,6 @@ const TokenConfigModal: React.FC<{
     );
 };
 
-// Stop confirmation modal
 const StopConfirmationModal: React.FC<{
     isOpen: boolean;
     onConfirm: () => void;
@@ -117,7 +180,8 @@ const StopConfirmationModal: React.FC<{
 
 const TestRunner: React.FC = () => {
     const { refreshData } = useTestResults();
-    const [tests, setTests] = useState<TestConfig[]>([]);
+    const [repositories, setRepositories] = useState<Repository[]>([]);
+    const [selectedRepository, setSelectedRepository] = useState<string>('');
     const [selectedTest, setSelectedTest] = useState<string>('');
     const [selectedProfile, setSelectedProfile] = useState<string>('LIGHT');
     const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -127,15 +191,14 @@ const TestRunner: React.FC = () => {
     const [autoScroll, setAutoScroll] = useState<boolean>(true);
     const [showStopConfirmation, setShowStopConfirmation] = useState<boolean>(false);
     const [runningTestId, setRunningTestId] = useState<string | null>(null);
+    const [showCloneModal, setShowCloneModal] = useState<boolean>(false);
 
-    // New states for environment and token management
     const [environment, setEnvironment] = useState<'PROD' | 'DEV'>('PROD');
     const [customToken, setCustomToken] = useState<string>('');
     const [isTokenModalOpen, setIsTokenModalOpen] = useState<boolean>(false);
 
     const socketRef = useRef<Socket | null>(null);
 
-    // Load environment config from localStorage
     useEffect(() => {
         const savedConfig = localStorage.getItem('k6-dashboard-config');
         if (savedConfig) {
@@ -143,65 +206,63 @@ const TestRunner: React.FC = () => {
                 const config: EnvironmentConfig = JSON.parse(savedConfig);
                 setEnvironment(config.environment || 'PROD');
                 setCustomToken(config.customToken || '');
+                setSelectedRepository(config.repository || '');
             } catch (err) {
                 console.error('Error parsing saved config:', err);
             }
         }
     }, []);
 
-    // Save environment config to localStorage
-    const saveConfig = (env: 'PROD' | 'DEV', token: string) => {
+    const saveConfig = (env: 'PROD' | 'DEV', token: string, repo: string) => {
         const config: EnvironmentConfig = {
             environment: env,
-            customToken: token
+            customToken: token,
+            repository: repo
         };
         localStorage.setItem('k6-dashboard-config', JSON.stringify(config));
     };
 
-    // Handle environment change
     const handleEnvironmentChange = (env: 'PROD' | 'DEV') => {
         setEnvironment(env);
-        saveConfig(env, customToken);
+        saveConfig(env, customToken, selectedRepository);
         setOutput(prev => [...prev, `🔄 Switched to ${env} environment`]);
     };
 
-    // Handle token save
+    const handleRepositoryChange = (repo: string) => {
+        setSelectedRepository(repo);
+        saveConfig(environment, customToken, repo);
+        setSelectedTest('');
+        setOutput(prev => [...prev, `📦 Selected repository: ${repo}`]);
+    };
+
     const handleTokenSave = (token: string) => {
         setCustomToken(token);
-        saveConfig(environment, token);
+        saveConfig(environment, token, selectedRepository);
         setOutput(prev => [...prev, `🔑 Custom token ${token ? 'updated' : 'cleared'}`]);
     };
 
-    // Load available tests
     useEffect(() => {
-        const fetchTests = async () => {
+        const loadRepositories = async () => {
             try {
-                console.log('Fetching tests from:', `${API_URL}/tests`);
-                const response = await axios.get(`${API_URL}/tests`);
-                setTests(response.data);
-
-                if (response.data.length > 0) {
-                    setSelectedTest(response.data[0].name);
+                const repos = await fetchRepositories();
+                setRepositories(repos);
+                if (repos.length > 0 && !selectedRepository) {
+                    setSelectedRepository(repos[0].name);
                 }
             } catch (err: any) {
-                console.error('Error loading tests:', err);
-                setError(`Failed to load available tests: ${err.message}`);
+                console.error('Error loading repositories:', err);
+                setError(`Failed to load repositories: ${err.message}`);
             }
         };
 
-        fetchTests();
-    }, []);
+        loadRepositories();
+    }, [selectedRepository]);
 
-    // Connect to WebSocket for real-time output
     useEffect(() => {
-        // Clean up previous socket if it exists
         if (socketRef.current) {
             socketRef.current.disconnect();
         }
 
-        console.log('Connecting to socket at:', BASE_URL);
-
-        // Create new socket connection
         const socket = io(BASE_URL, {
             withCredentials: true,
             reconnection: true,
@@ -212,20 +273,16 @@ const TestRunner: React.FC = () => {
         socketRef.current = socket;
 
         socket.on('connect', () => {
-            console.log('WebSocket connection established, socket ID:', socket.id);
             setOutput(prev => [...prev, 'WebSocket connection established']);
             setSocketConnected(true);
             setError(null);
         });
 
         socket.on('connection_established', (data) => {
-            console.log('Received connection confirmation:', data);
             setOutput(prev => [...prev, `Server confirmed connection: ${data.message}`]);
         });
 
         socket.on('testOutput', (message) => {
-            console.log('Received test output:', message);
-
             if (message.type === 'log') {
                 setOutput(prev => [...prev, message.data]);
             } else if (message.type === 'error') {
@@ -235,9 +292,7 @@ const TestRunner: React.FC = () => {
                 setRunningTestId(null);
                 setOutput(prev => [...prev, message.data]);
 
-                // Auto-refresh results after test completion
                 setTimeout(() => {
-                    console.log('Auto-refreshing test results after test completion');
                     refreshData();
                 }, 2000);
             } else if (message.type === 'stopped') {
@@ -247,59 +302,51 @@ const TestRunner: React.FC = () => {
             }
         });
 
-        // Listen for refresh results event
         socket.on('refreshResults', (message) => {
-            console.log('Received refresh results request:', message);
             setOutput(prev => [...prev, `🔄 ${message.message}`]);
             refreshData();
         });
 
         socket.on('disconnect', () => {
-            console.log('WebSocket connection closed');
             setSocketConnected(false);
             setOutput(prev => [...prev, 'WebSocket connection closed']);
         });
 
         socket.on('connect_error', (err) => {
-            console.error('WebSocket connection error:', err);
             setError(`WebSocket connection error: ${err.message}. Reconnecting...`);
         });
 
-        // Cleanup on component unmount
         return () => {
-            console.log('Cleaning up socket connection');
             socket.disconnect();
         };
     }, [refreshData]);
 
     const runTest = async () => {
-        if (!selectedTest) return;
+        if (!selectedTest || !selectedRepository) return;
 
-        const testId = `${selectedTest}-${Date.now()}`;
+        const testId = `${selectedRepository}-${selectedTest}-${Date.now()}`;
         setRunningTestId(testId);
         setIsRunning(true);
-        setOutput([`🚀 Starting test: ${selectedTest} with profile: ${selectedProfile} on ${environment}`]);
+        setOutput([`🚀 Starting test: ${selectedTest} from ${selectedRepository} with profile: ${selectedProfile} on ${environment}`]);
         setError(null);
-
-        // Auto-enable auto-scroll when starting new test
         setAutoScroll(true);
 
         try {
-            // Send directly through socket for real-time feedback
             if (socketRef.current && socketConnected) {
                 socketRef.current.emit('test_request', {
                     testId: testId,
                     test: selectedTest,
+                    repository: selectedRepository,
                     profile: selectedProfile,
                     environment: environment,
                     customToken: customToken
                 });
             }
 
-            // Also make the HTTP request with environment and token info
             await axios.post(`${API_URL}/run/test`, {
                 testId: testId,
                 test: selectedTest,
+                repository: selectedRepository,
                 profile: selectedProfile,
                 environment: environment,
                 customToken: customToken
@@ -313,30 +360,30 @@ const TestRunner: React.FC = () => {
     };
 
     const runAllTests = async () => {
-        const testId = `all-tests-${Date.now()}`;
+        if (!selectedRepository) return;
+
+        const testId = `${selectedRepository}-all-tests-${Date.now()}`;
         setRunningTestId(testId);
         setIsRunning(true);
-        setOutput([`🚀 Starting all tests sequentially with profile: ${selectedProfile} on ${environment}`]);
+        setOutput([`🚀 Starting all tests from ${selectedRepository} sequentially with profile: ${selectedProfile} on ${environment}`]);
         setError(null);
-
-        // Auto-enable auto-scroll when starting new test
         setAutoScroll(true);
 
         try {
-            // Send directly through socket for real-time feedback
             if (socketRef.current && socketConnected) {
                 socketRef.current.emit('test_request', {
                     testId: testId,
                     test: 'all',
+                    repository: selectedRepository,
                     profile: selectedProfile,
                     environment: environment,
                     customToken: customToken
                 });
             }
 
-            // Also make the HTTP request with environment and token info
             await axios.post(`${API_URL}/run/all`, {
                 testId: testId,
+                repository: selectedRepository,
                 profile: selectedProfile,
                 environment: environment,
                 customToken: customToken
@@ -353,14 +400,12 @@ const TestRunner: React.FC = () => {
         if (!runningTestId) return;
 
         try {
-            // Send stop request through socket
             if (socketRef.current && socketConnected) {
                 socketRef.current.emit('stop_test', {
                     testId: runningTestId
                 });
             }
 
-            // Also make HTTP request to stop
             await axios.post(`${API_URL}/run/stop`, {
                 testId: runningTestId
             });
@@ -369,6 +414,35 @@ const TestRunner: React.FC = () => {
         } catch (err: any) {
             console.error('Error stopping test:', err);
             setError(`Failed to stop test: ${err.message}`);
+        }
+    };
+
+    const handleCloneRepository = async (name: string, url: string) => {
+        try {
+            setOutput(prev => [...prev, `📥 Cloning repository: ${name} from ${url}...`]);
+            await cloneRepository({ name, url });
+            setOutput(prev => [...prev, `✅ Repository ${name} cloned successfully`]);
+
+            const repos = await fetchRepositories();
+            setRepositories(repos);
+            setSelectedRepository(name);
+        } catch (err: any) {
+            console.error('Error cloning repository:', err);
+            setError(`Failed to clone repository: ${err.message}`);
+        }
+    };
+
+    const handleUpdateRepository = async (name: string) => {
+        try {
+            setOutput(prev => [...prev, `🔄 Updating repository: ${name}...`]);
+            await updateRepository(name);
+            setOutput(prev => [...prev, `✅ Repository ${name} updated successfully`]);
+
+            const repos = await fetchRepositories();
+            setRepositories(repos);
+        } catch (err: any) {
+            console.error('Error updating repository:', err);
+            setError(`Failed to update repository: ${err.message}`);
         }
     };
 
@@ -383,7 +457,6 @@ const TestRunner: React.FC = () => {
     };
 
     const clearConnection = () => {
-        // Force disconnect and reconnect
         if (socketRef.current) {
             socketRef.current.disconnect();
         }
@@ -393,15 +466,19 @@ const TestRunner: React.FC = () => {
         setRunningTestId(null);
         setOutput(['🔄 Clearing connection and resetting...']);
 
-        // Reconnect after a brief delay
         setTimeout(() => {
-            window.location.reload(); // Simple but effective reset
+            window.location.reload();
         }, 1000);
     };
 
     const toggleAutoScroll = () => {
         setAutoScroll(prev => !prev);
     };
+
+    const selectedRepo = repositories.find(r => r.name === selectedRepository);
+    const availableTests = selectedRepo?.tests || [];
+    const availableProfiles = selectedRepo?.config?.LOAD_PROFILES ? Object.keys(selectedRepo.config.LOAD_PROFILES) : ['LIGHT', 'MEDIUM', 'HEAVY'];
+    const availableEnvironments = selectedRepo?.config?.HOSTS ? Object.keys(selectedRepo.config.HOSTS) : ['PROD', 'DEV'];
 
     return (
         <div>
@@ -415,42 +492,31 @@ const TestRunner: React.FC = () => {
 
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">Run Tests</h2>
+                    <h2 className="text-xl font-semibold">Repository & Test Configuration</h2>
 
-                    {/* Environment and Token Controls */}
                     <div className="flex items-center space-x-4">
-                        {/* Environment Toggle */}
                         <div className="flex items-center space-x-2">
                             <span className="text-sm font-medium text-gray-700">Environment:</span>
                             <div className="flex bg-gray-100 rounded-md p-1">
-                                <button
-                                    onClick={() => handleEnvironmentChange('PROD')}
-                                    className={`px-3 py-1 text-xs font-medium rounded transition-colors ${environment === 'PROD'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-600 hover:text-gray-800'
-                                        }`}
-                                    disabled={isRunning}
-                                >
-                                    PROD
-                                </button>
-                                <button
-                                    onClick={() => handleEnvironmentChange('DEV')}
-                                    className={`px-3 py-1 text-xs font-medium rounded transition-colors ${environment === 'DEV'
-                                        ? 'bg-orange-600 text-white'
-                                        : 'text-gray-600 hover:text-gray-800'
-                                        }`}
-                                    disabled={isRunning}
-                                >
-                                    DEV
-                                </button>
+                                {availableEnvironments.map(env => (
+                                    <button
+                                        key={env}
+                                        onClick={() => handleEnvironmentChange(env as 'PROD' | 'DEV')}
+                                        className={`px-3 py-1 text-xs font-medium rounded transition-colors ${environment === env
+                                            ? 'bg-blue-600 text-white'
+                                            : 'text-gray-600 hover:text-gray-800'
+                                            }`}
+                                        disabled={isRunning}
+                                    >
+                                        {env}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
-                        {/* Token Configuration Button */}
                         <button
                             onClick={() => setIsTokenModalOpen(true)}
                             className="flex items-center space-x-1 px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                            title="Configure custom API token"
                             disabled={isRunning}
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -472,10 +538,10 @@ const TestRunner: React.FC = () => {
                             <div className="text-sm text-gray-600">
                                 <span className="font-medium">Target:</span> {environment}
                                 {customToken && <span className="ml-2 text-green-600">• Custom Token Active</span>}
+                                {selectedRepository && <span className="ml-2 text-blue-600">• Repo: {selectedRepository}</span>}
                             </div>
                         </div>
 
-                        {/* Connection Controls */}
                         <div className="flex items-center space-x-2">
                             {isRunning && (
                                 <div className="flex items-center space-x-2 px-3 py-1 bg-orange-100 text-orange-800 rounded-md">
@@ -485,9 +551,16 @@ const TestRunner: React.FC = () => {
                             )}
 
                             <button
+                                onClick={() => setShowCloneModal(true)}
+                                className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
+                                disabled={isRunning}
+                            >
+                                📥 Clone Repo
+                            </button>
+
+                            <button
                                 onClick={clearConnection}
                                 className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                                title="Clear connection and reset"
                             >
                                 🔄 Reset Connection
                             </button>
@@ -495,25 +568,50 @@ const TestRunner: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select Repository</label>
+                        <div className="flex space-x-2">
+                            <select
+                                className="flex-1 p-2 border border-gray-300 rounded-md"
+                                value={selectedRepository}
+                                onChange={(e) => handleRepositoryChange(e.target.value)}
+                                disabled={isRunning}
+                            >
+                                <option value="" disabled>Select a repository</option>
+                                {repositories.map((repo) => (
+                                    <option key={repo.name} value={repo.name}>
+                                        📦 {repo.name} ({repo.tests?.length || 0} tests)
+                                    </option>
+                                ))}
+                            </select>
+                            {selectedRepository && (
+                                <button
+                                    onClick={() => handleUpdateRepository(selectedRepository)}
+                                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                                    disabled={isRunning}
+                                    title="Update repository"
+                                >
+                                    🔄
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Select Test</label>
                         <select
                             className="block w-full p-2 border border-gray-300 rounded-md"
                             value={selectedTest}
                             onChange={(e) => setSelectedTest(e.target.value)}
-                            disabled={isRunning}
+                            disabled={isRunning || !selectedRepository}
                         >
                             <option value="" disabled>Select a test</option>
-                            {tests.length > 0 ? (
-                                tests.map((test) => (
-                                    <option key={test.name} value={test.name}>
-                                        {test.description || test.name}
-                                    </option>
-                                ))
-                            ) : (
-                                <option value="" disabled>No tests available</option>
-                            )}
+                            {availableTests.map((test) => (
+                                <option key={test} value={test}>
+                                    🎯 {test}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
@@ -525,9 +623,11 @@ const TestRunner: React.FC = () => {
                             onChange={(e) => setSelectedProfile(e.target.value)}
                             disabled={isRunning}
                         >
-                            <option value="LIGHT">Light (10 VUs, 60s)</option>
-                            <option value="MEDIUM">Medium (30 VUs, 5m)</option>
-                            <option value="HEAVY">Heavy (100 VUs, 10m)</option>
+                            {availableProfiles.map((profile) => (
+                                <option key={profile} value={profile}>
+                                    ⚡ {profile}
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -536,7 +636,7 @@ const TestRunner: React.FC = () => {
                     <button
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
                         onClick={runTest}
-                        disabled={isRunning || !selectedTest}
+                        disabled={isRunning || !selectedTest || !selectedRepository}
                     >
                         {isRunning ? (
                             <span className="flex items-center">
@@ -554,7 +654,7 @@ const TestRunner: React.FC = () => {
                     <button
                         className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 transition-colors"
                         onClick={runAllTests}
-                        disabled={isRunning}
+                        disabled={isRunning || !selectedRepository}
                     >
                         {isRunning ? (
                             <span className="flex items-center">
@@ -569,12 +669,10 @@ const TestRunner: React.FC = () => {
                         )}
                     </button>
 
-                    {/* STOP BUTTON */}
                     {isRunning && (
                         <button
                             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                             onClick={() => setShowStopConfirmation(true)}
-                            title="Stop running test"
                         >
                             🛑 Stop Test
                         </button>
@@ -583,7 +681,6 @@ const TestRunner: React.FC = () => {
                     <button
                         className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                         onClick={clearOutput}
-                        title="Clear terminal output"
                     >
                         Clear Output
                     </button>
@@ -594,11 +691,10 @@ const TestRunner: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Test Execution Output</h2>
 
-                    {/* Status indicator */}
                     <div className="flex items-center space-x-4">
                         {isRunning && runningTestId && (
                             <div className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-md">
-                                Running: {runningTestId.split('-')[0]}
+                                Running: {runningTestId.split('-')[1] || runningTestId.split('-')[0]}
                             </div>
                         )}
 
@@ -609,9 +705,8 @@ const TestRunner: React.FC = () => {
                 </div>
 
                 <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                    <p>📁 <strong>Results location:</strong> <code className="bg-gray-200 px-1 rounded">k6-tests/results/</code></p>
-                    <p>🎛️ <strong>Terminal controls:</strong> Use auto-scroll toggle and manual scroll buttons below</p>
-                    <p>🔄 <strong>Auto-scroll:</strong> {autoScroll ? 'Enabled - shows latest output automatically' : 'Disabled - scroll manually to see new output'}</p>
+                    <p>📦 <strong>Repository:</strong> <code className="bg-gray-200 px-1 rounded">{selectedRepository || 'None selected'}</code></p>
+                    <p>📁 <strong>Results location:</strong> <code className="bg-gray-200 px-1 rounded">k6-tests/repos/{selectedRepository}/results/</code></p>
                     <p>🌐 <strong>Environment:</strong> Running tests against <span className={`font-medium ${environment === 'PROD' ? 'text-blue-600' : 'text-orange-600'}`}>{environment}</span> environment</p>
                     {isRunning && <p>⚠️ <strong>Running:</strong> Use STOP button above to terminate test execution</p>}
                 </div>
@@ -623,7 +718,12 @@ const TestRunner: React.FC = () => {
                 />
             </div>
 
-            {/* Token Configuration Modal */}
+            <CloneRepositoryModal
+                isOpen={showCloneModal}
+                onClose={() => setShowCloneModal(false)}
+                onClone={handleCloneRepository}
+            />
+
             <TokenConfigModal
                 isOpen={isTokenModalOpen}
                 onClose={() => setIsTokenModalOpen(false)}
@@ -631,7 +731,6 @@ const TestRunner: React.FC = () => {
                 currentToken={customToken}
             />
 
-            {/* Stop Confirmation Modal */}
             <StopConfirmationModal
                 isOpen={showStopConfirmation}
                 onConfirm={handleStopConfirmation}

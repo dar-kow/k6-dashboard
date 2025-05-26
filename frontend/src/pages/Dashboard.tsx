@@ -13,28 +13,34 @@ import TestRunSelector from '../components/TestRunSelector';
 import TestRunComparison from '../components/TestRunComparison';
 import { useTestResults } from '../context/TestResultContext';
 import ExportPDFButton from '../context/ExportPDFButton';
+import RepositorySelector from '../components/RepositorySelector';
 
 const Dashboard: React.FC = () => {
-    const { directories, loading, error } = useTestResults();
+    const { directories, loading, error, currentRepository, setCurrentRepository } = useTestResults();
     const [selectedTestRun, setSelectedTestRun] = useState<string | null>(null);
     const [latestResults, setLatestResults] = useState<Record<string, TestResult>>({});
     const [latestResultsLoading, setLatestResultsLoading] = useState<boolean>(true);
 
+    // Filter directories by current repository
+    const filteredDirectories = currentRepository
+        ? directories.filter(d => d.name.startsWith(`${currentRepository}/`))
+        : directories;
+
     // Auto-select latest directory when directories load
     useEffect(() => {
-        if (directories.length > 0 && !selectedTestRun) {
-            setSelectedTestRun(directories[0].name);
+        if (filteredDirectories.length > 0 && !selectedTestRun) {
+            setSelectedTestRun(filteredDirectories[0].name);
         }
-    }, [directories]);
+    }, [filteredDirectories, selectedTestRun]);
 
     useEffect(() => {
         const loadLatestResults = async () => {
-            if (!directories.length || !selectedTestRun) return;
+            if (!filteredDirectories.length || !selectedTestRun) return;
 
             setLatestResultsLoading(true);
 
             try {
-                const selectedDir = directories.find(d => d.name === selectedTestRun);
+                const selectedDir = filteredDirectories.find(d => d.name === selectedTestRun);
                 if (!selectedDir) return;
 
                 const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000/api'}/results/${selectedDir.name}`);
@@ -61,7 +67,7 @@ const Dashboard: React.FC = () => {
         };
 
         loadLatestResults();
-    }, [directories, selectedTestRun]);
+    }, [filteredDirectories, selectedTestRun]);
 
     // Safe accessor function for metric values with proper type checking and defaults
     const getMetricValue = (metric: any, property: string, defaultValue: number = 0): number => {
@@ -116,9 +122,9 @@ const Dashboard: React.FC = () => {
     };
 
     const getLastRunTime = () => {
-        if (!selectedTestRun || directories.length === 0) return 'No test run selected';
+        if (!selectedTestRun || filteredDirectories.length === 0) return 'No test run selected';
 
-        const selectedDir = directories.find(d => d.name === selectedTestRun);
+        const selectedDir = filteredDirectories.find(d => d.name === selectedTestRun);
         if (!selectedDir) return 'Selected run not found';
 
         const date = new Date(selectedDir.date);
@@ -249,9 +255,15 @@ const Dashboard: React.FC = () => {
                 </div>
             ) : (
                 <>
+                    {/* Repository Selector */}
+                    <RepositorySelector
+                        selectedRepository={currentRepository}
+                        onRepositoryChange={setCurrentRepository}
+                    />
+
                     {/* Test Run Selector */}
                     <TestRunSelector
-                        directories={directories}
+                        directories={filteredDirectories}
                         selectedDirectory={selectedTestRun}
                         onDirectoryChange={setSelectedTestRun}
                         loading={latestResultsLoading}
@@ -259,7 +271,7 @@ const Dashboard: React.FC = () => {
 
                     {/* Test Run Comparison */}
                     <TestRunComparison
-                        directories={directories}
+                        directories={filteredDirectories}
                         currentRun={selectedTestRun}
                         onCompareWith={handleCompareWith}
                     />
@@ -298,10 +310,15 @@ const Dashboard: React.FC = () => {
                             {/* Test Run Type Badge */}
                             {selectedTestRun && (
                                 <div className="flex items-center space-x-2">
+                                    {currentRepository && (
+                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                            📦 {currentRepository}
+                                        </span>
+                                    )}
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedTestRun.includes('sequential_') ? 'bg-blue-100 text-blue-800' :
-                                        selectedTestRun.includes('parallel_') ? 'bg-green-100 text-green-800' :
-                                            selectedTestRun.includes('individual_') ? 'bg-purple-100 text-purple-800' :
-                                                'bg-gray-100 text-gray-800'
+                                            selectedTestRun.includes('parallel_') ? 'bg-green-100 text-green-800' :
+                                                selectedTestRun.includes('individual_') ? 'bg-purple-100 text-purple-800' :
+                                                    'bg-gray-100 text-gray-800'
                                         }`}>
                                         {selectedTestRun.includes('sequential_') ? '📋 Sequential' :
                                             selectedTestRun.includes('parallel_') ? '⚡ Parallel' :
@@ -309,7 +326,7 @@ const Dashboard: React.FC = () => {
                                                     '📊 Test Run'}
                                     </span>
 
-                                    {selectedTestRun === directories[0]?.name && (
+                                    {selectedTestRun === filteredDirectories[0]?.name && (
                                         <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
                                             🆕 Latest
                                         </span>
@@ -321,6 +338,9 @@ const Dashboard: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-gray-600">
+                                    <span className="font-medium">Repository:</span> {currentRepository || 'All'}
+                                </p>
+                                <p className="text-gray-600 mt-2">
                                     <span className="font-medium">Run Time:</span> {getLastRunTime()}
                                 </p>
                                 <p className="text-gray-600 mt-2">
