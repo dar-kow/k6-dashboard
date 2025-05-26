@@ -13,6 +13,7 @@ export class TestRunnerRoutes {
       '/test',
       ValidationMiddleware.validateBody([
         { field: 'test', required: true, type: 'string', minLength: 1 },
+        { field: 'repository', required: true, type: 'string', minLength: 1 },
         {
           field: 'profile',
           required: false,
@@ -34,6 +35,7 @@ export class TestRunnerRoutes {
     router.post(
       '/all',
       ValidationMiddleware.validateBody([
+        { field: 'repository', required: true, type: 'string', minLength: 1 },
         {
           field: 'profile',
           required: false,

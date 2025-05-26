@@ -25,12 +25,14 @@ export class TestRunnerController {
       this.logger.info('Executing test', {
         test: dto.test,
         profile: dto.profile,
+        repository: dto.repository,
       });
 
       const command = new ExecuteTestCommand(
         dto.test!,
         TestExecutionMapper.validateAndMapProfile(dto.profile),
         TestExecutionMapper.validateAndMapEnvironment(dto.environment),
+        dto.repository,
         dto.customToken,
         dto.testId
       );
@@ -47,11 +49,15 @@ export class TestRunnerController {
   executeAllTests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: TestExecutionRequestDto = req.body;
-      this.logger.info('Executing all tests', { profile: dto.profile });
+      this.logger.info('Executing all tests', {
+        profile: dto.profile,
+        repository: dto.repository,
+      });
 
       const command = new ExecuteAllTestsCommand(
         TestExecutionMapper.validateAndMapProfile(dto.profile),
         TestExecutionMapper.validateAndMapEnvironment(dto.environment),
+        dto.repository,
         dto.customToken,
         dto.testId
       );
