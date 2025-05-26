@@ -9,6 +9,8 @@ interface TestResultsContextType {
     selectedDirectory: string | null;
     setSelectedDirectory: (dir: string | null) => void;
     refreshData: () => Promise<void>;
+    currentRepository: string | null;
+    setCurrentRepository: (repo: string | null) => void;
 }
 
 const TestResultsContext = createContext<TestResultsContextType>({
@@ -18,6 +20,8 @@ const TestResultsContext = createContext<TestResultsContextType>({
     selectedDirectory: null,
     setSelectedDirectory: () => { },
     refreshData: async () => { },
+    currentRepository: null,
+    setCurrentRepository: () => { },
 });
 
 export const useTestResults = () => useContext(TestResultsContext);
@@ -27,17 +31,27 @@ export const TestResultsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedDirectory, setSelectedDirectory] = useState<string | null>(null);
+    const [currentRepository, setCurrentRepository] = useState<string | null>(null);
 
     const loadData = async () => {
         try {
             setLoading(true);
             setError(null);
             const dirs = await fetchResultDirectories();
-            setDirectories(dirs);
+
+            // Sort directories by date (newest first) and handle repository-based structure
+            const sortedDirs = dirs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setDirectories(sortedDirs);
 
             // Auto-select the most recent directory if none is selected
-            if (!selectedDirectory && dirs.length > 0) {
-                setSelectedDirectory(dirs[0].name);
+            if (!selectedDirectory && sortedDirs.length > 0) {
+                setSelectedDirectory(sortedDirs[0].name);
+
+                // Extract repository from directory name if it contains '/'
+                if (sortedDirs[0].name.includes('/')) {
+                    const repoName = sortedDirs[0].name.split('/')[0];
+                    setCurrentRepository(repoName);
+                }
             }
         } catch (err) {
             console.error('Error loading test directories:', err);
@@ -47,20 +61,44 @@ export const TestResultsProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
     };
 
+    // Filter directories by current repository
+    const getFilteredDirectories = () => {
+        if (!currentRepository) return directories;
+        return directories.filter(dir => dir.name.startsWith(`${currentRepository}/`));
+    };
+
     // Initial data load
     useEffect(() => {
         loadData();
     }, []);
 
+    // Update repository when directory changes
+    useEffect(() => {
+        if (selectedDirectory && selectedDirectory.includes('/')) {
+            const repoName = selectedDirectory.split('/')[0];
+            if (repoName !== currentRepository) {
+                setCurrentRepository(repoName);
+            }
+        }
+    }, [selectedDirectory, currentRepository]);
+
     return (
         <TestResultsContext.Provider
             value={{
-                directories,
+                directories: getFilteredDirectories(),
                 loading,
                 error,
                 selectedDirectory,
-                setSelectedDirectory,
+                setSelectedDirectory: (dir) => {
+                    setSelectedDirectory(dir);
+                    if (dir && dir.includes('/')) {
+                        const repoName = dir.split('/')[0];
+                        setCurrentRepository(repoName);
+                    }
+                },
                 refreshData: loadData,
+                currentRepository,
+                setCurrentRepository,
             }}
         >
             {children}
