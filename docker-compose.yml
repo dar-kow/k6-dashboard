@@ -1,4 +1,3 @@
-# docker-compose.yml
 version: '3.8'
 
 services:
@@ -34,8 +33,12 @@ services:
     entrypoint: [ "/bin/sh", "/entrypoint.sh" ]
     command: >
       sh -c "
-        # Install bash, curl and tar
-        apk add --no-cache bash curl tar && 
+        # Install bash, curl, tar, and git (IMPORTANT!)
+        apk add --no-cache bash curl tar git && 
+        
+        # Verify git installation
+        echo 'Git version:' &&
+        git --version &&
         
         # Install k6 properly
         echo 'Installing k6...' &&
