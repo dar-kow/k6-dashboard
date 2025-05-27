@@ -21,7 +21,7 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
       const directories: TestDirectory[] = [];
       const virtualDirectories: TestDirectory[] = [];
 
-      // Check for repository-based structure
+      // TYLKO repos - usuwamy duplikację z repositories
       const reposDir = `${this.config.getK6TestsDir()}/repos`;
       const repoExists = await this.fileSystem.exists(reposDir);
 
@@ -32,26 +32,33 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
           const repoResultsExists = await this.fileSystem.exists(repoResultsPath);
 
           if (repoResultsExists) {
-            const repoEntries = await this.fileSystem.readDir(repoResultsPath);
+            try {
+              const repoEntries = await this.fileSystem.readDir(repoResultsPath);
 
-            for (const entry of repoEntries) {
-              if (entry.isDirectory()) {
-                const date = this.extractDateFromDirectoryName(entry.name);
-                directories.push(
-                  new TestDirectory(`${repo.name}/${entry.name}`, entry.path, date, 'directory')
-                );
-              } else if (entry.isFile() && entry.name.endsWith('.json')) {
-                const date = this.extractDateFromFileName(entry.name);
-                virtualDirectories.push(
-                  new TestDirectory(`${repo.name}/${entry.name}`, entry.path, date, 'virtual')
-                );
+              for (const entry of repoEntries) {
+                if (entry.isDirectory()) {
+                  const date = this.extractDateFromDirectoryName(entry.name);
+                  directories.push(
+                    new TestDirectory(`${repo.name}/${entry.name}`, entry.path, date, 'directory')
+                  );
+                } else if (entry.isFile() && entry.name.endsWith('.json')) {
+                  const date = this.extractDateFromFileName(entry.name);
+                  virtualDirectories.push(
+                    new TestDirectory(`${repo.name}/${entry.name}`, entry.path, date, 'virtual')
+                  );
+                }
               }
+            } catch (error) {
+              this.logger.warn(`Failed to read results for repository ${repo.name}`, {
+                repoName: repo.name,
+                error: (error as Error).message,
+              });
             }
           }
         }
       }
 
-      // Legacy structure
+      // Legacy structure (direct results in main directory)
       for (const entry of entries) {
         if (entry.isDirectory()) {
           const date = this.extractDateFromDirectoryName(entry.name);
@@ -70,6 +77,7 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
         realDirs: directories.length,
         virtualDirs: virtualDirectories.length,
         total: allDirs.length,
+        repoBasedDirs: directories.filter((d) => d.name.includes('/')).length,
       });
 
       return allDirs;
@@ -106,10 +114,18 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
 
       return [new TestFile(`${testName}.json`, filePath)];
     } else {
-      const entries = await this.fileSystem.readDir(filePath);
-      return entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
-        .map((entry) => new TestFile(entry.name, entry.path));
+      try {
+        const entries = await this.fileSystem.readDir(filePath);
+        return entries
+          .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+          .map((entry) => new TestFile(entry.name, entry.path));
+      } catch (error) {
+        this.logger.error('Error reading directory files', error as Error, {
+          directory,
+          filePath,
+        });
+        throw new FileNotFoundError(filePath);
+      }
     }
   }
 
@@ -209,7 +225,7 @@ export class FileSystemTestResultRepository implements ITestResultRepository {
     try {
       await this.fileSystem.mkdir(defaultPath, true);
     } catch (error) {
-      console.error(`Failed to create results directory: ${error}`);
+      this.logger.error(`Failed to create results directory: ${error}`);
     }
     return defaultPath;
   }

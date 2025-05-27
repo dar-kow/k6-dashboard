@@ -580,18 +580,46 @@ const TestRunner: React.FC = () => {
     const handleDeleteRepository = async () => {
         if (!selectedRepository) return;
 
-        try {
-            setOutput(prev => [...prev, `🗑️ Deleting repository: ${selectedRepository}...`]);
-            await deleteRepository(selectedRepository);
-            setOutput(prev => [...prev, `✅ Repository ${selectedRepository} deleted successfully`]);
+        const repoToDelete = selectedRepository;
 
+        try {
+            setOutput(prev => [...prev, `🗑️ Deleting repository: ${repoToDelete}...`]);
+            await deleteRepository(repoToDelete);
+            setOutput(prev => [...prev, `✅ Repository ${repoToDelete} deleted successfully`]);
+
+            // Clear current selections immediately
+            setSelectedRepository('');
+            setSelectedTest('');
+
+            // Refresh repositories list
             const repos = await fetchRepositories();
             setRepositories(repos);
-            setSelectedRepository(repos.length > 0 ? repos[0].name : '');
-            setSelectedTest('');
+
+            // Update global repository selector if it exists
+            if ((window as any).refreshRepositories) {
+                (window as any).refreshRepositories();
+            }
+
+            // Auto-select first available repository
+            if (repos.length > 0) {
+                const newRepo = repos[0].name;
+                setSelectedRepository(newRepo);
+                setOutput(prev => [...prev, `📦 Switched to repository: ${newRepo}`]);
+
+                // Trigger refresh of test results context
+                if (refreshData) {
+                    setTimeout(() => {
+                        refreshData();
+                    }, 1000);
+                }
+            } else {
+                setOutput(prev => [...prev, `📦 No repositories remaining`]);
+            }
+
         } catch (err: any) {
             console.error('Error deleting repository:', err);
             setError(`Failed to delete repository: ${err.message}`);
+            setOutput(prev => [...prev, `❌ Failed to delete repository: ${err.message}`]);
         }
     };
 

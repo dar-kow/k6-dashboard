@@ -13,6 +13,7 @@ export class GitRepositoryService implements IRepositoryService {
     private readonly config: IConfig,
     private readonly logger: ILogger
   ) {
+    // TYLKO repos - usuwamy duplikację
     this.reposDir = `${this.config.getK6TestsDir()}/repos`;
   }
 
@@ -41,38 +42,31 @@ export class GitRepositoryService implements IRepositoryService {
       // Create the target directory first
       await this.fileSystem.mkdir(repoPath, true);
 
-      // Git clone with explicit destination directory
-      // Use "." to clone into current directory (repoPath)
       const child = this.processExecutor.spawn('git', ['clone', repoUrl, '.'], {
-        cwd: repoPath, // Set working directory to the target path
+        cwd: repoPath,
       });
 
       return new Promise((resolve, reject) => {
         let stderr = '';
         let stdout = '';
 
-        // Collect stderr output for better error reporting
         if (child.stderr) {
           child.stderr.on('data', (data: any) => {
             stderr += data.toString();
           });
         }
 
-        // Collect stdout output for logging
         if (child.stdout) {
           child.stdout.on('data', (data: any) => {
             stdout += data.toString();
           });
         }
 
-        // Handle process errors (like git not found)
         child.on('error', (error) => {
           this.logger.error('Git process error', error, {
             repoUrl,
             repoName,
             repoPath,
-            errorCode: error.code || 'unknown',
-            errorMessage: error.message,
           });
 
           if (error.code === 'ENOENT') {
@@ -88,27 +82,17 @@ export class GitRepositoryService implements IRepositoryService {
 
         child.on('close', async (code) => {
           if (code === 0) {
-            this.logger.info('Git clone completed successfully', {
-              repoName,
-              repoPath,
-              stdout: stdout.substring(0, 500), // Log first 500 chars
-            });
+            this.logger.info('Git clone completed successfully', { repoName, repoPath });
 
-            // Verify that files were actually cloned
             try {
+              // Verify clone and create results directory
               const entries = await this.fileSystem.readDir(repoPath);
-              const files = entries.filter((e) => e.isFile()).map((e) => e.name);
-              const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
-
               this.logger.info('Repository contents after clone', {
                 repoName,
-                fileCount: files.length,
-                dirCount: dirs.length,
-                sampleFiles: files.slice(0, 5),
-                sampleDirs: dirs.slice(0, 5),
+                fileCount: entries.filter((e) => e.isFile()).length,
+                dirCount: entries.filter((e) => e.isDirectory()).length,
               });
 
-              // Ensure results directory is created
               await this.ensureResultsDirectory(repoName);
               resolve(repoPath);
             } catch (resultsError) {
@@ -116,42 +100,25 @@ export class GitRepositoryService implements IRepositoryService {
                 repoName,
                 error: (resultsError as Error).message,
               });
-              resolve(repoPath); // Still resolve since clone succeeded
+              resolve(repoPath);
             }
           } else {
             this.logger.error('Git clone failed', new Error(`Git clone exited with code ${code}`), {
               repoUrl,
               repoName,
-              repoPath,
               exitCode: code,
-              stderr: stderr.substring(0, 1000), // Log first 1000 chars of error
-              stdout: stdout.substring(0, 500),
+              stderr: stderr.substring(0, 1000),
             });
 
-            // Clean up the empty directory
-            try {
-              await this.fileSystem.stat(repoPath);
-              // Directory exists, try to remove it if empty
-              const entries = await this.fileSystem.readDir(repoPath);
-              if (entries.length === 0) {
-                // Directory is empty, we can remove it (Note: this requires additional filesystem method)
-                this.logger.debug('Cleaning up empty directory after failed clone', { repoPath });
-              }
-            } catch (cleanupError) {
-              // Ignore cleanup errors
-            }
-
-            // Provide user-friendly error messages
             let errorMessage = `Git clone failed with exit code ${code}`;
-
             if (stderr.includes('not found') || stderr.includes('does not exist')) {
-              errorMessage = `Repository not found: ${repoUrl}. Please check the URL and ensure the repository exists and is accessible.`;
+              errorMessage = `Repository not found: ${repoUrl}. Please check the URL.`;
             } else if (stderr.includes('Permission denied') || stderr.includes('authentication')) {
-              errorMessage = `Permission denied. Please check if you have access to the repository: ${repoUrl}`;
+              errorMessage = `Permission denied. Please check access to: ${repoUrl}`;
             } else if (stderr.includes('already exists')) {
-              errorMessage = `Directory already exists. Please choose a different repository name.`;
+              errorMessage = `Directory already exists. Choose a different repository name.`;
             } else if (stderr) {
-              errorMessage = `Git clone failed: ${stderr.split('\n')[0]}`; // First line of error
+              errorMessage = `Git clone failed: ${stderr.split('\n')[0]}`;
             }
 
             reject(new Error(errorMessage));
@@ -172,7 +139,6 @@ export class GitRepositoryService implements IRepositoryService {
     const repoPath = `${this.reposDir}/${repoName}`;
 
     try {
-      // Check if repository exists
       const exists = await this.fileSystem.exists(repoPath);
       if (!exists) {
         throw new Error(`Repository '${repoName}' not found. Please clone it first.`);
@@ -188,7 +154,6 @@ export class GitRepositoryService implements IRepositoryService {
         let stderr = '';
         let stdout = '';
 
-        // Collect output for logging
         if (child.stderr) {
           child.stderr.on('data', (data: any) => {
             stderr += data.toString();
@@ -203,44 +168,24 @@ export class GitRepositoryService implements IRepositoryService {
 
         child.on('error', (error) => {
           this.logger.error('Git pull process error', error, { repoName, repoPath });
-
-          if (error.code === 'ENOENT') {
-            reject(new Error('Git is not installed or not found in PATH.'));
-          } else {
-            reject(new Error(`Git process error: ${error.message}`));
-          }
+          reject(new Error(`Git process error: ${error.message}`));
         });
 
         child.on('close', (code) => {
           if (code === 0) {
-            this.logger.info('Git pull completed successfully', {
-              repoName,
-              stdout: stdout.substring(0, 500),
-            });
+            this.logger.info('Git pull completed successfully', { repoName });
             resolve();
           } else {
-            this.logger.error('Git pull failed', new Error(`Git pull exited with code ${code}`), {
-              repoName,
-              repoPath,
-              exitCode: code,
-              stderr: stderr.substring(0, 1000),
-              stdout: stdout.substring(0, 500),
-            });
-
-            let errorMessage = `Git pull failed with exit code ${code}`;
-            if (stderr) {
-              errorMessage = `Git pull failed: ${stderr.split('\n')[0]}`;
-            }
-
+            this.logger.error('Git pull failed', new Error(`Exit code ${code}`), { repoName });
+            const errorMessage = stderr
+              ? `Git pull failed: ${stderr.split('\n')[0]}`
+              : `Git pull failed with exit code ${code}`;
             reject(new Error(errorMessage));
           }
         });
       });
     } catch (error) {
-      this.logger.error('Failed to update repository', error as Error, {
-        repoName,
-        repoPath,
-      });
+      this.logger.error('Failed to update repository', error as Error, { repoName });
       throw error;
     }
   }
@@ -249,7 +194,6 @@ export class GitRepositoryService implements IRepositoryService {
     const repoPath = `${this.reposDir}/${repoName}`;
 
     try {
-      // Check if repository exists
       const exists = await this.fileSystem.exists(repoPath);
       if (!exists) {
         throw new Error(`Repository '${repoName}' not found.`);
@@ -258,7 +202,6 @@ export class GitRepositoryService implements IRepositoryService {
       this.logger.info('Starting repository deletion', { repoName, repoPath });
 
       // Use rm -rf to delete the repository directory
-      // This is platform dependent - for production consider using a proper directory deletion method
       const child = this.processExecutor.spawn('rm', ['-rf', repoPath], {
         cwd: this.reposDir,
       });
@@ -273,35 +216,25 @@ export class GitRepositoryService implements IRepositoryService {
         }
 
         child.on('error', (error) => {
-          this.logger.error('Repository deletion process error', error, { repoName, repoPath });
+          this.logger.error('Repository deletion process error', error, { repoName });
           reject(new Error(`Failed to delete repository: ${error.message}`));
         });
 
         child.on('close', (code) => {
           if (code === 0) {
-            this.logger.info('Repository deleted successfully', { repoName, repoPath });
+            this.logger.info('Repository deleted successfully', { repoName });
             resolve();
           } else {
-            this.logger.error(
-              'Repository deletion failed',
-              new Error(`rm command exited with code ${code}`),
-              {
-                repoName,
-                repoPath,
-                exitCode: code,
-                stderr: stderr.substring(0, 1000),
-              }
-            );
-
+            this.logger.error('Repository deletion failed', new Error(`Exit code ${code}`), {
+              repoName,
+              stderr,
+            });
             reject(new Error(`Failed to delete repository: ${stderr || `Exit code ${code}`}`));
           }
         });
       });
     } catch (error) {
-      this.logger.error('Failed to delete repository', error as Error, {
-        repoName,
-        repoPath,
-      });
+      this.logger.error('Failed to delete repository', error as Error, { repoName });
       throw error;
     }
   }
@@ -334,16 +267,12 @@ export class GitRepositoryService implements IRepositoryService {
       }
 
       const content = await this.fileSystem.readFile(configPath, 'utf-8');
-
-      // Enhanced parsing for env.js files
       const config = this.parseEnvJsFile(content.toString(), repoName);
 
       if (config) {
         this.logger.debug('Loaded repository config', {
           repoName,
           configKeys: Object.keys(config),
-          hostsCount: config.HOSTS ? Object.keys(config.HOSTS).length : 0,
-          tokensCount: config.TOKENS ? Object.keys(config.TOKENS).length : 0,
         });
       }
 
@@ -371,10 +300,10 @@ export class GitRepositoryService implements IRepositoryService {
         HOSTS: {},
         TOKENS: {},
         LOAD_PROFILES: {},
-        console: { log: () => {}, warn: () => {}, error: () => {} }, // Disable console in eval
+        console: { log: () => {}, warn: () => {}, error: () => {} },
       };
 
-      // Use Function constructor instead of eval for better isolation
+      // Use Function constructor for better isolation
       const func = new Function(
         'HOSTS',
         'TOKENS',
@@ -385,7 +314,6 @@ export class GitRepositoryService implements IRepositoryService {
 
       const result = func(context.HOSTS, context.TOKENS, context.LOAD_PROFILES, context.console);
 
-      // Validate the result structure
       if (typeof result === 'object' && result !== null) {
         return {
           HOSTS: result.HOSTS || {},
@@ -397,12 +325,7 @@ export class GitRepositoryService implements IRepositoryService {
       this.logger.warn('Invalid config structure returned from env.js', { repoName });
       return null;
     } catch (error) {
-      this.logger.error('Failed to parse env.js file', error as Error, {
-        repoName,
-        contentPreview: content.substring(0, 200),
-      });
-
-      // Try a simpler regex-based parsing as fallback
+      this.logger.error('Failed to parse env.js file', error as Error, { repoName });
       return this.parseEnvJsWithRegex(content, repoName);
     }
   }
@@ -425,47 +348,9 @@ export class GitRepositoryService implements IRepositoryService {
         }
       }
 
-      // Extract TOKENS object (more complex structure)
-      const tokensMatch = content.match(/const\s+TOKENS\s*=\s*(\{[\s\S]*?\n\};)/);
-      if (tokensMatch) {
-        try {
-          // This is a simplified approach - might need more sophisticated parsing
-          const tokensStr = tokensMatch[1]
-            .replace(/'/g, '"')
-            .replace(/,\s*}/g, '}')
-            .replace(/}\s*;/, '}');
-          result.TOKENS = JSON.parse(tokensStr);
-        } catch (e) {
-          this.logger.warn('Failed to parse TOKENS from env.js', { repoName });
-        }
-      }
-
-      // Extract LOAD_PROFILES object
-      const profilesMatch = content.match(/const\s+LOAD_PROFILES\s*=\s*(\{[\s\S]*?\n\};)/);
-      if (profilesMatch) {
-        try {
-          const profilesStr = profilesMatch[1]
-            .replace(/'/g, '"')
-            .replace(/,\s*}/g, '}')
-            .replace(/}\s*;/, '}');
-          result.LOAD_PROFILES = JSON.parse(profilesStr);
-        } catch (e) {
-          this.logger.warn('Failed to parse LOAD_PROFILES from env.js', { repoName });
-        }
-      }
-
-      this.logger.debug('Parsed env.js with regex fallback', {
-        repoName,
-        hasHosts: Object.keys(result.HOSTS).length > 0,
-        hasTokens: Object.keys(result.TOKENS).length > 0,
-        hasProfiles: Object.keys(result.LOAD_PROFILES).length > 0,
-      });
-
       return result;
     } catch (error) {
-      this.logger.error('Regex parsing of env.js also failed', error as Error, {
-        repoName,
-      });
+      this.logger.error('Regex parsing of env.js also failed', error as Error, { repoName });
       return null;
     }
   }
