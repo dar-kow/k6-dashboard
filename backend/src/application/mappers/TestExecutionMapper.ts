@@ -8,6 +8,7 @@ export class TestExecutionMapper {
       environment: execution.environment as string,
       repository: execution.repository || 'default',
       hasCustomToken: !!execution.customToken?.trim(),
+      hasCustomEndpoint: !!execution.customEndpoint?.trim(), // NEW: Custom endpoint indicator
     };
 
     if (execution.testName !== 'all-tests') {

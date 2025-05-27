@@ -9,6 +9,7 @@ export class TestExecution {
     public readonly environment: Environment,
     public readonly repository?: string,
     public readonly customToken?: string,
+    public readonly customEndpoint?: string, // NEW: Custom endpoint support
     public readonly startTime: Date = new Date(),
     public status: TestExecutionStatus = TestExecutionStatus.RUNNING
   ) {}

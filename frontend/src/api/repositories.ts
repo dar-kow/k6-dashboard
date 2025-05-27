@@ -54,6 +54,15 @@ export const updateRepository = async (name: string): Promise<void> => {
   }
 };
 
+export const deleteRepository = async (name: string): Promise<void> => {
+  try {
+    await apiClient.delete(`/repositories/${name}`);
+  } catch (error) {
+    console.error("Error deleting repository:", error);
+    throw error;
+  }
+};
+
 export const getRepositoryConfig = async (name: string): Promise<any> => {
   try {
     const response = await apiClient.get(`/repositories/${name}/config`);

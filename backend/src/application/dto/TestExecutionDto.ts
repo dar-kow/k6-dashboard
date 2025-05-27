@@ -4,6 +4,7 @@ export interface TestExecutionRequestDto {
   environment?: string;
   repository: string;
   customToken?: string;
+  customEndpoint?: string; // NEW: Support for custom endpoints
   testId?: string;
 }
 
@@ -16,6 +17,7 @@ export interface TestExecutionResponseDto {
     environment: string;
     repository: string;
     hasCustomToken: boolean;
+    hasCustomEndpoint: boolean; // NEW: Indicate if custom endpoint is used
   };
 }
 

@@ -180,6 +180,51 @@ export class RepositoryController {
     }
   };
 
+  deleteRepository = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { name } = req.params;
+
+      if (!name) {
+        return res.status(400).json({
+          error: 'Repository name is required',
+        });
+      }
+
+      this.logger.info('Starting repository delete operation', { name });
+
+      await this.repositoryService.deleteRepository(name);
+
+      this.logger.info('Repository deleted successfully', { name });
+
+      res.json({
+        success: true,
+        message: 'Repository deleted successfully',
+        repository: {
+          name,
+          deletedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to delete repository', error as Error, {
+        name: req.params?.name,
+      });
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete repository',
+        details: errorMessage,
+        troubleshooting: [
+          'Ensure the repository exists',
+          'Check if you have write permissions to the repositories directory',
+          'Make sure no processes are using files from this repository',
+          'Repository might already be deleted or never existed',
+        ],
+      });
+    }
+  };
+
   getRepositoryConfig = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name } = req.params;

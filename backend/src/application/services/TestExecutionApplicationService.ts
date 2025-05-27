@@ -17,6 +17,9 @@ import { TestExecutionError } from '../../core';
 export class K6TestExecutionService implements ITestExecutionService {
   private readonly runningProcesses = new Map<string, any>();
   private readonly k6TestsDir: string;
+  private readonly errorThrottleMap = new Map<string, { count: number; lastSent: number }>();
+  private readonly ERROR_THROTTLE_MS = 1000; // Send max 1 error per second per test
+  private readonly MAX_ERROR_COUNT = 50; // Max 50 errors total per test
 
   constructor(
     private readonly processExecutor: IProcessExecutor,
@@ -36,7 +39,8 @@ export class K6TestExecutionService implements ITestExecutionService {
       command.profile,
       command.environment,
       command.repository,
-      command.customToken
+      command.customToken,
+      command.customEndpoint
     );
 
     try {
@@ -100,7 +104,8 @@ export class K6TestExecutionService implements ITestExecutionService {
       command.profile,
       command.environment,
       command.repository,
-      command.customToken
+      command.customToken,
+      command.customEndpoint
     );
 
     try {
@@ -155,6 +160,7 @@ export class K6TestExecutionService implements ITestExecutionService {
         }, 5000);
 
         this.runningProcesses.delete(testId);
+        this.errorThrottleMap.delete(testId); // Clean up throttle data
         await this.notificationService.notifyTestStopped(testId);
         return true;
       }
@@ -183,11 +189,63 @@ export class K6TestExecutionService implements ITestExecutionService {
       K6_CUSTOM_TOKEN: command.customToken || '',
     };
 
-    if (repoConfig?.TOKENS?.[command.environment]) {
-      baseEnv.K6_TOKEN = command.customToken || repoConfig.TOKENS[command.environment].USER;
+    // Add repository config to environment
+    if (repoConfig) {
+      // Use custom endpoint if provided, otherwise use repository config
+      if (command.customEndpoint) {
+        baseEnv.K6_HOST = command.customEndpoint;
+        baseEnv.K6_CUSTOM_HOST = 'true'; // Flag to indicate custom endpoint is used
+      } else if (repoConfig.HOSTS && repoConfig.HOSTS[command.environment]) {
+        baseEnv.K6_HOST = repoConfig.HOSTS[command.environment];
+      }
+
+      // Add tokens
+      if (repoConfig.TOKENS && repoConfig.TOKENS[command.environment]) {
+        if (!command.customToken) {
+          baseEnv.K6_TOKEN = repoConfig.TOKENS[command.environment].USER || '';
+        }
+      }
+
+      // Add load profiles
+      if (repoConfig.LOAD_PROFILES && repoConfig.LOAD_PROFILES[command.profile]) {
+        const profile = repoConfig.LOAD_PROFILES[command.profile];
+        baseEnv.K6_VUS = profile.vus?.toString() || '10';
+        baseEnv.K6_DURATION = profile.duration || '60s';
+        baseEnv.K6_RAMP_UP = profile.rampUp || '10s';
+      }
+    } else if (command.customEndpoint) {
+      // Even without repo config, we can still use custom endpoint
+      baseEnv.K6_HOST = command.customEndpoint;
+      baseEnv.K6_CUSTOM_HOST = 'true';
     }
 
     return baseEnv;
+  }
+
+  private shouldSendError(testId: string): boolean {
+    const now = Date.now();
+    const throttleData = this.errorThrottleMap.get(testId);
+
+    if (!throttleData) {
+      this.errorThrottleMap.set(testId, { count: 1, lastSent: now });
+      return true;
+    }
+
+    // Don't send if we've hit the max error count
+    if (throttleData.count >= this.MAX_ERROR_COUNT) {
+      return false;
+    }
+
+    // Don't send if we're still in throttle period
+    if (now - throttleData.lastSent < this.ERROR_THROTTLE_MS) {
+      throttleData.count++;
+      return false;
+    }
+
+    // Update throttle data and allow sending
+    throttleData.count++;
+    throttleData.lastSent = now;
+    return true;
   }
 
   private setupProcessHandlers(
@@ -207,15 +265,29 @@ export class K6TestExecutionService implements ITestExecutionService {
 
     process.stderr?.on('data', (data: Buffer) => {
       const lines = this.processK6Output(data.toString());
-      lines.forEach(async (line) => {
-        if (line) {
-          await this.notificationService.notifyTestOutput(execution.testId, TestOutput.error(line));
-        }
-      });
+
+      // Only send error notifications if throttling allows
+      if (this.shouldSendError(execution.testId)) {
+        lines.forEach(async (line) => {
+          if (line) {
+            await this.notificationService.notifyTestOutput(
+              execution.testId,
+              TestOutput.error(line)
+            );
+          }
+        });
+      } else {
+        // Still log errors but don't spam WebSocket
+        this.logger.debug('Throttled error output', {
+          testId: execution.testId,
+          errorCount: this.errorThrottleMap.get(execution.testId)?.count,
+        });
+      }
     });
 
     process.on('close', async (code: number, signal: string) => {
       this.runningProcesses.delete(execution.testId);
+      this.errorThrottleMap.delete(execution.testId); // Clean up throttle data
 
       if (signal === 'SIGTERM' || signal === 'SIGKILL') {
         execution.stop();
@@ -249,6 +321,7 @@ export class K6TestExecutionService implements ITestExecutionService {
         repository,
       });
       this.runningProcesses.delete(execution.testId);
+      this.errorThrottleMap.delete(execution.testId);
 
       const result = TestExecutionResult.failure(-1, error);
       execution.complete(result);
@@ -272,15 +345,23 @@ export class K6TestExecutionService implements ITestExecutionService {
 
     process.stderr?.on('data', (data: Buffer) => {
       const lines = this.processK6Output(data.toString());
-      lines.forEach(async (line) => {
-        if (line) {
-          await this.notificationService.notifyTestOutput(execution.testId, TestOutput.error(line));
-        }
-      });
+
+      // Apply throttling for sequential tests too
+      if (this.shouldSendError(execution.testId)) {
+        lines.forEach(async (line) => {
+          if (line) {
+            await this.notificationService.notifyTestOutput(
+              execution.testId,
+              TestOutput.error(line)
+            );
+          }
+        });
+      }
     });
 
     process.on('close', async (code: number, signal: string) => {
       this.runningProcesses.delete(execution.testId);
+      this.errorThrottleMap.delete(execution.testId);
 
       if (signal === 'SIGTERM' || signal === 'SIGKILL') {
         execution.stop();
@@ -335,6 +416,14 @@ export class K6TestExecutionService implements ITestExecutionService {
       )
     );
 
+    // NEW: Show custom endpoint info
+    if (execution.customEndpoint) {
+      await this.notificationService.notifyTestOutput(
+        execution.testId,
+        TestOutput.log(`🔗 Custom Endpoint: ${execution.customEndpoint}`)
+      );
+    }
+
     await this.notificationService.notifyTestOutput(
       execution.testId,
       TestOutput.log(`⏰ Started at: ${this.generateReadableTimestamp()} (Poland time)`)
@@ -367,6 +456,14 @@ export class K6TestExecutionService implements ITestExecutionService {
         }`
       )
     );
+
+    // NEW: Show custom endpoint info
+    if (execution.customEndpoint) {
+      await this.notificationService.notifyTestOutput(
+        execution.testId,
+        TestOutput.log(`🔗 Custom Endpoint: ${execution.customEndpoint}`)
+      );
+    }
 
     await this.notificationService.notifyTestOutput(
       execution.testId,

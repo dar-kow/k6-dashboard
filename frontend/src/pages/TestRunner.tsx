@@ -3,7 +3,7 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import TerminalOutput from '../components/TerminalOutput';
 import { useTestResults } from '../context/TestResultContext';
-import { fetchRepositories, cloneRepository, updateRepository, Repository } from '../api/repositories';
+import { fetchRepositories, cloneRepository, updateRepository, deleteRepository, Repository } from '../api/repositories';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
 const BASE_URL = API_URL.replace('/api', '');
@@ -11,6 +11,7 @@ const BASE_URL = API_URL.replace('/api', '');
 interface EnvironmentConfig {
     environment: 'PROD' | 'DEV';
     customToken: string;
+    customEndpoints: Record<string, string>; // PROD/DEV -> endpoint
     repository: string;
 }
 
@@ -143,6 +144,87 @@ const TokenConfigModal: React.FC<{
     );
 };
 
+const EndpointsConfigModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (endpoints: Record<string, string>) => void;
+    currentEndpoints: Record<string, string>;
+}> = ({ isOpen, onClose, onSave, currentEndpoints }) => {
+    const [endpoints, setEndpoints] = useState(currentEndpoints);
+
+    useEffect(() => {
+        setEndpoints(currentEndpoints);
+    }, [currentEndpoints]);
+
+    if (!isOpen) return null;
+
+    const handleSave = () => {
+        onSave(endpoints);
+        onClose();
+    };
+
+    const updateEndpoint = (env: string, value: string) => {
+        setEndpoints(prev => ({ ...prev, [env]: value }));
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+                <h3 className="text-lg font-semibold mb-4">Configure Custom Endpoints</h3>
+
+                <div className="space-y-4 mb-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            🔵 PROD Environment Endpoint
+                        </label>
+                        <input
+                            type="url"
+                            className="w-full p-3 border border-gray-300 rounded-md text-sm"
+                            value={endpoints.PROD || ''}
+                            onChange={(e) => updateEndpoint('PROD', e.target.value)}
+                            placeholder="https://api.production.com"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            🟠 DEV Environment Endpoint
+                        </label>
+                        <input
+                            type="url"
+                            className="w-full p-3 border border-gray-300 rounded-md text-sm"
+                            value={endpoints.DEV || ''}
+                            onChange={(e) => updateEndpoint('DEV', e.target.value)}
+                            placeholder="https://api.development.com"
+                        />
+                    </div>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded-md mb-4">
+                    <p className="text-xs text-blue-700">
+                        💡 <strong>Custom endpoints override repository config.</strong> Leave empty to use repository's default endpoints from env.js file.
+                    </p>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                        Save Endpoints
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const StopConfirmationModal: React.FC<{
     isOpen: boolean;
     onConfirm: () => void;
@@ -178,6 +260,48 @@ const StopConfirmationModal: React.FC<{
     );
 };
 
+const DeleteConfirmationModal: React.FC<{
+    isOpen: boolean;
+    onConfirm: () => void;
+    onCancel: () => void;
+    repositoryName: string;
+}> = ({ isOpen, onConfirm, onCancel, repositoryName }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                <h3 className="text-lg font-semibold mb-4 text-red-600">🗑️ Delete Repository</h3>
+
+                <p className="text-gray-700 mb-4">
+                    Are you sure you want to permanently delete the repository:
+                </p>
+                <div className="bg-red-50 p-3 rounded-md mb-4">
+                    <p className="font-mono text-red-800 font-medium">{repositoryName}</p>
+                </div>
+                <p className="text-gray-700 mb-6 text-sm">
+                    ⚠️ This will delete all test files and results. This action cannot be undone.
+                </p>
+
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={onCancel}
+                        className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    >
+                        🗑️ Delete Repository
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const TestRunner: React.FC = () => {
     const { refreshData } = useTestResults();
     const [repositories, setRepositories] = useState<Repository[]>([]);
@@ -192,10 +316,13 @@ const TestRunner: React.FC = () => {
     const [showStopConfirmation, setShowStopConfirmation] = useState<boolean>(false);
     const [runningTestId, setRunningTestId] = useState<string | null>(null);
     const [showCloneModal, setShowCloneModal] = useState<boolean>(false);
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false);
 
     const [environment, setEnvironment] = useState<'PROD' | 'DEV'>('PROD');
     const [customToken, setCustomToken] = useState<string>('');
+    const [customEndpoints, setCustomEndpoints] = useState<Record<string, string>>({});
     const [isTokenModalOpen, setIsTokenModalOpen] = useState<boolean>(false);
+    const [isEndpointsModalOpen, setIsEndpointsModalOpen] = useState<boolean>(false);
 
     const socketRef = useRef<Socket | null>(null);
 
@@ -206,6 +333,7 @@ const TestRunner: React.FC = () => {
                 const config: EnvironmentConfig = JSON.parse(savedConfig);
                 setEnvironment(config.environment || 'PROD');
                 setCustomToken(config.customToken || '');
+                setCustomEndpoints(config.customEndpoints || {});
                 setSelectedRepository(config.repository || '');
             } catch (err) {
                 console.error('Error parsing saved config:', err);
@@ -213,10 +341,11 @@ const TestRunner: React.FC = () => {
         }
     }, []);
 
-    const saveConfig = (env: 'PROD' | 'DEV', token: string, repo: string) => {
+    const saveConfig = (env: 'PROD' | 'DEV', token: string, endpoints: Record<string, string>, repo: string) => {
         const config: EnvironmentConfig = {
             environment: env,
             customToken: token,
+            customEndpoints: endpoints,
             repository: repo
         };
         localStorage.setItem('k6-dashboard-config', JSON.stringify(config));
@@ -224,21 +353,28 @@ const TestRunner: React.FC = () => {
 
     const handleEnvironmentChange = (env: 'PROD' | 'DEV') => {
         setEnvironment(env);
-        saveConfig(env, customToken, selectedRepository);
+        saveConfig(env, customToken, customEndpoints, selectedRepository);
         setOutput(prev => [...prev, `🔄 Switched to ${env} environment`]);
     };
 
     const handleRepositoryChange = (repo: string) => {
         setSelectedRepository(repo);
-        saveConfig(environment, customToken, repo);
+        saveConfig(environment, customToken, customEndpoints, repo);
         setSelectedTest('');
         setOutput(prev => [...prev, `📦 Selected repository: ${repo}`]);
     };
 
     const handleTokenSave = (token: string) => {
         setCustomToken(token);
-        saveConfig(environment, token, selectedRepository);
+        saveConfig(environment, token, customEndpoints, selectedRepository);
         setOutput(prev => [...prev, `🔑 Custom token ${token ? 'updated' : 'cleared'}`]);
+    };
+
+    const handleEndpointsSave = (endpoints: Record<string, string>) => {
+        setCustomEndpoints(endpoints);
+        saveConfig(environment, customToken, endpoints, selectedRepository);
+        const endpointCount = Object.keys(endpoints).filter(k => endpoints[k]).length;
+        setOutput(prev => [...prev, `🌐 Custom endpoints ${endpointCount > 0 ? 'updated' : 'cleared'} (${endpointCount} endpoints)`]);
     };
 
     useEffect(() => {
@@ -321,36 +457,41 @@ const TestRunner: React.FC = () => {
         };
     }, [refreshData]);
 
+    const buildTestRequest = (testName?: string) => {
+        const testId = testName
+            ? `${selectedRepository}-${testName}-${Date.now()}`
+            : `${selectedRepository}-all-tests-${Date.now()}`;
+
+        return {
+            testId,
+            test: testName,
+            repository: selectedRepository,
+            profile: selectedProfile,
+            environment: environment,
+            customToken: customToken,
+            customEndpoint: customEndpoints[environment] // Pass custom endpoint if set
+        };
+    };
+
     const runTest = async () => {
         if (!selectedTest || !selectedRepository) return;
 
-        const testId = `${selectedRepository}-${selectedTest}-${Date.now()}`;
-        setRunningTestId(testId);
+        const requestData = buildTestRequest(selectedTest);
+        setRunningTestId(requestData.testId);
         setIsRunning(true);
         setOutput([`🚀 Starting test: ${selectedTest} from ${selectedRepository} with profile: ${selectedProfile} on ${environment}`]);
+        if (customEndpoints[environment]) {
+            setOutput(prev => [...prev, `🌐 Using custom endpoint: ${customEndpoints[environment]}`]);
+        }
         setError(null);
         setAutoScroll(true);
 
         try {
             if (socketRef.current && socketConnected) {
-                socketRef.current.emit('test_request', {
-                    testId: testId,
-                    test: selectedTest,
-                    repository: selectedRepository,
-                    profile: selectedProfile,
-                    environment: environment,
-                    customToken: customToken
-                });
+                socketRef.current.emit('test_request', requestData);
             }
 
-            await axios.post(`${API_URL}/run/test`, {
-                testId: testId,
-                test: selectedTest,
-                repository: selectedRepository,
-                profile: selectedProfile,
-                environment: environment,
-                customToken: customToken
-            });
+            await axios.post(`${API_URL}/run/test`, requestData);
         } catch (err: any) {
             console.error('Error starting test:', err);
             setError(`Failed to start test execution: ${err.message}`);
@@ -362,32 +503,22 @@ const TestRunner: React.FC = () => {
     const runAllTests = async () => {
         if (!selectedRepository) return;
 
-        const testId = `${selectedRepository}-all-tests-${Date.now()}`;
-        setRunningTestId(testId);
+        const requestData = buildTestRequest();
+        setRunningTestId(requestData.testId);
         setIsRunning(true);
         setOutput([`🚀 Starting all tests from ${selectedRepository} sequentially with profile: ${selectedProfile} on ${environment}`]);
+        if (customEndpoints[environment]) {
+            setOutput(prev => [...prev, `🌐 Using custom endpoint: ${customEndpoints[environment]}`]);
+        }
         setError(null);
         setAutoScroll(true);
 
         try {
             if (socketRef.current && socketConnected) {
-                socketRef.current.emit('test_request', {
-                    testId: testId,
-                    test: 'all',
-                    repository: selectedRepository,
-                    profile: selectedProfile,
-                    environment: environment,
-                    customToken: customToken
-                });
+                socketRef.current.emit('test_request', requestData);
             }
 
-            await axios.post(`${API_URL}/run/all`, {
-                testId: testId,
-                repository: selectedRepository,
-                profile: selectedProfile,
-                environment: environment,
-                customToken: customToken
-            });
+            await axios.post(`${API_URL}/run/all`, requestData);
         } catch (err: any) {
             console.error('Error starting tests:', err);
             setError(`Failed to start test execution: ${err.message}`);
@@ -446,9 +577,32 @@ const TestRunner: React.FC = () => {
         }
     };
 
+    const handleDeleteRepository = async () => {
+        if (!selectedRepository) return;
+
+        try {
+            setOutput(prev => [...prev, `🗑️ Deleting repository: ${selectedRepository}...`]);
+            await deleteRepository(selectedRepository);
+            setOutput(prev => [...prev, `✅ Repository ${selectedRepository} deleted successfully`]);
+
+            const repos = await fetchRepositories();
+            setRepositories(repos);
+            setSelectedRepository(repos.length > 0 ? repos[0].name : '');
+            setSelectedTest('');
+        } catch (err: any) {
+            console.error('Error deleting repository:', err);
+            setError(`Failed to delete repository: ${err.message}`);
+        }
+    };
+
     const handleStopConfirmation = () => {
         setShowStopConfirmation(false);
         stopTest();
+    };
+
+    const handleDeleteConfirmation = () => {
+        setShowDeleteConfirmation(false);
+        handleDeleteRepository();
     };
 
     const clearOutput = () => {
@@ -480,6 +634,17 @@ const TestRunner: React.FC = () => {
     const availableProfiles = selectedRepo?.config?.LOAD_PROFILES ? Object.keys(selectedRepo.config.LOAD_PROFILES) : ['LIGHT', 'MEDIUM', 'HEAVY'];
     const availableEnvironments = selectedRepo?.config?.HOSTS ? Object.keys(selectedRepo.config.HOSTS) : ['PROD', 'DEV'];
 
+    // Get effective endpoint (custom or from repo config)
+    const getEffectiveEndpoint = (env: 'PROD' | 'DEV') => {
+        if (customEndpoints[env]) {
+            return customEndpoints[env];
+        }
+        if (selectedRepo?.config?.HOSTS?.[env]) {
+            return selectedRepo.config.HOSTS[env];
+        }
+        return `No endpoint configured for ${env}`;
+    };
+
     return (
         <div>
             <h1 className="text-3xl font-bold mb-6">Test Runner</h1>
@@ -494,7 +659,7 @@ const TestRunner: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Repository & Test Configuration</h2>
 
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
                         <div className="flex items-center space-x-2">
                             <span className="text-sm font-medium text-gray-700">Environment:</span>
                             <div className="flex bg-gray-100 rounded-md p-1">
@@ -508,11 +673,22 @@ const TestRunner: React.FC = () => {
                                             }`}
                                         disabled={isRunning}
                                     >
-                                        {env}
+                                        {env === 'PROD' ? '🔵' : '🟠'} {env}
                                     </button>
                                 ))}
                             </div>
                         </div>
+
+                        <button
+                            onClick={() => setIsEndpointsModalOpen(true)}
+                            className="flex items-center space-x-1 px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                            disabled={isRunning}
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
+                            </svg>
+                            <span>{Object.keys(customEndpoints).some(k => customEndpoints[k]) ? 'Custom Endpoints' : 'Set Endpoints'}</span>
+                        </button>
 
                         <button
                             onClick={() => setIsTokenModalOpen(true)}
@@ -537,7 +713,8 @@ const TestRunner: React.FC = () => {
 
                             <div className="text-sm text-gray-600">
                                 <span className="font-medium">Target:</span> {environment}
-                                {customToken && <span className="ml-2 text-green-600">• Custom Token Active</span>}
+                                {customEndpoints[environment] && <span className="ml-2 text-purple-600">• Custom Endpoint</span>}
+                                {customToken && <span className="ml-2 text-green-600">• Custom Token</span>}
                                 {selectedRepository && <span className="ml-2 text-blue-600">• Repo: {selectedRepository}</span>}
                             </div>
                         </div>
@@ -586,14 +763,24 @@ const TestRunner: React.FC = () => {
                                 ))}
                             </select>
                             {selectedRepository && (
-                                <button
-                                    onClick={() => handleUpdateRepository(selectedRepository)}
-                                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-                                    disabled={isRunning}
-                                    title="Update repository"
-                                >
-                                    🔄
-                                </button>
+                                <div className="flex space-x-1">
+                                    <button
+                                        onClick={() => handleUpdateRepository(selectedRepository)}
+                                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                                        disabled={isRunning}
+                                        title="Update repository"
+                                    >
+                                        🔄
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDeleteConfirmation(true)}
+                                        className="px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+                                        disabled={isRunning}
+                                        title="Delete repository"
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -629,6 +816,25 @@ const TestRunner: React.FC = () => {
                                 </option>
                             ))}
                         </select>
+                    </div>
+                </div>
+
+                {/* Endpoint Configuration Display */}
+                <div className="mb-6 p-3 bg-gray-50 rounded-md">
+                    <div className="text-sm text-gray-700">
+                        <p className="font-medium mb-2">🌐 Current Endpoint Configuration:</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <span className="font-medium">🔵 PROD:</span>
+                                <span className="ml-2 font-mono text-xs">{getEffectiveEndpoint('PROD')}</span>
+                                {customEndpoints.PROD && <span className="ml-2 text-purple-600 text-xs">• Custom</span>}
+                            </div>
+                            <div>
+                                <span className="font-medium">🟠 DEV:</span>
+                                <span className="ml-2 font-mono text-xs">{getEffectiveEndpoint('DEV')}</span>
+                                {customEndpoints.DEV && <span className="ml-2 text-purple-600 text-xs">• Custom</span>}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -708,6 +914,7 @@ const TestRunner: React.FC = () => {
                     <p>📦 <strong>Repository:</strong> <code className="bg-gray-200 px-1 rounded">{selectedRepository || 'None selected'}</code></p>
                     <p>📁 <strong>Results location:</strong> <code className="bg-gray-200 px-1 rounded">k6-tests/repos/{selectedRepository}/results/</code></p>
                     <p>🌐 <strong>Environment:</strong> Running tests against <span className={`font-medium ${environment === 'PROD' ? 'text-blue-600' : 'text-orange-600'}`}>{environment}</span> environment</p>
+                    <p>🎯 <strong>Target:</strong> <code className="bg-gray-200 px-1 rounded text-xs">{getEffectiveEndpoint(environment)}</code></p>
                     {isRunning && <p>⚠️ <strong>Running:</strong> Use STOP button above to terminate test execution</p>}
                 </div>
 
@@ -731,10 +938,24 @@ const TestRunner: React.FC = () => {
                 currentToken={customToken}
             />
 
+            <EndpointsConfigModal
+                isOpen={isEndpointsModalOpen}
+                onClose={() => setIsEndpointsModalOpen(false)}
+                onSave={handleEndpointsSave}
+                currentEndpoints={customEndpoints}
+            />
+
             <StopConfirmationModal
                 isOpen={showStopConfirmation}
                 onConfirm={handleStopConfirmation}
                 onCancel={() => setShowStopConfirmation(false)}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={showDeleteConfirmation}
+                onConfirm={handleDeleteConfirmation}
+                onCancel={() => setShowDeleteConfirmation(false)}
+                repositoryName={selectedRepository}
             />
         </div>
     );

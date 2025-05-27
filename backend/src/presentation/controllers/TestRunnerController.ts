@@ -26,6 +26,7 @@ export class TestRunnerController {
         test: dto.test,
         profile: dto.profile,
         repository: dto.repository,
+        hasCustomEndpoint: !!dto.customEndpoint,
       });
 
       const command = new ExecuteTestCommand(
@@ -34,6 +35,7 @@ export class TestRunnerController {
         TestExecutionMapper.validateAndMapEnvironment(dto.environment),
         dto.repository,
         dto.customToken,
+        dto.customEndpoint, // NEW: Pass custom endpoint
         dto.testId
       );
 
@@ -52,6 +54,7 @@ export class TestRunnerController {
       this.logger.info('Executing all tests', {
         profile: dto.profile,
         repository: dto.repository,
+        hasCustomEndpoint: !!dto.customEndpoint,
       });
 
       const command = new ExecuteAllTestsCommand(
@@ -59,6 +62,7 @@ export class TestRunnerController {
         TestExecutionMapper.validateAndMapEnvironment(dto.environment),
         dto.repository,
         dto.customToken,
+        dto.customEndpoint, // NEW: Pass custom endpoint
         dto.testId
       );
 

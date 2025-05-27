@@ -27,6 +27,7 @@ export class TestRunnerRoutes {
           allowedValues: Object.values(Environment),
         },
         { field: 'customToken', required: false, type: 'string' },
+        { field: 'customEndpoint', required: false, type: 'string' }, // NEW: Custom endpoint validation
         { field: 'testId', required: false, type: 'string' },
       ]),
       this.controller.executeTest
@@ -49,6 +50,7 @@ export class TestRunnerRoutes {
           allowedValues: Object.values(Environment),
         },
         { field: 'customToken', required: false, type: 'string' },
+        { field: 'customEndpoint', required: false, type: 'string' }, // NEW: Custom endpoint validation
         { field: 'testId', required: false, type: 'string' },
       ]),
       this.controller.executeAllTests

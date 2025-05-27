@@ -25,6 +25,12 @@ export class RepositoryRoutes {
       this.controller.updateRepository
     );
 
+    router.delete(
+      '/:name',
+      ValidationMiddleware.validateParams([{ field: 'name', required: true, type: 'string' }]),
+      this.controller.deleteRepository
+    );
+
     router.get(
       '/:name/config',
       ValidationMiddleware.validateParams([{ field: 'name', required: true, type: 'string' }]),

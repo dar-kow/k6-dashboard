@@ -245,6 +245,67 @@ export class GitRepositoryService implements IRepositoryService {
     }
   }
 
+  async deleteRepository(repoName: string): Promise<void> {
+    const repoPath = `${this.reposDir}/${repoName}`;
+
+    try {
+      // Check if repository exists
+      const exists = await this.fileSystem.exists(repoPath);
+      if (!exists) {
+        throw new Error(`Repository '${repoName}' not found.`);
+      }
+
+      this.logger.info('Starting repository deletion', { repoName, repoPath });
+
+      // Use rm -rf to delete the repository directory
+      // This is platform dependent - for production consider using a proper directory deletion method
+      const child = this.processExecutor.spawn('rm', ['-rf', repoPath], {
+        cwd: this.reposDir,
+      });
+
+      return new Promise((resolve, reject) => {
+        let stderr = '';
+
+        if (child.stderr) {
+          child.stderr.on('data', (data: any) => {
+            stderr += data.toString();
+          });
+        }
+
+        child.on('error', (error) => {
+          this.logger.error('Repository deletion process error', error, { repoName, repoPath });
+          reject(new Error(`Failed to delete repository: ${error.message}`));
+        });
+
+        child.on('close', (code) => {
+          if (code === 0) {
+            this.logger.info('Repository deleted successfully', { repoName, repoPath });
+            resolve();
+          } else {
+            this.logger.error(
+              'Repository deletion failed',
+              new Error(`rm command exited with code ${code}`),
+              {
+                repoName,
+                repoPath,
+                exitCode: code,
+                stderr: stderr.substring(0, 1000),
+              }
+            );
+
+            reject(new Error(`Failed to delete repository: ${stderr || `Exit code ${code}`}`));
+          }
+        });
+      });
+    } catch (error) {
+      this.logger.error('Failed to delete repository', error as Error, {
+        repoName,
+        repoPath,
+      });
+      throw error;
+    }
+  }
+
   async getRepositories(): Promise<string[]> {
     try {
       await this.fileSystem.mkdir(this.reposDir, true);
@@ -273,21 +334,137 @@ export class GitRepositoryService implements IRepositoryService {
       }
 
       const content = await this.fileSystem.readFile(configPath, 'utf-8');
-      const cleanContent = content
-        .toString()
-        .replace(/export const/g, 'const')
-        .replace(/export {.*}/g, '');
 
-      const result = {};
-      eval(cleanContent + '; Object.assign(result, { HOSTS, TOKENS, LOAD_PROFILES })');
+      // Enhanced parsing for env.js files
+      const config = this.parseEnvJsFile(content.toString(), repoName);
 
-      this.logger.debug('Loaded repository config', { repoName, configKeys: Object.keys(result) });
-      return result;
+      if (config) {
+        this.logger.debug('Loaded repository config', {
+          repoName,
+          configKeys: Object.keys(config),
+          hostsCount: config.HOSTS ? Object.keys(config.HOSTS).length : 0,
+          tokensCount: config.TOKENS ? Object.keys(config.TOKENS).length : 0,
+        });
+      }
+
+      return config;
     } catch (error) {
-      this.logger.warn('Failed to load config for repository', {
+      this.logger.error('Failed to load config for repository', error as Error, {
         repoName,
         configPath,
-        error: (error as Error).message,
+      });
+      return null;
+    }
+  }
+
+  private parseEnvJsFile(content: string, repoName: string): any {
+    try {
+      // Remove comments and clean up the content
+      let cleanContent = content
+        .replace(/\/\*[\s\S]*?\*\//g, '') // Remove block comments
+        .replace(/\/\/.*$/gm, '') // Remove line comments
+        .replace(/export\s+const\s+/g, 'const ') // Replace export const with const
+        .replace(/export\s+\{[^}]*\}/g, ''); // Remove export statements
+
+      // Create a safe evaluation context
+      const context = {
+        HOSTS: {},
+        TOKENS: {},
+        LOAD_PROFILES: {},
+        console: { log: () => {}, warn: () => {}, error: () => {} }, // Disable console in eval
+      };
+
+      // Use Function constructor instead of eval for better isolation
+      const func = new Function(
+        'HOSTS',
+        'TOKENS',
+        'LOAD_PROFILES',
+        'console',
+        cleanContent + '\n; return { HOSTS, TOKENS, LOAD_PROFILES };'
+      );
+
+      const result = func(context.HOSTS, context.TOKENS, context.LOAD_PROFILES, context.console);
+
+      // Validate the result structure
+      if (typeof result === 'object' && result !== null) {
+        return {
+          HOSTS: result.HOSTS || {},
+          TOKENS: result.TOKENS || {},
+          LOAD_PROFILES: result.LOAD_PROFILES || {},
+        };
+      }
+
+      this.logger.warn('Invalid config structure returned from env.js', { repoName });
+      return null;
+    } catch (error) {
+      this.logger.error('Failed to parse env.js file', error as Error, {
+        repoName,
+        contentPreview: content.substring(0, 200),
+      });
+
+      // Try a simpler regex-based parsing as fallback
+      return this.parseEnvJsWithRegex(content, repoName);
+    }
+  }
+
+  private parseEnvJsWithRegex(content: string, repoName: string): any {
+    try {
+      const result: any = {
+        HOSTS: {},
+        TOKENS: {},
+        LOAD_PROFILES: {},
+      };
+
+      // Extract HOSTS object
+      const hostsMatch = content.match(/const\s+HOSTS\s*=\s*(\{[^}]*\})/s);
+      if (hostsMatch) {
+        try {
+          result.HOSTS = JSON.parse(hostsMatch[1].replace(/'/g, '"'));
+        } catch (e) {
+          this.logger.warn('Failed to parse HOSTS from env.js', { repoName });
+        }
+      }
+
+      // Extract TOKENS object (more complex structure)
+      const tokensMatch = content.match(/const\s+TOKENS\s*=\s*(\{[\s\S]*?\n\};)/);
+      if (tokensMatch) {
+        try {
+          // This is a simplified approach - might need more sophisticated parsing
+          const tokensStr = tokensMatch[1]
+            .replace(/'/g, '"')
+            .replace(/,\s*}/g, '}')
+            .replace(/}\s*;/, '}');
+          result.TOKENS = JSON.parse(tokensStr);
+        } catch (e) {
+          this.logger.warn('Failed to parse TOKENS from env.js', { repoName });
+        }
+      }
+
+      // Extract LOAD_PROFILES object
+      const profilesMatch = content.match(/const\s+LOAD_PROFILES\s*=\s*(\{[\s\S]*?\n\};)/);
+      if (profilesMatch) {
+        try {
+          const profilesStr = profilesMatch[1]
+            .replace(/'/g, '"')
+            .replace(/,\s*}/g, '}')
+            .replace(/}\s*;/, '}');
+          result.LOAD_PROFILES = JSON.parse(profilesStr);
+        } catch (e) {
+          this.logger.warn('Failed to parse LOAD_PROFILES from env.js', { repoName });
+        }
+      }
+
+      this.logger.debug('Parsed env.js with regex fallback', {
+        repoName,
+        hasHosts: Object.keys(result.HOSTS).length > 0,
+        hasTokens: Object.keys(result.TOKENS).length > 0,
+        hasProfiles: Object.keys(result.LOAD_PROFILES).length > 0,
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('Regex parsing of env.js also failed', error as Error, {
+        repoName,
       });
       return null;
     }

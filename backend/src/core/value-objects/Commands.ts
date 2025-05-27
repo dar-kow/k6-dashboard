@@ -7,6 +7,7 @@ export class ExecuteTestCommand {
     public readonly environment: Environment,
     public readonly repository: string,
     public readonly customToken?: string,
+    public readonly customEndpoint?: string, // NEW: Custom endpoint support
     public readonly testId?: string
   ) {}
 
@@ -21,6 +22,7 @@ export class ExecuteAllTestsCommand {
     public readonly environment: Environment,
     public readonly repository: string,
     public readonly customToken?: string,
+    public readonly customEndpoint?: string, // NEW: Custom endpoint support
     public readonly testId?: string
   ) {}
 
