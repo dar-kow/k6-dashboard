@@ -173,9 +173,11 @@ export class Application {
     // API routes
     const testResultRoutes = this.container.get<any>('testResultRoutes');
     const testRoutes = this.container.get<any>('testRoutes');
+    const repositoryRoutes = this.container.get<any>('repositoryRoutes');
 
     this.app.use('/api/results', testResultRoutes.getRouter());
     this.app.use('/api/tests', testRoutes.getRouter());
+    this.app.use('/api/repositories', repositoryRoutes.getRouter());
 
     // Register test runner routes after WebSocket setup
     this.container.registerTestRunnerRoutes();
