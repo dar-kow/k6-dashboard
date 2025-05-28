@@ -67,12 +67,73 @@ export class MultiRepositoryTestRepository implements ITestRepository {
           return new TestConfig(name, description, entry.path);
         });
 
-      this.logger.info('Found tests in repository', { repositoryId, count: tests.length });
+      // Sprawdź czy debug test istnieje
+      const hasDebugTest = tests.some((t) => t.name === 'debug-k6-env');
+      if (!hasDebugTest) {
+        // Utwórz plik debug jeśli nie istnieje
+        try {
+          const debugContent = this.getDebugTestContent();
+          const debugPath = `${testsPath}/debug-k6-env.js`;
+          await this.fileSystem.writeFile(debugPath, debugContent);
+
+          tests.unshift(new TestConfig('debug-k6-env', 'Debug K6 Environment', debugPath));
+
+          this.logger.info('Created debug test file', { repositoryId, path: debugPath });
+        } catch (error) {
+          this.logger.warn('Could not create debug test file', { repositoryId, error });
+        }
+      }
+
+      this.logger.info('Found tests in repository', {
+        repositoryId,
+        count: tests.length,
+        testNames: tests.map((t) => t.name),
+      });
+
       return tests;
     } catch (error) {
       this.logger.error('Error fetching tests from repository', error as Error, { repositoryId });
       throw error;
     }
+  }
+
+  private getDebugTestContent(): string {
+    return `// debug-k6-env.js - Auto-generated debug test
+import { check } from 'k6';
+
+export let options = {
+  vus: 1,
+  iterations: 1,
+};
+
+export default function () {
+  console.log('=== K6 ENVIRONMENT DEBUG ===');
+  console.log('Working directory:', __ENV.PWD || 'unknown');
+  
+  console.log('\\n=== ENVIRONMENT VARIABLES ===');
+  console.log('PROFILE:', __ENV.PROFILE || '[NOT SET]');
+  console.log('ENVIRONMENT:', __ENV.ENVIRONMENT || '[NOT SET]');
+  console.log('CURRENT_HOST:', __ENV.CURRENT_HOST || '[NOT SET]');
+  console.log('CURRENT_TOKEN:', __ENV.CURRENT_TOKEN ? '[SET]' : '[NOT SET]');
+  console.log('VUS:', __ENV.VUS || '[NOT SET]');
+  console.log('DURATION:', __ENV.DURATION || '[NOT SET]');
+  
+  console.log('\\n=== TEST IMPORTS ===');
+  try {
+    // These imports should work if structure is correct
+    console.log('Attempting to verify file structure...');
+    console.log('Expected: ../config/env.js and ../helpers/common.js');
+    
+    check(true, {
+      'Profile is set': () => __ENV.PROFILE !== undefined,
+      'Host is configured': () => __ENV.CURRENT_HOST !== undefined,
+    });
+  } catch (error) {
+    console.log('Error:', error.message);
+  }
+  
+  console.log('\\n=== END DEBUG ===');
+}`;
   }
 
   async findByName(name: string, repositoryId?: string): Promise<TestConfig | null> {
