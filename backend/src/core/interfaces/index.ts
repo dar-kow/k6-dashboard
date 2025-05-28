@@ -6,3 +6,5 @@ export * from './repositories/ITestRepository';
 export * from './repositories/ITestResultRepository';
 export * from './services/ITestExecutionService';
 export * from './services/INotificationService';
+export * from './repositories/IRepositoryRepository';
+export * from './services/IGitServices';

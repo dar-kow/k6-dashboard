@@ -3,9 +3,10 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import TerminalOutput from '../components/TerminalOutput';
 import { useTestResults } from '../context/TestResultContext';
+import { useRepository } from '../context/RepositoryContext';
+import RepositorySelector from '../components/RepositorySelector';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
-// Extract the base URL without the /api path for socket.io
 const BASE_URL = API_URL.replace('/api', '');
 
 interface TestConfig {
@@ -17,32 +18,50 @@ interface TestConfig {
 interface EnvironmentConfig {
     environment: 'PROD' | 'DEV';
     customToken: string;
+    customHost: string;
 }
 
-// Modal component for token configuration
 const TokenConfigModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    onSave: (token: string) => void;
+    onSave: (token: string, host: string) => void;
     currentToken: string;
-}> = ({ isOpen, onClose, onSave, currentToken }) => {
+    currentHost: string;
+}> = ({ isOpen, onClose, onSave, currentToken, currentHost }) => {
     const [token, setToken] = useState(currentToken);
+    const [host, setHost] = useState(currentHost);
 
     useEffect(() => {
         setToken(currentToken);
-    }, [currentToken]);
+        setHost(currentHost);
+    }, [currentToken, currentHost]);
 
     if (!isOpen) return null;
 
     const handleSave = () => {
-        onSave(token);
+        onSave(token, host);
         onClose();
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
-                <h3 className="text-lg font-semibold mb-4">Configure API Token</h3>
+                <h3 className="text-lg font-semibold mb-4">Configure Custom Environment</h3>
+
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Custom Host URL
+                    </label>
+                    <input
+                        className="w-full p-3 border border-gray-300 rounded-md text-sm"
+                        value={host}
+                        onChange={(e) => setHost(e.target.value)}
+                        placeholder="https://api.example.com"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Leave empty to use the default host from repository config
+                    </p>
+                </div>
 
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -56,7 +75,7 @@ const TokenConfigModal: React.FC<{
                         placeholder="Enter your JWT token here..."
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                        This token will be used for API authentication. It's stored in your browser's local storage.
+                        Leave empty to use the default token from repository config
                     </p>
                 </div>
 
@@ -71,7 +90,7 @@ const TokenConfigModal: React.FC<{
                         onClick={handleSave}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                     >
-                        Save Token
+                        Save Configuration
                     </button>
                 </div>
             </div>
@@ -79,7 +98,6 @@ const TokenConfigModal: React.FC<{
     );
 };
 
-// Stop confirmation modal
 const StopConfirmationModal: React.FC<{
     isOpen: boolean;
     onConfirm: () => void;
@@ -117,6 +135,7 @@ const StopConfirmationModal: React.FC<{
 
 const TestRunner: React.FC = () => {
     const { refreshData } = useTestResults();
+    const { selectedRepository, selectedRepositoryConfig } = useRepository();
     const [tests, setTests] = useState<TestConfig[]>([]);
     const [selectedTest, setSelectedTest] = useState<string>('');
     const [selectedProfile, setSelectedProfile] = useState<string>('LIGHT');
@@ -128,14 +147,13 @@ const TestRunner: React.FC = () => {
     const [showStopConfirmation, setShowStopConfirmation] = useState<boolean>(false);
     const [runningTestId, setRunningTestId] = useState<string | null>(null);
 
-    // New states for environment and token management
     const [environment, setEnvironment] = useState<'PROD' | 'DEV'>('PROD');
     const [customToken, setCustomToken] = useState<string>('');
+    const [customHost, setCustomHost] = useState<string>('');
     const [isTokenModalOpen, setIsTokenModalOpen] = useState<boolean>(false);
 
     const socketRef = useRef<Socket | null>(null);
 
-    // Load environment config from localStorage
     useEffect(() => {
         const savedConfig = localStorage.getItem('k6-dashboard-config');
         if (savedConfig) {
@@ -143,41 +161,44 @@ const TestRunner: React.FC = () => {
                 const config: EnvironmentConfig = JSON.parse(savedConfig);
                 setEnvironment(config.environment || 'PROD');
                 setCustomToken(config.customToken || '');
+                setCustomHost(config.customHost || '');
             } catch (err) {
                 console.error('Error parsing saved config:', err);
             }
         }
     }, []);
 
-    // Save environment config to localStorage
-    const saveConfig = (env: 'PROD' | 'DEV', token: string) => {
+    const saveConfig = (env: 'PROD' | 'DEV', token: string, host: string) => {
         const config: EnvironmentConfig = {
             environment: env,
-            customToken: token
+            customToken: token,
+            customHost: host
         };
         localStorage.setItem('k6-dashboard-config', JSON.stringify(config));
     };
 
-    // Handle environment change
     const handleEnvironmentChange = (env: 'PROD' | 'DEV') => {
         setEnvironment(env);
-        saveConfig(env, customToken);
+        saveConfig(env, customToken, customHost);
         setOutput(prev => [...prev, `🔄 Switched to ${env} environment`]);
     };
 
-    // Handle token save
-    const handleTokenSave = (token: string) => {
+    const handleTokenSave = (token: string, host: string) => {
         setCustomToken(token);
-        saveConfig(environment, token);
-        setOutput(prev => [...prev, `🔑 Custom token ${token ? 'updated' : 'cleared'}`]);
+        setCustomHost(host);
+        saveConfig(environment, token, host);
+        setOutput(prev => [...prev, `🔑 Custom configuration ${token || host ? 'updated' : 'cleared'}`]);
     };
 
-    // Load available tests
     useEffect(() => {
         const fetchTests = async () => {
             try {
-                console.log('Fetching tests from:', `${API_URL}/tests`);
-                const response = await axios.get(`${API_URL}/tests`);
+                const url = selectedRepository
+                    ? `${API_URL}/tests?repositoryId=${selectedRepository.id}`
+                    : `${API_URL}/tests`;
+
+                console.log('Fetching tests from:', url);
+                const response = await axios.get(url);
                 setTests(response.data);
 
                 if (response.data.length > 0) {
@@ -190,18 +211,15 @@ const TestRunner: React.FC = () => {
         };
 
         fetchTests();
-    }, []);
+    }, [selectedRepository]);
 
-    // Connect to WebSocket for real-time output
     useEffect(() => {
-        // Clean up previous socket if it exists
         if (socketRef.current) {
             socketRef.current.disconnect();
         }
 
         console.log('Connecting to socket at:', BASE_URL);
 
-        // Create new socket connection
         const socket = io(BASE_URL, {
             withCredentials: true,
             reconnection: true,
@@ -235,7 +253,6 @@ const TestRunner: React.FC = () => {
                 setRunningTestId(null);
                 setOutput(prev => [...prev, message.data]);
 
-                // Auto-refresh results after test completion
                 setTimeout(() => {
                     console.log('Auto-refreshing test results after test completion');
                     refreshData();
@@ -247,7 +264,6 @@ const TestRunner: React.FC = () => {
             }
         });
 
-        // Listen for refresh results event
         socket.on('refreshResults', (message) => {
             console.log('Received refresh results request:', message);
             setOutput(prev => [...prev, `🔄 ${message.message}`]);
@@ -265,7 +281,6 @@ const TestRunner: React.FC = () => {
             setError(`WebSocket connection error: ${err.message}. Reconnecting...`);
         });
 
-        // Cleanup on component unmount
         return () => {
             console.log('Cleaning up socket connection');
             socket.disconnect();
@@ -281,28 +296,29 @@ const TestRunner: React.FC = () => {
         setOutput([`🚀 Starting test: ${selectedTest} with profile: ${selectedProfile} on ${environment}`]);
         setError(null);
 
-        // Auto-enable auto-scroll when starting new test
         setAutoScroll(true);
 
         try {
-            // Send directly through socket for real-time feedback
             if (socketRef.current && socketConnected) {
                 socketRef.current.emit('test_request', {
                     testId: testId,
                     test: selectedTest,
                     profile: selectedProfile,
                     environment: environment,
-                    customToken: customToken
+                    customToken: customToken,
+                    customHost: customHost,
+                    repositoryId: selectedRepository?.id
                 });
             }
 
-            // Also make the HTTP request with environment and token info
             await axios.post(`${API_URL}/run/test`, {
                 testId: testId,
                 test: selectedTest,
                 profile: selectedProfile,
                 environment: environment,
-                customToken: customToken
+                customToken: customToken,
+                customHost: customHost,
+                repositoryId: selectedRepository?.id
             });
         } catch (err: any) {
             console.error('Error starting test:', err);
@@ -319,27 +335,28 @@ const TestRunner: React.FC = () => {
         setOutput([`🚀 Starting all tests sequentially with profile: ${selectedProfile} on ${environment}`]);
         setError(null);
 
-        // Auto-enable auto-scroll when starting new test
         setAutoScroll(true);
 
         try {
-            // Send directly through socket for real-time feedback
             if (socketRef.current && socketConnected) {
                 socketRef.current.emit('test_request', {
                     testId: testId,
                     test: 'all',
                     profile: selectedProfile,
                     environment: environment,
-                    customToken: customToken
+                    customToken: customToken,
+                    customHost: customHost,
+                    repositoryId: selectedRepository?.id
                 });
             }
 
-            // Also make the HTTP request with environment and token info
             await axios.post(`${API_URL}/run/all`, {
                 testId: testId,
                 profile: selectedProfile,
                 environment: environment,
-                customToken: customToken
+                customToken: customToken,
+                customHost: customHost,
+                repositoryId: selectedRepository?.id
             });
         } catch (err: any) {
             console.error('Error starting tests:', err);
@@ -353,14 +370,12 @@ const TestRunner: React.FC = () => {
         if (!runningTestId) return;
 
         try {
-            // Send stop request through socket
             if (socketRef.current && socketConnected) {
                 socketRef.current.emit('stop_test', {
                     testId: runningTestId
                 });
             }
 
-            // Also make HTTP request to stop
             await axios.post(`${API_URL}/run/stop`, {
                 testId: runningTestId
             });
@@ -383,7 +398,6 @@ const TestRunner: React.FC = () => {
     };
 
     const clearConnection = () => {
-        // Force disconnect and reconnect
         if (socketRef.current) {
             socketRef.current.disconnect();
         }
@@ -393,14 +407,38 @@ const TestRunner: React.FC = () => {
         setRunningTestId(null);
         setOutput(['🔄 Clearing connection and resetting...']);
 
-        // Reconnect after a brief delay
         setTimeout(() => {
-            window.location.reload(); // Simple but effective reset
+            window.location.reload();
         }, 1000);
     };
 
     const toggleAutoScroll = () => {
         setAutoScroll(prev => !prev);
+    };
+
+    const getAvailableProfiles = () => {
+        if (selectedRepositoryConfig) {
+            return selectedRepositoryConfig.availableProfiles;
+        }
+        return ['LIGHT', 'MEDIUM', 'HEAVY'];
+    };
+
+    const getProfileDetails = (profileName: string) => {
+        if (selectedRepositoryConfig && selectedRepositoryConfig.loadProfiles[profileName]) {
+            const profile = selectedRepositoryConfig.loadProfiles[profileName];
+            return `${profileName} (${profile.vus} VUs, ${profile.duration})`;
+        }
+
+        switch (profileName) {
+            case 'LIGHT':
+                return 'Light (10 VUs, 60s)';
+            case 'MEDIUM':
+                return 'Medium (30 VUs, 5m)';
+            case 'HEAVY':
+                return 'Heavy (100 VUs, 10m)';
+            default:
+                return profileName;
+        }
     };
 
     return (
@@ -413,13 +451,13 @@ const TestRunner: React.FC = () => {
                 </div>
             )}
 
+            <RepositorySelector />
+
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Run Tests</h2>
 
-                    {/* Environment and Token Controls */}
                     <div className="flex items-center space-x-4">
-                        {/* Environment Toggle */}
                         <div className="flex items-center space-x-2">
                             <span className="text-sm font-medium text-gray-700">Environment:</span>
                             <div className="flex bg-gray-100 rounded-md p-1">
@@ -446,17 +484,16 @@ const TestRunner: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Token Configuration Button */}
                         <button
                             onClick={() => setIsTokenModalOpen(true)}
                             className="flex items-center space-x-1 px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                            title="Configure custom API token"
+                            title="Configure custom host and token"
                             disabled={isRunning}
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2m8 0V7a2 2 0 00-2-2H9a2 2 0 00-2 2v2m8 0H9m0 0v6m0-6h8"></path>
                             </svg>
-                            <span>{customToken ? 'Token Set' : 'Set Token'}</span>
+                            <span>{customToken || customHost ? 'Custom Config Set' : 'Set Custom'}</span>
                         </button>
                     </div>
                 </div>
@@ -471,11 +508,15 @@ const TestRunner: React.FC = () => {
 
                             <div className="text-sm text-gray-600">
                                 <span className="font-medium">Target:</span> {environment}
-                                {customToken && <span className="ml-2 text-green-600">• Custom Token Active</span>}
+                                {selectedRepositoryConfig && (
+                                    <span className="ml-2 text-xs text-gray-500">
+                                        ({customHost || selectedRepositoryConfig.hosts[environment]})
+                                    </span>
+                                )}
+                                {(customToken || customHost) && <span className="ml-2 text-green-600">• Custom Config Active</span>}
                             </div>
                         </div>
 
-                        {/* Connection Controls */}
                         <div className="flex items-center space-x-2">
                             {isRunning && (
                                 <div className="flex items-center space-x-2 px-3 py-1 bg-orange-100 text-orange-800 rounded-md">
@@ -525,9 +566,11 @@ const TestRunner: React.FC = () => {
                             onChange={(e) => setSelectedProfile(e.target.value)}
                             disabled={isRunning}
                         >
-                            <option value="LIGHT">Light (10 VUs, 60s)</option>
-                            <option value="MEDIUM">Medium (30 VUs, 5m)</option>
-                            <option value="HEAVY">Heavy (100 VUs, 10m)</option>
+                            {getAvailableProfiles().map((profile) => (
+                                <option key={profile} value={profile}>
+                                    {getProfileDetails(profile)}
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -569,7 +612,6 @@ const TestRunner: React.FC = () => {
                         )}
                     </button>
 
-                    {/* STOP BUTTON */}
                     {isRunning && (
                         <button
                             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
@@ -594,7 +636,6 @@ const TestRunner: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Test Execution Output</h2>
 
-                    {/* Status indicator */}
                     <div className="flex items-center space-x-4">
                         {isRunning && runningTestId && (
                             <div className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-md">
@@ -609,7 +650,11 @@ const TestRunner: React.FC = () => {
                 </div>
 
                 <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                    <p>📁 <strong>Results location:</strong> <code className="bg-gray-200 px-1 rounded">k6-tests/results/</code></p>
+                    <p>📁 <strong>Results location:</strong>
+                        <code className="bg-gray-200 px-1 rounded ml-1">
+                            {selectedRepository ? `repositories/${selectedRepository.id}/results/` : 'k6-tests/results/'}
+                        </code>
+                    </p>
                     <p>🎛️ <strong>Terminal controls:</strong> Use auto-scroll toggle and manual scroll buttons below</p>
                     <p>🔄 <strong>Auto-scroll:</strong> {autoScroll ? 'Enabled - shows latest output automatically' : 'Disabled - scroll manually to see new output'}</p>
                     <p>🌐 <strong>Environment:</strong> Running tests against <span className={`font-medium ${environment === 'PROD' ? 'text-blue-600' : 'text-orange-600'}`}>{environment}</span> environment</p>
@@ -623,15 +668,14 @@ const TestRunner: React.FC = () => {
                 />
             </div>
 
-            {/* Token Configuration Modal */}
             <TokenConfigModal
                 isOpen={isTokenModalOpen}
                 onClose={() => setIsTokenModalOpen(false)}
                 onSave={handleTokenSave}
                 currentToken={customToken}
+                currentHost={customHost}
             />
 
-            {/* Stop Confirmation Modal */}
             <StopConfirmationModal
                 isOpen={showStopConfirmation}
                 onConfirm={handleStopConfirmation}

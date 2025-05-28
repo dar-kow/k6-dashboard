@@ -1,6 +1,23 @@
 import { Environment } from './config/Environment';
 import { ConsoleLogger } from './config/Logger';
 
+import { IGitService } from './core/interfaces/services/IGitServices';
+import { IRepositoryRepository } from './core/interfaces/repositories/IRepositoryRepository';
+import { NodeGitService } from './infrastructure/services/NodeGitService';
+import { FileSystemRepositoryRepository } from './infrastructure/repositories/FileSystemRepositoryRepository';
+import { MultiRepositoryTestRepository } from './infrastructure/repositories/MultiRepositoryTestRepository';
+import { MultiRepositoryTestResultRepository } from './infrastructure/repositories/MultiRepositoryTestResultRepository';
+import { RepositoryAwareTestExecutionService } from './application/services/RepositoryAwareTestExecutionService';
+import {
+  CreateRepositoryUseCase,
+  GetRepositoriesUseCase,
+  GetRepositoryConfigUseCase,
+  SyncRepositoryUseCase,
+  DeleteRepositoryUseCase,
+} from './core/use-cases/repositories/RepositoryUseCases';
+import { RepositoryController } from './presentation/controllers/RepositoryController';
+import { RepositoryRoutes } from './presentation/routes/RepositoryRoutes';
+
 // Core interfaces
 import { IConfig } from './core/interfaces/common/IConfig';
 import { ILogger } from './core/interfaces/common/ILogger';
@@ -14,8 +31,6 @@ import { INotificationService } from './core/interfaces/services/INotificationSe
 // Infrastructure implementations
 import { NodeFileSystem } from './infrastructure/external/NodeFileSystem';
 import { NodeProcessExecutor } from './infrastructure/external/NodeProcessExecutor';
-import { FileSystemTestRepository } from './infrastructure/repositories/FileSystemTestRepository';
-import { K6TestExecutionService } from './application/services/TestExecutionApplicationService';
 
 // Use cases
 import {
@@ -44,7 +59,6 @@ import { TestResultRoutes } from './presentation/routes/TestResultRoutes';
 import { TestRoutes } from './presentation/routes/TestRoutes';
 import { TestRunnerRoutes } from './presentation/routes/TestRunnerRoutes';
 import { HealthRoutes } from './presentation/routes/HealthRoutes';
-import { FileSystemTestResultRepository } from '@infrastructure/repositories/FileSystemTestResultRepository';
 
 export class DIContainer {
   private static instance: DIContainer;
@@ -85,10 +99,16 @@ export class DIContainer {
     this.register<IFileSystem>('fileSystem', new NodeFileSystem());
     this.register<IProcessExecutor>('processExecutor', new NodeProcessExecutor());
 
+    // Git service - DODAJ TUTAJ
+    this.register<IGitService>(
+      'gitService',
+      new NodeGitService(this.get<IFileSystem>('fileSystem'), this.get<ILogger>('logger'))
+    );
+
     // Repositories
     this.register<ITestResultRepository>(
       'testResultRepository',
-      new FileSystemTestResultRepository(
+      new MultiRepositoryTestResultRepository(
         this.get<IFileSystem>('fileSystem'),
         this.get<IConfig>('config'),
         this.get<ILogger>('logger')
@@ -97,8 +117,19 @@ export class DIContainer {
 
     this.register<ITestRepository>(
       'testRepository',
-      new FileSystemTestRepository(
+      new MultiRepositoryTestRepository(
         this.get<IFileSystem>('fileSystem'),
+        this.get<IConfig>('config'),
+        this.get<ILogger>('logger')
+      )
+    );
+
+    // Repository repository - MUSI BYĆ TUTAJ, PRZED registerUseCases()!
+    this.register<IRepositoryRepository>(
+      'repositoryRepository',
+      new FileSystemRepositoryRepository(
+        this.get<IFileSystem>('fileSystem'),
+        this.get<IGitService>('gitService'),
         this.get<IConfig>('config'),
         this.get<ILogger>('logger')
       )
@@ -107,7 +138,7 @@ export class DIContainer {
     // Application services (will be registered after WebSocket setup)
     // NotificationService will be registered after Socket.IO setup
 
-    // Use cases
+    // Use cases - TO MUSI BYĆ PO REJESTRACJI WSZYSTKICH REPOSITORIES!
     this.registerUseCases();
 
     // Controllers
@@ -126,9 +157,11 @@ export class DIContainer {
     // Now register test execution service that depends on notification service
     this.register<ITestExecutionService>(
       'testExecutionService',
-      new K6TestExecutionService(
+      new RepositoryAwareTestExecutionService(
         this.get<IProcessExecutor>('processExecutor'),
         notificationService,
+        this.get<IRepositoryRepository>('repositoryRepository'),
+        this.get<IFileSystem>('fileSystem'),
         this.get<IConfig>('config'),
         this.get<ILogger>('logger')
       )
@@ -170,6 +203,46 @@ export class DIContainer {
       'getAvailableTestsUseCase',
       new GetAvailableTestsUseCase(
         this.get<ITestRepository>('testRepository'),
+        this.get<ILogger>('logger')
+      )
+    );
+
+    this.register(
+      'createRepositoryUseCase',
+      new CreateRepositoryUseCase(
+        this.get<IRepositoryRepository>('repositoryRepository'),
+        this.get<ILogger>('logger')
+      )
+    );
+
+    this.register(
+      'getRepositoriesUseCase',
+      new GetRepositoriesUseCase(
+        this.get<IRepositoryRepository>('repositoryRepository'),
+        this.get<ILogger>('logger')
+      )
+    );
+
+    this.register(
+      'getRepositoryConfigUseCase',
+      new GetRepositoryConfigUseCase(
+        this.get<IRepositoryRepository>('repositoryRepository'),
+        this.get<ILogger>('logger')
+      )
+    );
+
+    this.register(
+      'syncRepositoryUseCase',
+      new SyncRepositoryUseCase(
+        this.get<IRepositoryRepository>('repositoryRepository'),
+        this.get<ILogger>('logger')
+      )
+    );
+
+    this.register(
+      'deleteRepositoryUseCase',
+      new DeleteRepositoryUseCase(
+        this.get<IRepositoryRepository>('repositoryRepository'),
         this.get<ILogger>('logger')
       )
     );
@@ -227,6 +300,18 @@ export class DIContainer {
     );
 
     this.register('healthController', new HealthController(this.get<ILogger>('logger')));
+
+    this.register(
+      'repositoryController',
+      new RepositoryController(
+        this.get('createRepositoryUseCase'),
+        this.get('getRepositoriesUseCase'),
+        this.get('getRepositoryConfigUseCase'),
+        this.get('syncRepositoryUseCase'),
+        this.get('deleteRepositoryUseCase'),
+        this.get<ILogger>('logger')
+      )
+    );
   }
 
   private registerExecutionControllers(): void {
@@ -254,6 +339,8 @@ export class DIContainer {
     this.register('testRoutes', new TestRoutes(this.get('testController')));
 
     this.register('healthRoutes', new HealthRoutes(this.get('healthController')));
+
+    this.register('repositoryRoutes', new RepositoryRoutes(this.get('repositoryController')));
   }
 
   registerTestRunnerRoutes(): void {

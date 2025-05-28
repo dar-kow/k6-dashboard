@@ -3,7 +3,8 @@ export class ResultsUpdatedEvent {
     public readonly message: string,
     public readonly testName?: string,
     public readonly resultFile?: string,
-    public readonly timestamp: string = new Date().toISOString()
+    public readonly timestamp: string = new Date().toISOString(),
+    public readonly repositoryId?: string
   ) {}
 }
 

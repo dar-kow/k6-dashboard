@@ -4,7 +4,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install curl for downloading k6 and bash for running scripts
-RUN apk add --no-cache curl bash
+RUN apk add --no-cache curl bash git
 
 # Install k6 directly from binary release
 RUN curl -L https://github.com/grafana/k6/releases/download/v0.43.1/k6-v0.43.1-linux-amd64.tar.gz -o k6.tar.gz \

@@ -4,6 +4,8 @@ export interface TestExecutionRequestDto {
   environment?: string;
   customToken?: string;
   testId?: string;
+  repositoryId?: string;
+  customHost?: string;
 }
 
 export interface TestExecutionResponseDto {
@@ -14,6 +16,8 @@ export interface TestExecutionResponseDto {
     profile: string;
     environment: string;
     hasCustomToken: boolean;
+    repositoryId?: string;
+    customHost?: string;
   };
 }
 
