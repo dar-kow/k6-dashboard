@@ -88,6 +88,13 @@ export class FileSystemRepositoryRepository implements IRepositoryRepository {
 
     await this.gitService.clone(repository.url, repoPath, repository.branch);
 
+    const resultsPath = `${repoPath}/results`;
+    await this.ensureDirectoryExists(resultsPath);
+    this.logger.info('Created results directory for repository', {
+      repositoryId: repository.id,
+      resultsPath,
+    });
+
     const updatedRepo = new Repository(
       repository.id,
       repository.name,
@@ -149,45 +156,78 @@ export class FileSystemRepositoryRepository implements IRepositoryRepository {
   }
 
   private extractHosts(content: string): HostConfig {
-    const hostsMatch = content.match(/export\s+const\s+HOSTS\s*=\s*{([^}]+)}/s);
+    console.log('🔍 Parsing HOSTS from env.js...');
+
+    // Bardziej elastyczny regex
+    const hostsMatch = content.match(/export\s+const\s+HOSTS\s*=\s*\{([\s\S]*?)\};/);
     if (!hostsMatch) {
+      console.log('❌ HOSTS not found in env.js');
       return { PROD: 'http://localhost:5000/api', DEV: 'http://localhost:5000/api' };
     }
 
     const hostsContent = hostsMatch[1];
-    const prodMatch = hostsContent.match(/PROD:\s*["']([^"']+)["']/);
-    const devMatch = hostsContent.match(/DEV:\s*["']([^"']+)["']/);
+    console.log('📝 HOSTS content:', hostsContent);
 
-    return {
+    // Bardziej precyzyjne regex patterns
+    const prodMatch = hostsContent.match(/PROD\s*:\s*["']([^"']+)["']/);
+    const devMatch = hostsContent.match(/DEV\s*:\s*["']([^"']+)["']/);
+
+    const result = {
       PROD: prodMatch ? prodMatch[1] : 'http://localhost:5000/api',
       DEV: devMatch ? devMatch[1] : 'http://localhost:5000/api',
     };
+
+    console.log('✅ Parsed HOSTS:', result);
+    return result;
   }
 
   private extractTokens(content: string): TokenConfig {
-    const tokensMatch = content.match(/export\s+const\s+TOKENS\s*=\s*{([\s\S]+?)};/);
+    console.log('🔍 Parsing TOKENS from env.js...');
+
+    const tokensMatch = content.match(
+      /export\s+const\s+TOKENS\s*=\s*\{([\s\S]*?)\};\s*(?=export|$)/
+    );
     if (!tokensMatch) {
+      console.log('❌ TOKENS not found in env.js');
       return { PROD: {}, DEV: {} };
     }
 
     const result: TokenConfig = { PROD: {}, DEV: {} };
     const tokensContent = tokensMatch[1];
+    console.log('📝 TOKENS content:', tokensContent);
 
-    const prodMatch = tokensContent.match(/PROD:\s*{([^}]+)}/s);
-    if (prodMatch) {
-      const userMatch = prodMatch[1].match(/USER:\s*["']([^"']+)["']/);
-      const adminMatch = prodMatch[1].match(/ADMIN:\s*["']([^"']+)["']/);
+    // Parse PROD tokens
+    const prodBlockMatch = tokensContent.match(/PROD\s*:\s*\{([\s\S]*?)\}/);
+    if (prodBlockMatch) {
+      const prodContent = prodBlockMatch[1];
+      const userMatch = prodContent.match(/USER\s*:\s*["']([^"']+)["']/);
+      const adminMatch = prodContent.match(/ADMIN\s*:\s*["']([^"']+)["']/);
+
       if (userMatch) result.PROD.USER = userMatch[1];
       if (adminMatch) result.PROD.ADMIN = adminMatch[1];
     }
 
-    const devMatch = tokensContent.match(/DEV:\s*{([^}]+)}/s);
-    if (devMatch) {
-      const userMatch = devMatch[1].match(/USER:\s*["']([^"']+)["']/);
-      const adminMatch = devMatch[1].match(/ADMIN:\s*["']([^"']+)["']/);
+    // Parse DEV tokens
+    const devBlockMatch = tokensContent.match(/DEV\s*:\s*\{([\s\S]*?)\}/);
+    if (devBlockMatch) {
+      const devContent = devBlockMatch[1];
+      const userMatch = devContent.match(/USER\s*:\s*["']([^"']+)["']/);
+      const adminMatch = devContent.match(/ADMIN\s*:\s*["']([^"']+)["']/);
+
       if (userMatch) result.DEV.USER = userMatch[1];
       if (adminMatch) result.DEV.ADMIN = adminMatch[1];
     }
+
+    console.log('✅ Parsed TOKENS (sanitized):', {
+      PROD: {
+        USER: result.PROD.USER ? `${result.PROD.USER.substring(0, 20)}...` : 'missing',
+        ADMIN: result.PROD.ADMIN ? `${result.PROD.ADMIN.substring(0, 20)}...` : 'missing',
+      },
+      DEV: {
+        USER: result.DEV.USER ? `${result.DEV.USER.substring(0, 20)}...` : 'missing',
+        ADMIN: result.DEV.ADMIN ? `${result.DEV.ADMIN.substring(0, 20)}...` : 'missing',
+      },
+    });
 
     return result;
   }
