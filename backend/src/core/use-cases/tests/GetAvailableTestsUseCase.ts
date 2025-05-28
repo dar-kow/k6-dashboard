@@ -8,14 +8,15 @@ export class GetAvailableTestsUseCase {
     private readonly logger: ILogger
   ) {}
 
-  async execute(): Promise<TestConfig[]> {
-    this.logger.debug('Fetching available tests');
+  async execute(repositoryId?: string): Promise<TestConfig[]> {
+    this.logger.debug('Fetching available tests', { repositoryId });
 
     try {
-      const tests = await this.testRepository.findAll();
+      const tests = await this.testRepository.findAll(repositoryId);
 
       this.logger.info('Successfully fetched available tests', {
         count: tests.length,
+        repositoryId,
       });
 
       return tests;
