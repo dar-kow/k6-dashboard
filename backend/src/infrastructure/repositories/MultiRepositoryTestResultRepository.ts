@@ -28,6 +28,17 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
             `repo:${repositoryId}`
           );
           directories.push(...repoDirs);
+
+          this.logger.debug('Found results in repository', {
+            repositoryId,
+            resultsPath: repoResultsDir,
+            count: repoDirs.length,
+          });
+        } else {
+          this.logger.warn('Results directory not found for repository', {
+            repositoryId,
+            expectedPath: repoResultsDir,
+          });
         }
       } else {
         const defaultResultsDir = await this.findResultsDirectory();
@@ -54,7 +65,11 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
 
       const allDirs = directories.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-      this.logger.info('Found test directories', { total: allDirs.length });
+      this.logger.info('Found test directories', {
+        total: allDirs.length,
+        repositoryId: repositoryId || 'all',
+      });
+
       return allDirs;
     } catch (error) {
       this.logger.error('Error fetching test directories', error as Error);
