@@ -9,11 +9,12 @@ export class TestController {
     private readonly logger: ILogger
   ) {}
 
-  getAvailableTests = async (_req: Request, res: Response, next: NextFunction) => {
+  getAvailableTests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       this.logger.debug('Getting available tests');
 
-      const tests = await this.getAvailableTestsUseCase.execute();
+      const repositoryId = req.query.repositoryId as string | undefined;
+      const tests = await this.getAvailableTestsUseCase.execute(repositoryId);
       const dto = TestResultMapper.toConfigsDto(tests);
 
       res.json(dto);

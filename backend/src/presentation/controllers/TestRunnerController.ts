@@ -22,11 +22,14 @@ export class TestRunnerController {
   executeTest = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: TestExecutionRequestDto = req.body;
+
       this.logger.info('Executing test', {
         test: dto.test,
         profile: dto.profile,
+        repositoryId: dto.repositoryId, // LOG to
       });
 
+      // Stwórz podstawowy command
       const command = new ExecuteTestCommand(
         dto.test!,
         TestExecutionMapper.validateAndMapProfile(dto.profile),
@@ -35,8 +38,22 @@ export class TestRunnerController {
         dto.testId
       );
 
-      const execution = await this.executeTestUseCase.execute(command);
+      // Rozszerz command o dodatkowe pola
+      const extendedCommand = Object.assign(command, {
+        repositoryId: dto.repositoryId,
+        customHost: dto.customHost,
+      });
+
+      // Przekaż rozszerzony command
+      const execution = await this.executeTestUseCase.execute(extendedCommand);
       const response = TestExecutionMapper.toResponseDto(execution, 'Test started successfully');
+
+      if (dto.repositoryId) {
+        response.config.repositoryId = dto.repositoryId;
+      }
+      if (dto.customHost) {
+        response.config.customHost = dto.customHost;
+      }
 
       res.json(response);
     } catch (error) {
@@ -47,20 +64,33 @@ export class TestRunnerController {
   executeAllTests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: TestExecutionRequestDto = req.body;
-      this.logger.info('Executing all tests', { profile: dto.profile });
+      this.logger.info('Executing all tests', {
+        profile: dto.profile,
+        repositoryId: dto.repositoryId,
+      });
 
-      const command = new ExecuteAllTestsCommand(
+      const command: any = new ExecuteAllTestsCommand(
         TestExecutionMapper.validateAndMapProfile(dto.profile),
         TestExecutionMapper.validateAndMapEnvironment(dto.environment),
         dto.customToken,
         dto.testId
       );
 
+      command.repositoryId = dto.repositoryId;
+      command.customHost = dto.customHost;
+
       const execution = await this.executeAllTestsUseCase.execute(command);
       const response = TestExecutionMapper.toResponseDto(
         execution,
         'All tests started successfully'
       );
+
+      if (dto.repositoryId) {
+        response.config.repositoryId = dto.repositoryId;
+      }
+      if (dto.customHost) {
+        response.config.customHost = dto.customHost;
+      }
 
       res.json(response);
     } catch (error) {
