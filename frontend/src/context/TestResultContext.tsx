@@ -1,69 +1,71 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { TestDirectory } from '../types/testResults';
 import { fetchResultDirectories } from '../api/results';
-import { TestDirectory, TestResult } from '../types/testResults';
+import { useRepository } from './RepositoryContext';
 
-interface TestResultsContextType {
+interface TestResultContextType {
     directories: TestDirectory[];
     loading: boolean;
     error: string | null;
     selectedDirectory: string | null;
-    setSelectedDirectory: (dir: string | null) => void;
+    setSelectedDirectory: (directory: string | null) => void;
     refreshData: () => Promise<void>;
 }
 
-const TestResultsContext = createContext<TestResultsContextType>({
-    directories: [],
-    loading: false,
-    error: null,
-    selectedDirectory: null,
-    setSelectedDirectory: () => { },
-    refreshData: async () => { },
-});
+const TestResultContext = createContext<TestResultContextType | undefined>(undefined);
 
-export const useTestResults = () => useContext(TestResultsContext);
+export const useTestResults = () => {
+    const context = useContext(TestResultContext);
+    if (!context) {
+        throw new Error('useTestResults must be used within a TestResultProvider');
+    }
+    return context;
+};
 
-export const TestResultsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface TestResultProviderProps {
+    children: ReactNode;
+}
+
+export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children }) => {
+    const { selectedRepository } = useRepository();
     const [directories, setDirectories] = useState<TestDirectory[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedDirectory, setSelectedDirectory] = useState<string | null>(null);
 
-    const loadData = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const dirs = await fetchResultDirectories();
-            setDirectories(dirs);
+    const refreshData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
 
-            // Auto-select the most recent directory if none is selected
-            if (!selectedDirectory && dirs.length > 0) {
-                setSelectedDirectory(dirs[0].name);
-            }
+        try {
+            const allDirectories = await fetchResultDirectories();
+
+            const filteredDirectories = selectedRepository
+                ? allDirectories.filter(dir => dir.name.startsWith(`repo:${selectedRepository.id}/`))
+                : allDirectories.filter(dir => !dir.name.startsWith('repo:'));
+
+            setDirectories(filteredDirectories);
+            console.log('Fetched directories:', filteredDirectories.length);
         } catch (err) {
-            console.error('Error loading test directories:', err);
-            setError('Failed to load test directories');
+            console.error('Error fetching directories:', err);
+            setError('Failed to fetch test results. Please ensure the backend server is running.');
         } finally {
             setLoading(false);
         }
+    }, [selectedRepository]);
+
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
+
+    const value: TestResultContextType = {
+        directories,
+        loading,
+        error,
+        selectedDirectory,
+        setSelectedDirectory,
+        refreshData,
     };
 
-    // Initial data load
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    return (
-        <TestResultsContext.Provider
-            value={{
-                directories,
-                loading,
-                error,
-                selectedDirectory,
-                setSelectedDirectory,
-                refreshData: loadData,
-            }}
-        >
-            {children}
-        </TestResultsContext.Provider>
-    );
+    return <TestResultContext.Provider value={value}>{children}</TestResultContext.Provider>;
 };
