@@ -61,11 +61,12 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
       let envConfig: any = {};
 
       if (repoCommand.repositoryId) {
-        workingDir = `${this.k6TestsDir}/repositories/${repoCommand.repositoryId}`;
-        testFile = `tests/${command.testName}.js`;
-        resultFile = `results/${timestamp}_${command.testName}.json`;
+        const repoPath = `${this.k6TestsDir}/repositories/${repoCommand.repositoryId}`;
+        workingDir = `${repoPath}/tests`;
+        testFile = `${command.testName}.js`;
+        resultFile = `${repoPath}/results/${timestamp}_${command.testName}.json`;
 
-        await this.ensureResultsDirectory(`${workingDir}/results`);
+        await this.ensureResultsDirectory(`${repoPath}/results`);
 
         envConfig = await this.getEnvironmentConfig(
           repoCommand.repositoryId,
@@ -75,9 +76,9 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
           repoCommand.customToken
         );
       } else {
-        workingDir = this.k6TestsDir;
-        testFile = `tests/${command.testName}.js`;
-        resultFile = `results/${timestamp}_${command.testName}.json`;
+        workingDir = `${this.k6TestsDir}/tests`;
+        testFile = `${command.testName}.js`;
+        resultFile = `${this.k6TestsDir}/results/${timestamp}_${command.testName}.json`;
       }
 
       // Log environment config for debugging
@@ -292,8 +293,23 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
     customHost?: string,
     customToken?: string
   ): Promise<any> {
+    console.log('🔧 Getting environment config:', {
+      repositoryId,
+      environment,
+      profile,
+      hasCustomHost: !!customHost,
+      hasCustomToken: !!customToken,
+      customHost: customHost || '[not provided]',
+      customTokenPreview: customToken ? `${customToken.substring(0, 20)}...` : '[not provided]',
+    });
+
     try {
       const config = await this.repositoryRepository.getConfig(repositoryId);
+
+      console.log('📋 Repository config loaded:', {
+        hasConfig: !!config,
+        configType: config ? 'found' : 'missing',
+      });
 
       let host = customHost;
       let token = customToken;
@@ -302,59 +318,85 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         // Jeśli nie ma custom host, użyj z konfiguracji repo
         if (!host) {
           host = config.getHost(environment as 'PROD' | 'DEV');
+          console.log(`🌐 Using repository host for ${environment}:`, host);
+        } else {
+          console.log('🌐 Using custom host:', host);
         }
 
         // Jeśli nie ma custom token, użyj z konfiguracji repo
         if (!token) {
           token = config.getToken(environment as 'PROD' | 'DEV', 'USER');
+          console.log(
+            `🔑 Using repository token for ${environment}:`,
+            token ? `${token.substring(0, 20)}...` : '[MISSING TOKEN]'
+          );
+        } else {
+          console.log('🔑 Using custom token:', `${token.substring(0, 20)}...`);
         }
 
         const loadProfile = config.getLoadProfile(profile);
 
-        this.logger.debug('Repository config loaded', {
-          repositoryId,
-          environment,
+        console.log('⚙️ Load profile resolved:', {
           profile,
-          hasConfig: !!config,
-          resolvedHost: host,
-          hasToken: !!token,
-          loadProfile: loadProfile ? `${loadProfile.vus} VUs, ${loadProfile.duration}` : 'default',
+          resolved: loadProfile
+            ? `${loadProfile.vus} VUs, ${loadProfile.duration}`
+            : 'using defaults',
         });
 
-        return {
+        const finalConfig = {
           CURRENT_HOST: host || 'http://localhost:5000/api',
           CURRENT_TOKEN: token || '',
           VUS: loadProfile?.vus || 10,
           DURATION: loadProfile?.duration || '60s',
         };
-      } else {
-        this.logger.warn('No repository config found, using custom values or defaults', {
-          repositoryId,
-          customHost,
-          hasCustomToken: !!customToken,
+
+        console.log('✅ Final environment config:', {
+          CURRENT_HOST: finalConfig.CURRENT_HOST,
+          hasToken: !!finalConfig.CURRENT_TOKEN,
+          tokenPreview: finalConfig.CURRENT_TOKEN
+            ? `${finalConfig.CURRENT_TOKEN.substring(0, 20)}...`
+            : '[EMPTY]',
+          VUS: finalConfig.VUS,
+          DURATION: finalConfig.DURATION,
         });
 
-        return {
+        return finalConfig;
+      } else {
+        console.log('❌ No repository config found, using custom/default values');
+
+        const fallbackConfig = {
           CURRENT_HOST: customHost || 'http://localhost:5000/api',
           CURRENT_TOKEN: customToken || '',
           VUS: 10,
           DURATION: '60s',
         };
+
+        console.log('🔄 Fallback config:', {
+          CURRENT_HOST: fallbackConfig.CURRENT_HOST,
+          hasToken: !!fallbackConfig.CURRENT_TOKEN,
+          tokenPreview: fallbackConfig.CURRENT_TOKEN
+            ? `${fallbackConfig.CURRENT_TOKEN.substring(0, 20)}...`
+            : '[EMPTY]',
+        });
+
+        return fallbackConfig;
       }
     } catch (error) {
-      this.logger.error('Error loading repository config', error as Error, {
-        repositoryId,
-        environment,
-        profile,
-      });
+      console.error('💥 Error loading repository config:', error);
 
-      // Fallback na custom wartości
-      return {
+      const errorConfig = {
         CURRENT_HOST: customHost || 'http://localhost:5000/api',
         CURRENT_TOKEN: customToken || '',
         VUS: 10,
         DURATION: '60s',
       };
+
+      console.log('🆘 Error fallback config:', {
+        CURRENT_HOST: errorConfig.CURRENT_HOST,
+        hasToken: !!errorConfig.CURRENT_TOKEN,
+      });
+
+      return errorConfig;
     }
   }
 
