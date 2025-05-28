@@ -1,7 +1,7 @@
 import { TestDirectory, TestFile } from '../../entities';
 
 export interface ITestResultRepository {
-  findAll(): Promise<TestDirectory[]>;
+  findAll(repositoryId?: string): Promise<TestDirectory[]>;
   findByDirectory(directory: string): Promise<TestFile[]>;
   findResult(directory: string, file: string): Promise<any>;
   exists(directory: string): Promise<boolean>;
