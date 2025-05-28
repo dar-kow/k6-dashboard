@@ -11,6 +11,7 @@ import {
   LoadProfiles,
 } from '../../core/value-objects/RepositoryConfig';
 import { FileNotFoundError } from '../../core/errors';
+import { promises as fs } from 'fs';
 
 export class FileSystemRepositoryRepository implements IRepositoryRepository {
   private readonly repositoriesPath: string;
@@ -110,7 +111,7 @@ export class FileSystemRepositoryRepository implements IRepositoryRepository {
   async delete(id: string): Promise<void> {
     const repoPath = `${this.repositoriesPath}/${id}`;
     if (await this.fileSystem.exists(repoPath)) {
-      const fs = require('fs').promises;
+      // Używaj ES import zamiast require
       await fs.rm(repoPath, { recursive: true, force: true });
     }
 

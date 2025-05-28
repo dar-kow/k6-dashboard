@@ -80,6 +80,21 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         resultFile = `results/${timestamp}_${command.testName}.json`;
       }
 
+      // Log environment config for debugging
+      this.logger.info('Environment config for test execution', {
+        testId,
+        repositoryId: repoCommand.repositoryId,
+        environment: command.environment,
+        customHost: repoCommand.customHost,
+        customToken: repoCommand.customToken ? '[REDACTED]' : undefined,
+        envConfig: {
+          CURRENT_HOST: envConfig.CURRENT_HOST,
+          hasToken: !!envConfig.CURRENT_TOKEN,
+          VUS: envConfig.VUS,
+          DURATION: envConfig.DURATION,
+        },
+      });
+
       await this.notifyStart(execution, resultFile);
 
       const args = [
@@ -90,13 +105,12 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         '-e',
         `ENVIRONMENT=${command.environment}`,
         '-e',
-        `CUSTOM_TOKEN=${command.customToken || ''}`,
-        '-e',
-        'LOG_LEVEL=error',
+        `LOG_LEVEL=error`,
         '--summary-export',
         resultFile,
       ];
 
+      // Przekaż zmienne środowiskowe jako argumenty K6
       if (envConfig.CURRENT_HOST) {
         args.push('-e', `CURRENT_HOST=${envConfig.CURRENT_HOST}`);
       }
@@ -110,14 +124,39 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         args.push('-e', `DURATION=${envConfig.DURATION}`);
       }
 
+      // Dodaj także custom token jeśli jest podany
+      if (command.customToken) {
+        args.push('-e', `CUSTOM_TOKEN=${command.customToken}`);
+      }
+
+      const processEnv = {
+        ...process.env,
+        TERM: 'xterm-256color',
+        NO_COLOR: 'false',
+        // Dodatkowo ustaw w środowisku procesu
+        CURRENT_HOST: envConfig.CURRENT_HOST,
+        CURRENT_TOKEN: envConfig.CURRENT_TOKEN || '',
+        PROFILE: command.profile,
+        ENVIRONMENT: command.environment,
+        LOG_LEVEL: 'error',
+      };
+
+      this.logger.info('Starting K6 process', {
+        testId,
+        command: 'k6',
+        args,
+        workingDir,
+        envVars: {
+          CURRENT_HOST: processEnv.CURRENT_HOST,
+          ENVIRONMENT: processEnv.ENVIRONMENT,
+          PROFILE: processEnv.PROFILE,
+          hasToken: !!processEnv.CURRENT_TOKEN,
+        },
+      });
+
       const child = this.processExecutor.spawn('k6', args, {
         cwd: workingDir,
-        env: {
-          ...process.env,
-          ...envConfig,
-          TERM: 'xterm-256color',
-          NO_COLOR: 'false',
-        },
+        env: processEnv,
       });
 
       this.runningProcesses.set(testId, child);
@@ -174,14 +213,20 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         scriptPath = `${workingDir}/sequential-tests.sh`;
       }
 
+      const processEnv = {
+        ...process.env,
+        TERM: 'xterm-256color',
+        NO_COLOR: 'false',
+        CURRENT_HOST: envConfig.CURRENT_HOST || '',
+        CURRENT_TOKEN: envConfig.CURRENT_TOKEN || '',
+        PROFILE: command.profile,
+        ENVIRONMENT: command.environment,
+        LOG_LEVEL: 'error',
+      };
+
       const child = this.processExecutor.spawn('bash', [scriptPath, 'all', command.profile], {
         cwd: workingDir,
-        env: {
-          ...process.env,
-          ...envConfig,
-          TERM: 'xterm-256color',
-          NO_COLOR: 'false',
-        },
+        env: processEnv,
       });
 
       this.runningProcesses.set(testId, child);
@@ -247,21 +292,70 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
     customHost?: string,
     customToken?: string
   ): Promise<any> {
-    const config = await this.repositoryRepository.getConfig(repositoryId);
-    if (!config) {
-      return {};
+    try {
+      const config = await this.repositoryRepository.getConfig(repositoryId);
+
+      let host = customHost;
+      let token = customToken;
+
+      if (config) {
+        // Jeśli nie ma custom host, użyj z konfiguracji repo
+        if (!host) {
+          host = config.getHost(environment as 'PROD' | 'DEV');
+        }
+
+        // Jeśli nie ma custom token, użyj z konfiguracji repo
+        if (!token) {
+          token = config.getToken(environment as 'PROD' | 'DEV', 'USER');
+        }
+
+        const loadProfile = config.getLoadProfile(profile);
+
+        this.logger.debug('Repository config loaded', {
+          repositoryId,
+          environment,
+          profile,
+          hasConfig: !!config,
+          resolvedHost: host,
+          hasToken: !!token,
+          loadProfile: loadProfile ? `${loadProfile.vus} VUs, ${loadProfile.duration}` : 'default',
+        });
+
+        return {
+          CURRENT_HOST: host || 'http://localhost:5000/api',
+          CURRENT_TOKEN: token || '',
+          VUS: loadProfile?.vus || 10,
+          DURATION: loadProfile?.duration || '60s',
+        };
+      } else {
+        this.logger.warn('No repository config found, using custom values or defaults', {
+          repositoryId,
+          customHost,
+          hasCustomToken: !!customToken,
+        });
+
+        return {
+          CURRENT_HOST: customHost || 'http://localhost:5000/api',
+          CURRENT_TOKEN: customToken || '',
+          VUS: 10,
+          DURATION: '60s',
+        };
+      }
+    } catch (error) {
+      this.logger.error('Error loading repository config', error as Error, {
+        repositoryId,
+        environment,
+        profile,
+      });
+
+      // Fallback na custom wartości
+      return {
+        CURRENT_HOST: customHost || 'http://localhost:5000/api',
+        CURRENT_TOKEN: customToken || '',
+        VUS: 10,
+        DURATION: '60s',
+      };
     }
-
-    const loadProfile = config.getLoadProfile(profile);
-    const host = customHost || config.getHost(environment as 'PROD' | 'DEV');
-    const token = customToken || config.getToken(environment as 'PROD' | 'DEV', 'USER');
-
-    return {
-      CURRENT_HOST: host,
-      CURRENT_TOKEN: token || '',
-      VUS: loadProfile?.vus || 10,
-      DURATION: loadProfile?.duration || '60s',
-    };
   }
 
   private async ensureResultsDirectory(path: string): Promise<void> {
