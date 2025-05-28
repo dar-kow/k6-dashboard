@@ -35,7 +35,7 @@ services:
     command: >
       sh -c "
         # Install bash, curl and tar
-        apk add --no-cache bash curl tar && 
+        apk add --no-cache bash curl git tar && 
         
         # Install k6 properly
         echo 'Installing k6...' &&
