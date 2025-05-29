@@ -31,12 +31,10 @@ const TestResults: React.FC = () => {
         let targetDirectory: string | null = null;
 
         if (directory) {
-            // Przypadek: /results/directory (może być zwykły directory lub repoId)
             targetDirectory = directory;
             console.log('📁 Directory from params:', targetDirectory);
         } else {
-            // Przypadek: /results/repoId/filename.json - parsuj z pathname
-            const pathParts = location.pathname.split('/').filter(Boolean); // ['results', 'repoId', 'filename.json']
+            const pathParts = location.pathname.split('/').filter(Boolean);
             if (pathParts.length >= 3 && pathParts[0] === 'results') {
                 const repoId = pathParts[1];
                 const remainingPath = pathParts.slice(2).join('/');
