@@ -5,21 +5,45 @@ import MetricCard from './MetricCard';
 interface TestResultDetailProps {
     testResult: TestResult;
     testName: string;
+    repositoryName?: string;
+    directoryName?: string;
 }
 
 const TestResultDetail: React.FC<TestResultDetailProps> = ({
     testResult,
     testName,
+    repositoryName,
+    directoryName,
 }) => {
     const formatTestName = (name: string) => {
         return name
             .replace(/-/g, ' ')
+            .replace(/_/g, ' ')
             .split(' ')
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
     };
 
-    // Safe accessor function for metric values with proper type checking and defaults
+    const getDisplayTitle = () => {
+        const formattedTestName = formatTestName(testName);
+
+        if (repositoryName) {
+            return `${repositoryName} / ${formattedTestName} Test Results`;
+        }
+
+        if (directoryName && directoryName.includes('/')) {
+            const parts = directoryName.split('/');
+            if (parts.length >= 2) {
+                const potentialUuid = parts[0];
+                if (potentialUuid.length === 36 && potentialUuid.includes('-')) {
+                    return `${formattedTestName} Test Results`;
+                }
+            }
+        }
+
+        return `${formattedTestName} Test Results`;
+    };
+
     const getMetricValue = (metric: any, property: string, defaultValue: number = 0): number => {
         if (!metric || typeof metric !== 'object' || metric[property] === undefined || metric[property] === null) {
             return defaultValue;
@@ -27,7 +51,6 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
         return typeof metric[property] === 'number' ? metric[property] : defaultValue;
     };
 
-    // Safe formatter with null checks
     const safeFormat = (value: any, decimals: number = 2): string => {
         if (value === undefined || value === null || typeof value !== 'number' || isNaN(value)) {
             return '0.00';
@@ -35,10 +58,8 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
         return value.toFixed(decimals);
     };
 
-    // Check if metrics exist in the result
     const hasMetrics = testResult && testResult.metrics && typeof testResult.metrics === 'object';
 
-    // Calculate derived metrics safely
     const totalRequests = hasMetrics ? getMetricValue(testResult.metrics.http_reqs, 'count') : 0;
     const requestRate = hasMetrics ? getMetricValue(testResult.metrics.http_reqs, 'rate') : 0;
     const avgResponseTime = hasMetrics ? getMetricValue(testResult.metrics.http_req_duration, 'avg') : 0;
@@ -46,7 +67,7 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
 
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">{formatTestName(testName)} Test Results</h2>
+            <h2 className="text-2xl font-bold mb-4">{getDisplayTitle()}</h2>
 
             {!hasMetrics ? (
                 <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
@@ -55,6 +76,20 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
                 </div>
             ) : (
                 <>
+                    {/* Repository info if available */}
+                    {repositoryName && (
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-blue-600">📦</span>
+                                <span className="text-sm font-medium text-blue-900">
+                                    Repository: <span className="font-bold">{repositoryName}</span>
+                                </span>
+                                <span className="text-sm text-blue-700">
+                                    Test: <span className="font-semibold">{formatTestName(testName)}</span>
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <MetricCard

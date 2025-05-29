@@ -193,6 +193,54 @@ export class Application {
         res.sendFile(path.join(__dirname, '../../frontend/build/index.html'));
       });
     }
+
+    this.app.get('/debug/repositories', async (_req, res) => {
+      try {
+        const repositoriesPath = `${this.config.getK6TestsDir()}/repositories`;
+        const repositoriesMetaPath = `${repositoriesPath}/repositories.json`;
+
+        const fs = this.container.get<any>('fileSystem');
+
+        const debugInfo = {
+          repositoriesPath,
+          repositoriesMetaPath,
+          pathExists: await fs.exists(repositoriesPath),
+          metaFileExists: await fs.exists(repositoriesMetaPath),
+          metadata: null as any,
+          directories: [] as string[],
+          error: null as string | null,
+        };
+
+        // Sprawdź czy istnieją katalogi repositories
+        if (debugInfo.pathExists) {
+          try {
+            const entries = await fs.readDir(repositoriesPath);
+            debugInfo.directories = entries
+              .filter((e: any) => e.isDirectory())
+              .map((e: any) => e.name);
+          } catch (error) {
+            debugInfo.error = `Error reading repositories directory: ${error}`;
+          }
+        }
+
+        // Sprawdź metadata
+        if (debugInfo.metaFileExists) {
+          try {
+            const content = await fs.readFile(repositoriesMetaPath, 'utf-8');
+            debugInfo.metadata = JSON.parse(content as string);
+          } catch (error) {
+            debugInfo.error = `Error reading repositories metadata: ${error}`;
+          }
+        }
+
+        res.json(debugInfo);
+      } catch (error) {
+        res.status(500).json({
+          error: 'Debug repositories failed',
+          details: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
   }
 
   private setupErrorHandling(): void {

@@ -9,12 +9,41 @@ export class TestResultMapper {
       `Sending timestamp to frontend: ${directory.name} -> ${timestamp} (${directory.date.toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })})`
     );
 
-    return {
+    console.log('🔍 TestResultMapper mapping directory:', {
+      name: directory.name,
+      repositoryId: directory.repositoryId,
+      repositoryName: directory.repositoryName,
+      testName: directory.getTestName?.() || 'N/A',
+    });
+
+    const dto: TestDirectoryDto = {
       name: directory.name,
       path: directory.path,
       date: timestamp.toString(),
       type: directory.type,
     };
+
+    if (directory.repositoryId) {
+      dto.repositoryId = directory.repositoryId;
+    }
+
+    if (directory.repositoryName) {
+      dto.repositoryName = directory.repositoryName;
+    }
+
+    const testName = directory.getTestName?.();
+    if (testName) {
+      dto.testName = testName;
+    }
+
+    console.log('✅ TestResultMapper created DTO:', {
+      name: dto.name,
+      repositoryId: dto.repositoryId,
+      repositoryName: dto.repositoryName,
+      testName: dto.testName,
+    });
+
+    return dto;
   }
 
   static toDirectoriesDto(directories: TestDirectory[]): TestDirectoryDto[] {

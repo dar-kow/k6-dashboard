@@ -68,43 +68,89 @@ export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children
                 try {
                     const parsedDate = parseDirectoryDate(dir.date);
 
-                    console.log(`📂 Processing directory:`, {
+                    console.log(`📂 Processing directory in context:`, {
                         name: dir.name,
                         date: parsedDate.toISOString(),
+                        repositoryName: dir.repositoryName,
+                        repositoryId: dir.repositoryId,
+                        testName: dir.testName,
                         isValid: !isNaN(parsedDate.getTime())
                     });
 
                     return {
                         ...dir,
-                        date: parsedDate
-                    };
+                        date: parsedDate,
+                        repositoryId: dir.repositoryId,
+                        repositoryName: dir.repositoryName,
+                        testName: dir.testName,
+                    } as TestDirectory;
                 } catch (error) {
                     console.error('❌ Error processing directory:', dir, error);
                     return {
                         ...dir,
-                        date: new Date()
-                    };
+                        date: new Date(),
+                        repositoryId: dir.repositoryId,
+                        repositoryName: dir.repositoryName,
+                        testName: dir.testName,
+                    } as TestDirectory;
                 }
+            });
+
+            console.log(`🎯 Processed directories summary:`, {
+                total: processedDirectories.length,
+                withRepositoryInfo: processedDirectories.filter(d => d.repositoryName).length,
+                samples: processedDirectories.slice(0, 3).map(d => ({
+                    name: d.name,
+                    repositoryName: d.repositoryName,
+                    repositoryId: d.repositoryId,
+                    testName: d.testName
+                }))
             });
             const filteredDirectories = selectedRepository
                 ? processedDirectories.filter(dir => {
                     const belongsToRepo = dir.name.startsWith(`${selectedRepository.id}/`);
-                    console.log(`🔍 Directory ${dir.name} belongs to repo ${selectedRepository.id}:`, belongsToRepo);
+                    console.log(`🔍 Directory filtering:`, {
+                        dirName: dir.name,
+                        selectedRepoId: selectedRepository.id,
+                        belongsToRepo,
+                        repositoryName: dir.repositoryName,
+                        repositoryId: dir.repositoryId,
+                        testName: dir.testName
+                    });
                     return belongsToRepo;
                 })
                 : processedDirectories.filter(dir => {
                     const isDefault = dir.name.startsWith('default/');
-                    console.log(`🔍 Directory ${dir.name} is default:`, isDefault);
+                    console.log(`🔍 Default directory filtering:`, {
+                        dirName: dir.name,
+                        isDefault,
+                        repositoryName: dir.repositoryName,
+                        repositoryId: dir.repositoryId,
+                        testName: dir.testName
+                    });
                     return isDefault;
                 });
 
-            console.log(`✅ Filtered directories (${filteredDirectories.length}):`,
+            console.log(`✅ Final filtered directories (${filteredDirectories.length}):`,
                 filteredDirectories.map(d => ({
                     name: d.name,
                     date: d.date.toISOString(),
+                    repositoryName: d.repositoryName,
+                    repositoryId: d.repositoryId,
+                    testName: d.testName,
                     valid: !isNaN(d.date.getTime())
                 }))
             );
+
+            if (filteredDirectories.length > 0) {
+                console.log(`🎯 First directory detailed info:`, {
+                    name: filteredDirectories[0].name,
+                    repositoryName: filteredDirectories[0].repositoryName,
+                    repositoryId: filteredDirectories[0].repositoryId,
+                    testName: filteredDirectories[0].testName,
+                    hasRepositoryInfo: !!(filteredDirectories[0].repositoryName && filteredDirectories[0].repositoryId)
+                });
+            }
 
             setDirectories(filteredDirectories);
 

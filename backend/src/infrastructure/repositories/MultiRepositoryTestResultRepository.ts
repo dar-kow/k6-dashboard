@@ -67,26 +67,147 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
     const directories: TestDirectory[] = [];
     const virtualDirectories: TestDirectory[] = [];
 
+    console.log(`🔍 Processing path: ${path} for repositoryId: ${repositoryId}`);
+
+    // 🔧 POPRAWKA: Lepsze logowanie repository metadata
+    let repositoryName: string | undefined;
+    let actualRepositoryId: string | undefined;
+
+    if (repositoryId !== 'default') {
+      try {
+        // Użyj absolutnej ścieżki do repositories.json
+        const repositoriesMetaPath = `${this.repositoriesPath}/repositories.json`;
+        console.log(`📋 Looking for repositories metadata at: ${repositoriesMetaPath}`);
+
+        const metaExists = await this.fileSystem.exists(repositoriesMetaPath);
+        console.log(`📋 Repositories metadata exists: ${metaExists}`);
+
+        if (metaExists) {
+          const content = await this.fileSystem.readFile(repositoriesMetaPath, 'utf-8');
+          console.log(
+            `📋 Raw repositories.json content (first 200 chars):`,
+            (content as string).substring(0, 200)
+          );
+
+          try {
+            const reposData = JSON.parse(content as string);
+            console.log(`📋 Parsed repositories data:`, {
+              isArray: Array.isArray(reposData),
+              length: Array.isArray(reposData) ? reposData.length : 'N/A',
+              repositories: Array.isArray(reposData)
+                ? reposData.map((r) => ({ id: r.id, name: r.name }))
+                : 'Not array',
+            });
+
+            const repoInfo = reposData.find((r: any) => r.id === repositoryId);
+            console.log(`📋 Looking for repositoryId: ${repositoryId}`);
+            console.log(`📋 Found repository info:`, repoInfo);
+
+            if (repoInfo) {
+              repositoryName = repoInfo.name;
+              actualRepositoryId = repoInfo.id;
+              console.log(`✅ Repository resolved: ${repositoryName} (ID: ${actualRepositoryId})`);
+            } else {
+              console.warn(`⚠️ Repository ${repositoryId} not found in metadata`);
+              console.warn(
+                `⚠️ Available repositories:`,
+                reposData.map((r: any) => r.id)
+              );
+            }
+          } catch (parseError) {
+            console.error(`❌ Error parsing repositories.json:`, parseError);
+            console.error(`❌ Content that failed to parse:`, content);
+          }
+        } else {
+          console.warn(`⚠️ Repositories metadata file not found at ${repositoriesMetaPath}`);
+
+          // 🔧 POPRAWKA: Sprawdź czy katalog repositories w ogóle istnieje
+          const reposDirExists = await this.fileSystem.exists(this.repositoriesPath);
+          console.warn(
+            `⚠️ Repositories directory exists: ${reposDirExists} at ${this.repositoriesPath}`
+          );
+
+          if (reposDirExists) {
+            try {
+              const repoEntries = await this.fileSystem.readDir(this.repositoriesPath);
+              console.warn(
+                `⚠️ Contents of repositories directory:`,
+                repoEntries.map((e) => ({
+                  name: e.name,
+                  isDir: e.isDirectory(),
+                  isFile: e.isFile(),
+                }))
+              );
+            } catch (dirError) {
+              console.error(`❌ Error reading repositories directory:`, dirError);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error loading repository metadata:`, error);
+      }
+    } else {
+      repositoryName = 'Default Tests';
+      console.log(`📋 Using default repository name: ${repositoryName}`);
+    }
+
+    console.log(
+      `🏷️ Final repository info: name="${repositoryName}", id="${actualRepositoryId || repositoryId}"`
+    );
+
+    // Process real directories
     for (const entry of entries) {
       if (entry.isDirectory()) {
         const date = this.extractDateFromDirectoryName(entry.name);
-        directories.push(
-          new TestDirectory(`${repositoryId}/${entry.name}`, entry.path, date, 'directory')
+        const directory = new TestDirectory(
+          `${repositoryId}/${entry.name}`,
+          entry.path,
+          date,
+          'directory',
+          actualRepositoryId || repositoryId,
+          repositoryName
         );
+        directories.push(directory);
+        console.log(`📁 Created real directory:`, {
+          name: directory.name,
+          repositoryName: directory.repositoryName,
+          repositoryId: directory.repositoryId,
+        });
       }
     }
 
-    // Virtual directories (single JSON files)
+    // Process virtual directories (single JSON files)
     for (const entry of entries) {
       if (entry.isFile() && entry.name.endsWith('.json')) {
         const date = this.extractDateFromFileName(entry.name);
-        virtualDirectories.push(
-          new TestDirectory(`${repositoryId}/${entry.name}`, entry.path, date, 'virtual')
+        const directory = new TestDirectory(
+          `${repositoryId}/${entry.name}`,
+          entry.path,
+          date,
+          'virtual',
+          actualRepositoryId || repositoryId,
+          repositoryName
         );
+        virtualDirectories.push(directory);
+        console.log(`📄 Created virtual directory:`, {
+          name: directory.name,
+          repositoryName: directory.repositoryName,
+          repositoryId: directory.repositoryId,
+          testName: directory.getTestName(),
+        });
       }
     }
 
-    return [...directories, ...virtualDirectories];
+    const allDirs = [...directories, ...virtualDirectories];
+    console.log(`📊 Final directories summary:`, {
+      repositoryId: actualRepositoryId || repositoryId,
+      repositoryName,
+      totalDirs: allDirs.length,
+      realDirs: directories.length,
+      virtualDirs: virtualDirectories.length,
+    });
+
+    return allDirs;
   }
 
   async findByDirectory(directory: string): Promise<TestFile[]> {

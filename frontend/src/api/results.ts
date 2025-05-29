@@ -75,7 +75,13 @@ export const fetchResultDirectories = async (
 
     const processedDirectories = response.data.map((item, index) => {
       try {
-        console.log(`📂 Processing directory ${index}:`, item);
+        console.log(`📂 Processing directory ${index}:`, {
+          name: item.name,
+          repositoryId: item.repositoryId,
+          repositoryName: item.repositoryName,
+          testName: item.testName,
+          hasRepositoryInfo: !!(item.repositoryId && item.repositoryName),
+        });
 
         if (!item.name || !item.path) {
           console.warn(`⚠️ Directory ${index} missing required fields:`, item);
@@ -85,11 +91,18 @@ export const fetchResultDirectories = async (
           name: item.name || `unknown-${index}`,
           path: item.path || "",
           date: parseApiDate(item.date),
+          // 🔧 POPRAWKA: Zachowaj repository info z API
+          repositoryId: item.repositoryId,
+          repositoryName: item.repositoryName,
+          testName: item.testName,
         };
 
         console.log(`✅ Processed directory ${index}:`, {
           name: directory.name,
           date: directory.date.toISOString(),
+          repositoryName: directory.repositoryName,
+          repositoryId: directory.repositoryId,
+          testName: directory.testName,
           valid: !isNaN(directory.date.getTime()),
         });
 
@@ -100,6 +113,9 @@ export const fetchResultDirectories = async (
           name: `error-directory-${index}`,
           path: "",
           date: new Date(),
+          repositoryId: item.repositoryId,
+          repositoryName: item.repositoryName,
+          testName: item.testName,
         };
       }
     });
@@ -109,7 +125,7 @@ export const fetchResultDirectories = async (
     );
 
     console.log(
-      `✅ Successfully processed ${sortedDirectories.length} directories`
+      `✅ Successfully processed ${sortedDirectories.length} directories with repository info`
     );
     return sortedDirectories;
   } catch (error) {

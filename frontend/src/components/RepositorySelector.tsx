@@ -96,7 +96,7 @@ const RepositorySelector: React.FC = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-900">
-                                {selectedRepository.name}
+                                📦 {selectedRepository.name}
                             </p>
                             <p className="text-xs text-gray-600 mt-1">
                                 {selectedRepository.url}
@@ -104,6 +104,9 @@ const RepositorySelector: React.FC = () => {
                             <p className="text-xs text-gray-500 mt-1">
                                 Branch: {selectedRepository.branch}
                                 {selectedRepository.lastSync && ` • Last sync: ${new Date(selectedRepository.lastSync).toLocaleString()}`}
+                            </p>
+                            <p className="text-xs text-green-600 mt-1 font-medium">
+                                📁 Results: {selectedRepository.name}/results/
                             </p>
                         </div>
                         <div className="flex items-center space-x-2">
