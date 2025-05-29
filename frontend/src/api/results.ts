@@ -85,11 +85,17 @@ export const fetchResultDirectories = async (
           name: item.name || `unknown-${index}`,
           path: item.path || "",
           date: parseApiDate(item.date),
+          // 🔧 DODANE: Repository info dla lepszego UX
+          repositoryId: item.repositoryId,
+          repositoryName: item.repositoryName,
+          testName: item.testName,
         };
 
         console.log(`✅ Processed directory ${index}:`, {
           name: directory.name,
           date: directory.date.toISOString(),
+          repositoryName: directory.repositoryName,
+          testName: directory.testName,
           valid: !isNaN(directory.date.getTime()),
         });
 
@@ -109,7 +115,7 @@ export const fetchResultDirectories = async (
     );
 
     console.log(
-      `✅ Successfully processed ${sortedDirectories.length} directories`
+      `✅ Successfully processed ${sortedDirectories.length} directories with repository info`
     );
     return sortedDirectories;
   } catch (error) {
