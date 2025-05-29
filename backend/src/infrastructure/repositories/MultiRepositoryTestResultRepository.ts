@@ -69,7 +69,7 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
 
     console.log(`🔍 Processing path: ${path} for repositoryId: ${repositoryId}`);
 
-    // 🔧 POPRAWKA: Pobierz repository name dla lepszego UX
+    // 🔧 POPRAWKA: Lepsze logowanie repository metadata
     let repositoryName: string | undefined;
     let actualRepositoryId: string | undefined;
 
@@ -84,24 +84,64 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
 
         if (metaExists) {
           const content = await this.fileSystem.readFile(repositoriesMetaPath, 'utf-8');
-          console.log(`📋 Raw repositories.json content:`, content);
+          console.log(
+            `📋 Raw repositories.json content (first 200 chars):`,
+            (content as string).substring(0, 200)
+          );
 
-          const reposData = JSON.parse(content as string);
-          console.log(`📋 Parsed repositories data:`, reposData);
+          try {
+            const reposData = JSON.parse(content as string);
+            console.log(`📋 Parsed repositories data:`, {
+              isArray: Array.isArray(reposData),
+              length: Array.isArray(reposData) ? reposData.length : 'N/A',
+              repositories: Array.isArray(reposData)
+                ? reposData.map((r) => ({ id: r.id, name: r.name }))
+                : 'Not array',
+            });
 
-          const repoInfo = reposData.find((r: any) => r.id === repositoryId);
-          console.log(`📋 Looking for repositoryId: ${repositoryId}`);
-          console.log(`📋 Found repository info:`, repoInfo);
+            const repoInfo = reposData.find((r: any) => r.id === repositoryId);
+            console.log(`📋 Looking for repositoryId: ${repositoryId}`);
+            console.log(`📋 Found repository info:`, repoInfo);
 
-          if (repoInfo) {
-            repositoryName = repoInfo.name;
-            actualRepositoryId = repoInfo.id;
-            console.log(`✅ Repository resolved: ${repositoryName} (ID: ${actualRepositoryId})`);
-          } else {
-            console.warn(`⚠️ Repository ${repositoryId} not found in metadata`);
+            if (repoInfo) {
+              repositoryName = repoInfo.name;
+              actualRepositoryId = repoInfo.id;
+              console.log(`✅ Repository resolved: ${repositoryName} (ID: ${actualRepositoryId})`);
+            } else {
+              console.warn(`⚠️ Repository ${repositoryId} not found in metadata`);
+              console.warn(
+                `⚠️ Available repositories:`,
+                reposData.map((r: any) => r.id)
+              );
+            }
+          } catch (parseError) {
+            console.error(`❌ Error parsing repositories.json:`, parseError);
+            console.error(`❌ Content that failed to parse:`, content);
           }
         } else {
           console.warn(`⚠️ Repositories metadata file not found at ${repositoriesMetaPath}`);
+
+          // 🔧 POPRAWKA: Sprawdź czy katalog repositories w ogóle istnieje
+          const reposDirExists = await this.fileSystem.exists(this.repositoriesPath);
+          console.warn(
+            `⚠️ Repositories directory exists: ${reposDirExists} at ${this.repositoriesPath}`
+          );
+
+          if (reposDirExists) {
+            try {
+              const repoEntries = await this.fileSystem.readDir(this.repositoriesPath);
+              console.warn(
+                `⚠️ Contents of repositories directory:`,
+                repoEntries.map((e) => ({
+                  name: e.name,
+                  isDir: e.isDirectory(),
+                  isFile: e.isFile(),
+                }))
+              );
+            } catch (dirError) {
+              console.error(`❌ Error reading repositories directory:`, dirError);
+            }
+          }
         }
       } catch (error) {
         console.error(`❌ Error loading repository metadata:`, error);
