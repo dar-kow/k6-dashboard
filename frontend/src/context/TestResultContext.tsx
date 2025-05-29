@@ -26,6 +26,25 @@ interface TestResultProviderProps {
     children: ReactNode;
 }
 
+const parseDirectoryDate = (dateValue: any): Date => {
+    try {
+        if (dateValue instanceof Date) return dateValue;
+        if (typeof dateValue === 'string') {
+            if (/^\d{13}$/.test(dateValue)) {
+                return new Date(parseInt(dateValue));
+            }
+            return new Date(dateValue);
+        }
+        if (typeof dateValue === 'number') {
+            return new Date(dateValue);
+        }
+        return new Date();
+    } catch (error) {
+        console.error('❌ Error parsing date:', dateValue, error);
+        return new Date();
+    }
+};
+
 export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children }) => {
     const { selectedRepository } = useRepository();
     const [directories, setDirectories] = useState<TestDirectory[]>([]);
@@ -38,17 +57,60 @@ export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children
         setError(null);
 
         try {
-            const allDirectories = await fetchResultDirectories();
+            console.log('🔄 Refreshing test results data...');
 
+            const repositoryId = selectedRepository?.id;
+            const allDirectories = await fetchResultDirectories(repositoryId);
+
+            console.log('📁 Raw directories from API:', allDirectories);
+
+            const processedDirectories = allDirectories.map(dir => {
+                try {
+                    const parsedDate = parseDirectoryDate(dir.date);
+
+                    console.log(`📂 Processing directory:`, {
+                        name: dir.name,
+                        date: parsedDate.toISOString(),
+                        isValid: !isNaN(parsedDate.getTime())
+                    });
+
+                    return {
+                        ...dir,
+                        date: parsedDate
+                    };
+                } catch (error) {
+                    console.error('❌ Error processing directory:', dir, error);
+                    return {
+                        ...dir,
+                        date: new Date()
+                    };
+                }
+            });
             const filteredDirectories = selectedRepository
-                ? allDirectories.filter(dir => dir.name.startsWith(`repo:${selectedRepository.id}/`))
-                : allDirectories.filter(dir => !dir.name.startsWith('repo:'));
+                ? processedDirectories.filter(dir => {
+                    const belongsToRepo = dir.name.startsWith(`${selectedRepository.id}/`);
+                    console.log(`🔍 Directory ${dir.name} belongs to repo ${selectedRepository.id}:`, belongsToRepo);
+                    return belongsToRepo;
+                })
+                : processedDirectories.filter(dir => {
+                    const isDefault = dir.name.startsWith('default/');
+                    console.log(`🔍 Directory ${dir.name} is default:`, isDefault);
+                    return isDefault;
+                });
+
+            console.log(`✅ Filtered directories (${filteredDirectories.length}):`,
+                filteredDirectories.map(d => ({
+                    name: d.name,
+                    date: d.date.toISOString(),
+                    valid: !isNaN(d.date.getTime())
+                }))
+            );
 
             setDirectories(filteredDirectories);
-            console.log('Fetched directories:', filteredDirectories.length);
+
         } catch (err) {
-            console.error('Error fetching directories:', err);
-            setError('Failed to fetch test results. Please ensure the backend server is running.');
+            console.error('💥 Error fetching directories:', err);
+            setError(`Failed to fetch test results: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setLoading(false);
         }
