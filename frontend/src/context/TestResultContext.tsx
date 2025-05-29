@@ -71,40 +71,76 @@ export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children
                     console.log(`📂 Processing directory:`, {
                         name: dir.name,
                         date: parsedDate.toISOString(),
+                        repositoryName: dir.repositoryName,
+                        testName: dir.testName,
                         isValid: !isNaN(parsedDate.getTime())
                     });
 
                     return {
                         ...dir,
-                        date: parsedDate
-                    };
+                        date: parsedDate,
+                        // 🔧 DODANE: Zachowaj repository info z API
+                        repositoryId: dir.repositoryId,
+                        repositoryName: dir.repositoryName,
+                        testName: dir.testName,
+                    } as TestDirectory;
                 } catch (error) {
                     console.error('❌ Error processing directory:', dir, error);
                     return {
                         ...dir,
-                        date: new Date()
-                    };
+                        date: new Date(),
+                        repositoryId: dir.repositoryId,
+                        repositoryName: dir.repositoryName,
+                        testName: dir.testName,
+                    } as TestDirectory;
                 }
             });
             const filteredDirectories = selectedRepository
                 ? processedDirectories.filter(dir => {
                     const belongsToRepo = dir.name.startsWith(`${selectedRepository.id}/`);
-                    console.log(`🔍 Directory ${dir.name} belongs to repo ${selectedRepository.id}:`, belongsToRepo);
+                    console.log(`🔍 Directory filtering:`, {
+                        dirName: dir.name,
+                        selectedRepoId: selectedRepository.id,
+                        belongsToRepo,
+                        repositoryName: dir.repositoryName,
+                        repositoryId: dir.repositoryId,
+                        testName: dir.testName
+                    });
                     return belongsToRepo;
                 })
                 : processedDirectories.filter(dir => {
                     const isDefault = dir.name.startsWith('default/');
-                    console.log(`🔍 Directory ${dir.name} is default:`, isDefault);
+                    console.log(`🔍 Default directory filtering:`, {
+                        dirName: dir.name,
+                        isDefault,
+                        repositoryName: dir.repositoryName,
+                        repositoryId: dir.repositoryId,
+                        testName: dir.testName
+                    });
                     return isDefault;
                 });
 
-            console.log(`✅ Filtered directories (${filteredDirectories.length}):`,
+            console.log(`✅ Final filtered directories (${filteredDirectories.length}):`,
                 filteredDirectories.map(d => ({
                     name: d.name,
                     date: d.date.toISOString(),
+                    repositoryName: d.repositoryName,
+                    repositoryId: d.repositoryId,
+                    testName: d.testName,
                     valid: !isNaN(d.date.getTime())
                 }))
             );
+
+            // 🔧 DODANE: Dodatkowe logowanie dla debugowania  
+            if (filteredDirectories.length > 0) {
+                console.log(`🎯 First directory detailed info:`, {
+                    name: filteredDirectories[0].name,
+                    repositoryName: filteredDirectories[0].repositoryName,
+                    repositoryId: filteredDirectories[0].repositoryId,
+                    testName: filteredDirectories[0].testName,
+                    hasRepositoryInfo: !!(filteredDirectories[0].repositoryName && filteredDirectories[0].repositoryId)
+                });
+            }
 
             setDirectories(filteredDirectories);
 
