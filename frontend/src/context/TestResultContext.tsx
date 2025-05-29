@@ -68,10 +68,11 @@ export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children
                 try {
                     const parsedDate = parseDirectoryDate(dir.date);
 
-                    console.log(`📂 Processing directory:`, {
+                    console.log(`📂 Processing directory in context:`, {
                         name: dir.name,
                         date: parsedDate.toISOString(),
                         repositoryName: dir.repositoryName,
+                        repositoryId: dir.repositoryId,
                         testName: dir.testName,
                         isValid: !isNaN(parsedDate.getTime())
                     });
@@ -79,7 +80,6 @@ export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children
                     return {
                         ...dir,
                         date: parsedDate,
-                        // 🔧 DODANE: Zachowaj repository info z API
                         repositoryId: dir.repositoryId,
                         repositoryName: dir.repositoryName,
                         testName: dir.testName,
@@ -94,6 +94,17 @@ export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children
                         testName: dir.testName,
                     } as TestDirectory;
                 }
+            });
+
+            console.log(`🎯 Processed directories summary:`, {
+                total: processedDirectories.length,
+                withRepositoryInfo: processedDirectories.filter(d => d.repositoryName).length,
+                samples: processedDirectories.slice(0, 3).map(d => ({
+                    name: d.name,
+                    repositoryName: d.repositoryName,
+                    repositoryId: d.repositoryId,
+                    testName: d.testName
+                }))
             });
             const filteredDirectories = selectedRepository
                 ? processedDirectories.filter(dir => {
@@ -131,7 +142,6 @@ export const TestResultProvider: React.FC<TestResultProviderProps> = ({ children
                 }))
             );
 
-            // 🔧 DODANE: Dodatkowe logowanie dla debugowania  
             if (filteredDirectories.length > 0) {
                 console.log(`🎯 First directory detailed info:`, {
                     name: filteredDirectories[0].name,
