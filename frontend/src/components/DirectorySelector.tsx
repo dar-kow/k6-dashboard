@@ -68,9 +68,11 @@ const DirectorySelector: React.FC<DirectorySelectorProps> = ({
         // Fallback dla starych danych
         if (directory.name.endsWith('.json')) {
             const match = directory.name.match(/^\d{8}_\d{6}_(.+)\.json$/);
-            const result = match ? match[1].replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()) : directory.name;
-            console.log(`⚠️ Using fallback from filename: ${result}`);
-            return result;
+            if (match) {
+                const result = match[1].replace(/-/g, ' ').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                console.log(`⚠️ Using fallback from filename: ${result}`);
+                return result;
+            }
         }
 
         console.log(`❌ Using directory name as fallback: ${directory.name}`);
