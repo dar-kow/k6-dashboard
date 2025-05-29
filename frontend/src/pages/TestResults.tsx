@@ -243,6 +243,7 @@ const TestResults: React.FC = () => {
                                 return selectedDir?.repositoryName;
                             })()}
                             directoryName={selectedDirectory || undefined}
+                            selectedDirectory={directories.find(d => d.name === selectedDirectory)}
                         />
                     )}
 

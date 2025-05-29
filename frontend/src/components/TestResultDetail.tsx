@@ -7,6 +7,7 @@ interface TestResultDetailProps {
     testName: string;
     repositoryName?: string;
     directoryName?: string;
+    selectedDirectory?: any;
 }
 
 const TestResultDetail: React.FC<TestResultDetailProps> = ({
@@ -14,6 +15,7 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
     testName,
     repositoryName,
     directoryName,
+    selectedDirectory,
 }) => {
     const formatTestName = (name: string) => {
         return name
@@ -24,8 +26,60 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
             .join(' ');
     };
 
+    const getFormattedTestName = () => {
+        console.log(`🔍 TestResultDetail getFormattedTestName:`, {
+            selectedDirectory: selectedDirectory ? {
+                name: selectedDirectory.name,
+                testName: selectedDirectory.testName,
+                isVirtual: selectedDirectory.name?.endsWith('.json')
+            } : null,
+            fallbackTestName: testName,
+            directoryName
+        });
+
+        if (selectedDirectory?.testName) {
+            const formattedTestName: string = selectedDirectory.testName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            console.log(`✅ Using selectedDirectory.testName: ${formattedTestName}`);
+            return formattedTestName;
+        }
+
+        if (selectedDirectory?.name?.endsWith('.json')) {
+            const fileName = selectedDirectory.name.split('/').pop() || '';
+            const extractedTestName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+            interface WordFormatter {
+                (word: string): string;
+            }
+
+            interface FormattedTestName {
+                replace(searchValue: string | RegExp, replaceValue: string): FormattedTestName;
+                split(separator: string): string[];
+            }
+
+            const wordFormatter: WordFormatter = (word: string): string =>
+                word.charAt(0).toUpperCase() + word.slice(1);
+
+            const formatted: string = extractedTestName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string): string => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            console.log(`⚠️ Using fallback from fileName: ${formatted}`);
+            return formatted;
+        }
+
+        const fallbackFormatted = formatTestName(testName);
+        console.log(`❌ Using final fallback testName: ${fallbackFormatted}`);
+        return fallbackFormatted;
+    };
+
     const getDisplayTitle = () => {
-        const formattedTestName = formatTestName(testName);
+        const formattedTestName = getFormattedTestName();
 
         if (repositoryName) {
             return `${repositoryName} / ${formattedTestName} Test Results`;
@@ -67,7 +121,8 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
 
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4">{getDisplayTitle()}</h2>
+            {/* it looks bad on UI repeat */}
+            {/* <h2 className="text-2xl font-bold mb-4">{getDisplayTitle()}</h2> */}
 
             {!hasMetrics ? (
                 <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
@@ -85,7 +140,7 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
                                     Repository: <span className="font-bold">{repositoryName}</span>
                                 </span>
                                 <span className="text-sm text-blue-700">
-                                    Test: <span className="font-semibold">{formatTestName(testName)}</span>
+                                    Test: <span className="font-semibold">{getFormattedTestName()}</span>
                                 </span>
                             </div>
                         </div>
