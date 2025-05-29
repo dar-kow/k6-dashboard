@@ -2,6 +2,10 @@ export interface TestDirectory {
   name: string;
   path: string;
   date: Date;
+  // 🔧 DODANE: Repository info dla lepszego UX
+  repositoryId?: string;
+  repositoryName?: string;
+  testName?: string;
 }
 
 export interface TestFile {
@@ -86,4 +90,8 @@ export interface TestResult {
     [key: string]: any;
   };
   root_group: TestGroupStructure;
+
+  // 🔧 DODANE: Helper methods dla lepszego UX
+  getDisplayName?: () => string;
+  getTestType?: () => string;
 }
