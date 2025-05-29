@@ -41,15 +41,14 @@ const Dashboard: React.FC = () => {
 
                 const results: Record<string, TestResult> = {};
 
-                // 🔧 SPRAWDŹ CZY TO VIRTUAL DIRECTORY (pojedynczy plik JSON)
                 if (selectedDir.name.endsWith('.json')) {
                     console.log('📄 Virtual directory detected - loading single file result');
 
                     try {
                         // Dla virtual directory, nazwa zawiera pełną ścieżkę: "repoId/timestamp_test.json"
                         const pathParts = selectedDir.name.split('/');
-                        const fileName = pathParts[pathParts.length - 1]; // "timestamp_test.json"
-                        const testKey = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, ''); // "test"
+                        const fileName = pathParts[pathParts.length - 1];
+                        const testKey = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
 
                         console.log('📄 Loading virtual file:', {
                             selectedDirName: selectedDir.name,
@@ -57,20 +56,17 @@ const Dashboard: React.FC = () => {
                             testKey
                         });
 
-                        // Użyj pełnej ścieżki jako directory parameter
                         const result = await fetchTestResult(selectedDir.name, fileName);
                         results[testKey] = result;
 
                         console.log('✅ Loaded virtual directory result:', testKey);
                     } catch (err) {
                         console.error('❌ Error loading virtual directory result:', err);
-                        // Pokaż błąd ale kontynuuj
                     }
                 } else {
                     console.log('📁 Real directory detected - loading files list');
 
                     try {
-                        // Dla normalnego directory, pobierz listę plików
                         const files = await fetchResultFiles(selectedDir.name);
                         console.log('📁 Files found:', files);
 
@@ -80,11 +76,9 @@ const Dashboard: React.FC = () => {
                             return;
                         }
 
-                        // Przetwórz max 10 plików
                         const filesToProcess = files.slice(0, Math.min(10, files.length));
                         console.log(`📊 Processing ${filesToProcess.length} files out of ${files.length} total`);
 
-                        // Załaduj wyniki testów
                         for (const file of filesToProcess) {
                             try {
                                 if (!file || !file.name) {
@@ -101,12 +95,10 @@ const Dashboard: React.FC = () => {
                                 console.log('✅ Loaded result for:', testKey);
                             } catch (err) {
                                 console.error(`❌ Error loading result for ${file?.name || 'unknown'}:`, err);
-                                // Kontynuuj z innymi plikami
                             }
                         }
                     } catch (err) {
                         console.error('❌ Error loading files from directory:', err);
-                        // Pokaż błąd ale kontynuuj
                     }
                 }
 
@@ -119,7 +111,6 @@ const Dashboard: React.FC = () => {
 
             } catch (err) {
                 console.error('💥 Critical error loading latest results:', err);
-                // Nie ustawiaj error state, żeby nie zepsuć całego UI
             } finally {
                 setLatestResultsLoading(false);
             }
@@ -325,7 +316,7 @@ const Dashboard: React.FC = () => {
             }
         });
 
-        return checkData.slice(0, 6); // Show top 6 checks
+        return checkData.slice(0, 6);
     };
 
     return (
@@ -434,7 +425,6 @@ const Dashboard: React.FC = () => {
                                     <span className="font-medium">Run Time:</span> {getLastRunTime()}
                                 </p>
 
-                                {/* 🔧 POPRAWKA: Pokazuj repository name zamiast UUID */}
                                 <p className="text-gray-600 mt-2">
                                     <span className="font-medium">Repository:</span> {
                                         selectedTestRun ? (() => {
@@ -454,12 +444,11 @@ const Dashboard: React.FC = () => {
                                                 return selectedDir.repositoryName;
                                             }
 
-                                            // Fallback: jeśli nie ma repository name, spróbuj wyciągnąć z nazwy
                                             if (selectedDir?.name.includes('/')) {
                                                 const parts = selectedDir.name.split('/');
                                                 const repoId = parts[0];
                                                 console.log(`⚠️ No repository name, using fallback for ID: ${repoId}`);
-                                                return `Repository ${repoId.substring(0, 8)}...`; // Pokaż pierwsze 8 znaków UUID
+                                                return `Repository ${repoId.substring(0, 8)}...`;
                                             }
 
                                             console.log(`❌ No repository info available`);
@@ -468,7 +457,6 @@ const Dashboard: React.FC = () => {
                                     }
                                 </p>
 
-                                {/* 🔧 POPRAWKA: Pokazuj test name zamiast pełnej ścieżki */}
                                 <p className="text-gray-600 mt-2">
                                     <span className="font-medium">Test:</span> {
                                         selectedTestRun ? (() => {
@@ -493,7 +481,6 @@ const Dashboard: React.FC = () => {
                                                 return formattedTestName;
                                             }
 
-                                            // Fallback: wyciągnij z nazwy pliku
                                             if (selectedDir?.name.endsWith('.json')) {
                                                 const fileName = selectedDir.name.split('/').pop() || '';
                                                 const testName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
