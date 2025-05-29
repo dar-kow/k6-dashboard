@@ -652,12 +652,18 @@ const TestRunner: React.FC = () => {
                 <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded">
                     <p>📁 <strong>Results location:</strong>
                         <code className="bg-gray-200 px-1 rounded ml-1">
-                            {selectedRepository ? `repositories/${selectedRepository.id}/results/` : 'k6-tests/results/'}
+                            {selectedRepository
+                                ? `${selectedRepository.name}/results/`
+                                : 'k6-tests/results/'
+                            }
                         </code>
                     </p>
                     <p>🎛️ <strong>Terminal controls:</strong> Use auto-scroll toggle and manual scroll buttons below</p>
                     <p>🔄 <strong>Auto-scroll:</strong> {autoScroll ? 'Enabled - shows latest output automatically' : 'Disabled - scroll manually to see new output'}</p>
                     <p>🌐 <strong>Environment:</strong> Running tests against <span className={`font-medium ${environment === 'PROD' ? 'text-blue-600' : 'text-orange-600'}`}>{environment}</span> environment</p>
+                    {selectedRepository && (
+                        <p>📦 <strong>Repository:</strong> <span className="font-medium text-gray-700">{selectedRepository.name}</span> (branch: {selectedRepository.branch})</p>
+                    )}
                     {isRunning && <p>⚠️ <strong>Running:</strong> Use STOP button above to terminate test execution</p>}
                 </div>
 

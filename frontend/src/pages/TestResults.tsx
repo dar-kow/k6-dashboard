@@ -21,16 +21,37 @@ const TestResults: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState<boolean>(false);
 
-    // If directory is provided in the URL, update selectedDirectory in context
     useEffect(() => {
-        if (directory && directory !== selectedDirectory) {
-            setSelectedDirectory(directory);
-        } else if (!directory && selectedDirectory) {
+        console.log('🔍 URL Analysis:', {
+            directory,
+            pathname: location.pathname,
+            selectedDirectory
+        });
+
+        let targetDirectory: string | null = null;
+
+        if (directory) {
+            targetDirectory = directory;
+            console.log('📁 Directory from params:', targetDirectory);
+        } else {
+            const pathParts = location.pathname.split('/').filter(Boolean);
+            if (pathParts.length >= 3 && pathParts[0] === 'results') {
+                const repoId = pathParts[1];
+                const remainingPath = pathParts.slice(2).join('/');
+                targetDirectory = `${repoId}/${remainingPath}`;
+                console.log('📁 Repository path detected:', targetDirectory);
+            }
+        }
+
+        if (targetDirectory && targetDirectory !== selectedDirectory) {
+            console.log('🔄 Setting selected directory:', targetDirectory);
+            setSelectedDirectory(targetDirectory);
+        } else if (!targetDirectory && selectedDirectory) {
+            console.log('🔄 Navigating to selected directory:', selectedDirectory);
             navigate(`/results/${selectedDirectory}`);
         }
-    }, [directory, selectedDirectory, setSelectedDirectory, navigate]);
+    }, [directory, location.pathname, selectedDirectory, setSelectedDirectory, navigate]);
 
-    // Load files when the directory changes
     useEffect(() => {
         const loadFiles = async () => {
             if (!selectedDirectory) return;
@@ -42,14 +63,11 @@ const TestResults: React.FC = () => {
                 const files = await fetchResultFiles(selectedDirectory);
                 setFiles(files);
 
-                // For virtual directories (single files), auto-select the simple test name
                 if (selectedDirectory.endsWith('.json')) {
-                    // Extract test name from individual file format: 20250522_165817_account.json -> account.json
                     const match = selectedDirectory.match(/^\d{8}_\d{6}_(.+)\.json$/);
                     const testFileName = match ? `${match[1]}.json` : selectedDirectory;
                     setSelectedFile(testFileName);
                 } else {
-                    // For real directories, auto-select the first file if available
                     if (files.length > 0 && !selectedFile) {
                         setSelectedFile(files[0].name);
                     }
@@ -65,7 +83,6 @@ const TestResults: React.FC = () => {
         loadFiles();
     }, [selectedDirectory]);
 
-    // Load test result when selected file changes
     useEffect(() => {
         const loadTestResult = async () => {
             if (!selectedDirectory || !selectedFile) return;
@@ -98,7 +115,6 @@ const TestResults: React.FC = () => {
         setSelectedFile(file);
     };
 
-    // Generate PDF for single test
     const handleExportSingleTestPDF = async () => {
         if (!selectedTestResult || !selectedFile || !selectedDirectory) return;
 
@@ -116,7 +132,6 @@ const TestResults: React.FC = () => {
         );
     };
 
-    // Check if this is a virtual directory (single file)
     const isVirtualDirectory = selectedDirectory?.endsWith('.json') || false;
     const getTestTypeLabel = (directoryName: string) => {
         if (directoryName.endsWith('.json')) return 'Individual Test';
@@ -214,6 +229,20 @@ const TestResults: React.FC = () => {
                         <TestResultDetail
                             testResult={selectedTestResult}
                             testName={selectedFile.replace('.json', '')}
+                            repositoryName={(() => {
+                                const selectedDir = directories.find(d => d.name === selectedDirectory);
+                                console.log('🔍 TestResults passing repository info:', {
+                                    selectedDirectory,
+                                    selectedDir: selectedDir ? {
+                                        name: selectedDir.name,
+                                        repositoryName: selectedDir.repositoryName,
+                                        repositoryId: selectedDir.repositoryId,
+                                        testName: selectedDir.testName
+                                    } : null
+                                });
+                                return selectedDir?.repositoryName;
+                            })()}
+                            directoryName={selectedDirectory || undefined}
                         />
                     )}
 

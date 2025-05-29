@@ -2,6 +2,9 @@ export interface TestDirectory {
   name: string;
   path: string;
   date: Date;
+  repositoryId?: string;
+  repositoryName?: string;
+  testName?: string;
 }
 
 export interface TestFile {
@@ -86,4 +89,7 @@ export interface TestResult {
     [key: string]: any;
   };
   root_group: TestGroupStructure;
+
+  getDisplayName?: () => string;
+  getTestType?: () => string;
 }

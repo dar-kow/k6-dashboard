@@ -2,7 +2,10 @@ export interface TestDirectoryDto {
   name: string;
   path: string;
   date: string;
-  type?: "directory" | "virtual";
+  type?: 'directory' | 'virtual';
+  repositoryId?: string | undefined;
+  repositoryName?: string | undefined;
+  testName?: string | undefined;
 }
 
 export interface TestFileDto {
