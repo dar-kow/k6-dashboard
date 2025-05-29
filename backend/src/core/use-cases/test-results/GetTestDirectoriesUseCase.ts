@@ -8,19 +8,25 @@ export class GetTestDirectoriesUseCase {
     private readonly logger: ILogger
   ) {}
 
-  async execute(): Promise<TestDirectory[]> {
-    this.logger.debug('Fetching test directories');
+  async execute(repositoryId?: string): Promise<TestDirectory[]> {
+    this.logger.debug('Fetching test directories', { repositoryId });
 
     try {
-      const directories = await this.testResultRepository.findAll();
+      const directories = await this.testResultRepository.findAll(repositoryId);
 
       this.logger.info('Successfully fetched test directories', {
         count: directories.length,
+        repositoryId: repositoryId || 'all',
+        directories: directories.slice(0, 5).map((d) => ({
+          name: d.name,
+          type: d.type,
+          date: d.date.toISOString(),
+        })),
       });
 
       return directories;
     } catch (error) {
-      this.logger.error('Failed to fetch test directories', error as Error);
+      this.logger.error('Failed to fetch test directories', error as Error, { repositoryId });
       throw error;
     }
   }

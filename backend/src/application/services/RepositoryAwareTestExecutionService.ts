@@ -57,6 +57,7 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
       const timestamp = this.generateTimestamp();
       let testFile: string;
       let resultFile: string;
+      let k6ResultFile: string;
       let workingDir: string;
       let envConfig: any = {};
 
@@ -64,9 +65,22 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         const repoPath = `${this.k6TestsDir}/repositories/${repoCommand.repositoryId}`;
         workingDir = `${repoPath}/tests`;
         testFile = `${command.testName}.js`;
+
         resultFile = `${repoPath}/results/${timestamp}_${command.testName}.json`;
 
-        await this.ensureResultsDirectory(`${repoPath}/results`);
+        k6ResultFile = `../results/${timestamp}_${command.testName}.json`;
+
+        const resultsDir = `${repoPath}/results`;
+        await this.ensureResultsDirectory(resultsDir);
+
+        console.log('📁 Results directory setup:', {
+          repoPath,
+          workingDir,
+          resultsDir,
+          resultFile,
+          k6ResultFile,
+          'resultsDir exists': await this.fileSystem.exists(resultsDir),
+        });
 
         envConfig = await this.getEnvironmentConfig(
           repoCommand.repositoryId,
@@ -76,18 +90,23 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
           repoCommand.customToken
         );
       } else {
+        // Default repository logic
         workingDir = `${this.k6TestsDir}/tests`;
         testFile = `${command.testName}.js`;
         resultFile = `${this.k6TestsDir}/results/${timestamp}_${command.testName}.json`;
+        k6ResultFile = `../results/${timestamp}_${command.testName}.json`;
+
+        const resultsDir = `${this.k6TestsDir}/results`;
+        await this.ensureResultsDirectory(resultsDir);
       }
 
-      // Log environment config for debugging
       this.logger.info('Environment config for test execution', {
         testId,
         repositoryId: repoCommand.repositoryId,
         environment: command.environment,
-        customHost: repoCommand.customHost,
-        customToken: repoCommand.customToken ? '[REDACTED]' : undefined,
+        workingDir,
+        resultFile,
+        k6ResultFile,
         envConfig: {
           CURRENT_HOST: envConfig.CURRENT_HOST,
           hasToken: !!envConfig.CURRENT_TOKEN,
@@ -108,10 +127,9 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         '-e',
         `LOG_LEVEL=error`,
         '--summary-export',
-        resultFile,
+        k6ResultFile,
       ];
 
-      // Przekaż zmienne środowiskowe jako argumenty K6
       if (envConfig.CURRENT_HOST) {
         args.push('-e', `CURRENT_HOST=${envConfig.CURRENT_HOST}`);
       }
@@ -125,7 +143,6 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         args.push('-e', `DURATION=${envConfig.DURATION}`);
       }
 
-      // Dodaj także custom token jeśli jest podany
       if (command.customToken) {
         args.push('-e', `CUSTOM_TOKEN=${command.customToken}`);
       }
@@ -134,7 +151,6 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         ...process.env,
         TERM: 'xterm-256color',
         NO_COLOR: 'false',
-        // Dodatkowo ustaw w środowisku procesu
         CURRENT_HOST: envConfig.CURRENT_HOST,
         CURRENT_TOKEN: envConfig.CURRENT_TOKEN || '',
         PROFILE: command.profile,
@@ -147,6 +163,7 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         command: 'k6',
         args,
         workingDir,
+        resultPath: k6ResultFile,
         envVars: {
           CURRENT_HOST: processEnv.CURRENT_HOST,
           ENVIRONMENT: processEnv.ENVIRONMENT,
@@ -212,6 +229,9 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
       } else {
         workingDir = this.k6TestsDir;
         scriptPath = `${workingDir}/sequential-tests.sh`;
+
+        const resultsDir = `${workingDir}/results`;
+        await this.ensureResultsDirectory(resultsDir);
       }
 
       const processEnv = {
@@ -401,8 +421,25 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
   }
 
   private async ensureResultsDirectory(path: string): Promise<void> {
-    if (!(await this.fileSystem.exists(path))) {
-      await this.fileSystem.mkdir(path, true);
+    try {
+      this.logger.info('Ensuring results directory exists', { path });
+
+      if (!(await this.fileSystem.exists(path))) {
+        this.logger.info('Creating results directory', { path });
+        await this.fileSystem.mkdir(path, true);
+      } else {
+        this.logger.info('Results directory already exists', { path });
+      }
+
+      const stats = await this.fileSystem.stat(path);
+      if (!stats.isDirectory()) {
+        throw new Error(`Path exists but is not a directory: ${path}`);
+      }
+
+      this.logger.info('Results directory verified successfully', { path });
+    } catch (error) {
+      this.logger.error('Failed to ensure results directory', error as Error, { path });
+      throw new Error(`Cannot create or access results directory: ${path} - ${error}`);
     }
   }
 
@@ -625,5 +662,40 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
       minute: '2-digit',
       second: '2-digit',
     });
+  }
+
+  private async ensureResultsDirectoryExists(resultFile: string): Promise<void> {
+    try {
+      // Wyciągnij ścieżkę do folderu z pełnej ścieżki pliku
+      const resultDir = resultFile.substring(0, resultFile.lastIndexOf('/'));
+
+      this.logger.debug('Ensuring results directory exists', { resultDir });
+
+      // Sprawdź czy folder istnieje
+      if (!(await this.fileSystem.exists(resultDir))) {
+        this.logger.info('Creating results directory', { resultDir });
+        await this.fileSystem.mkdir(resultDir, true);
+      }
+
+      // Dodatkowa weryfikacja - sprawdź czy folder jest dostępny do zapisu
+      const testFile = `${resultDir}/.test-write`;
+      try {
+        await this.fileSystem.writeFile(testFile, 'test');
+        // Usuń plik testowy
+        try {
+          await require('fs').promises.unlink(testFile);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      } catch (writeError) {
+        this.logger.error('Results directory is not writable', writeError as Error, { resultDir });
+        throw new Error(`Results directory is not writable: ${resultDir}`);
+      }
+
+      this.logger.debug('Results directory verified', { resultDir });
+    } catch (error) {
+      this.logger.error('Failed to ensure results directory', error as Error, { resultFile });
+      throw error;
+    }
   }
 }

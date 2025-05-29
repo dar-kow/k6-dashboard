@@ -23,39 +23,21 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
       if (repositoryId) {
         const repoResultsDir = `${this.repositoriesPath}/${repositoryId}/results`;
         if (await this.fileSystem.exists(repoResultsDir)) {
-          const repoDirs = await this.getDirectoriesFromPath(
-            repoResultsDir,
-            `repo:${repositoryId}`
-          );
+          const repoDirs = await this.getDirectoriesFromPath(repoResultsDir, repositoryId);
           directories.push(...repoDirs);
-
-          this.logger.debug('Found results in repository', {
-            repositoryId,
-            resultsPath: repoResultsDir,
-            count: repoDirs.length,
-          });
-        } else {
-          this.logger.warn('Results directory not found for repository', {
-            repositoryId,
-            expectedPath: repoResultsDir,
-          });
         }
       } else {
-        const defaultResultsDir = await this.findResultsDirectory();
+        const defaultResultsDir = await this.findDefaultResultsDirectory();
         const defaultDirs = await this.getDirectoriesFromPath(defaultResultsDir, 'default');
         directories.push(...defaultDirs);
 
-        const reposPath = this.repositoriesPath;
-        if (await this.fileSystem.exists(reposPath)) {
-          const repos = await this.fileSystem.readDir(reposPath);
+        if (await this.fileSystem.exists(this.repositoriesPath)) {
+          const repos = await this.fileSystem.readDir(this.repositoriesPath);
           for (const repo of repos) {
             if (repo.isDirectory()) {
               const repoResultsDir = `${repo.path}/results`;
               if (await this.fileSystem.exists(repoResultsDir)) {
-                const repoDirs = await this.getDirectoriesFromPath(
-                  repoResultsDir,
-                  `repo:${repo.name}`
-                );
+                const repoDirs = await this.getDirectoriesFromPath(repoResultsDir, repo.name);
                 directories.push(...repoDirs);
               }
             }
@@ -77,7 +59,10 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
     }
   }
 
-  private async getDirectoriesFromPath(path: string, prefix: string): Promise<TestDirectory[]> {
+  private async getDirectoriesFromPath(
+    path: string,
+    repositoryId: string
+  ): Promise<TestDirectory[]> {
     const entries = await this.fileSystem.readDir(path);
     const directories: TestDirectory[] = [];
     const virtualDirectories: TestDirectory[] = [];
@@ -86,16 +71,17 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
       if (entry.isDirectory()) {
         const date = this.extractDateFromDirectoryName(entry.name);
         directories.push(
-          new TestDirectory(`${prefix}/${entry.name}`, entry.path, date, 'directory')
+          new TestDirectory(`${repositoryId}/${entry.name}`, entry.path, date, 'directory')
         );
       }
     }
 
+    // Virtual directories (single JSON files)
     for (const entry of entries) {
       if (entry.isFile() && entry.name.endsWith('.json')) {
         const date = this.extractDateFromFileName(entry.name);
         virtualDirectories.push(
-          new TestDirectory(`${prefix}/${entry.name}`, entry.path, date, 'virtual')
+          new TestDirectory(`${repositoryId}/${entry.name}`, entry.path, date, 'virtual')
         );
       }
     }
@@ -104,30 +90,37 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
   }
 
   async findByDirectory(directory: string): Promise<TestFile[]> {
-    const [prefix, ...rest] = directory.split('/');
+    this.logger.debug('Finding files in directory', { directory });
+
+    const [repositoryId, ...rest] = directory.split('/');
     const actualDir = rest.join('/');
 
     let resultsDir: string;
-    if (prefix.startsWith('repo:')) {
-      const repoId = prefix.substring(5);
-      resultsDir = `${this.repositoriesPath}/${repoId}/results`;
+    if (repositoryId === 'default') {
+      resultsDir = await this.findDefaultResultsDirectory();
     } else {
-      resultsDir = await this.findResultsDirectory();
+      resultsDir = `${this.repositoriesPath}/${repositoryId}/results`;
     }
+
+    this.logger.debug('Resolved paths', {
+      directory,
+      repositoryId,
+      actualDir,
+      resultsDir,
+    });
 
     if (actualDir.endsWith('.json')) {
       const filePath = `${resultsDir}/${actualDir}`;
-      const exists = await this.fileSystem.exists(filePath);
 
-      if (!exists) {
+      if (!(await this.fileSystem.exists(filePath))) {
         throw new FileNotFoundError(filePath);
       }
 
-      const match = actualDir.match(/^\d{8}_\d{6}_(.+)\.json$/);
-      const testName = match ? match[1] : actualDir.replace('.json', '');
-
+      const testName = actualDir.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
       return [new TestFile(`${testName}.json`, filePath)];
-    } else {
+    }
+    // Real directory
+    else {
       const dirPath = `${resultsDir}/${actualDir}`;
       const entries = await this.fileSystem.readDir(dirPath);
 
@@ -138,15 +131,16 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
   }
 
   async findResult(directory: string, file: string): Promise<any> {
-    const [prefix, ...rest] = directory.split('/');
+    this.logger.debug('Finding result', { directory, file });
+
+    const [repositoryId, ...rest] = directory.split('/');
     const actualDir = rest.join('/');
 
     let resultsDir: string;
-    if (prefix.startsWith('repo:')) {
-      const repoId = prefix.substring(5);
-      resultsDir = `${this.repositoriesPath}/${repoId}/results`;
+    if (repositoryId === 'default') {
+      resultsDir = await this.findDefaultResultsDirectory();
     } else {
-      resultsDir = await this.findResultsDirectory();
+      resultsDir = `${this.repositoriesPath}/${repositoryId}/results`;
     }
 
     let filePath: string;
@@ -156,8 +150,15 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
       filePath = `${resultsDir}/${actualDir}/${file}`;
     }
 
-    const exists = await this.fileSystem.exists(filePath);
-    if (!exists) {
+    this.logger.debug('Resolved file path', {
+      directory,
+      file,
+      repositoryId,
+      actualDir,
+      filePath,
+    });
+
+    if (!(await this.fileSystem.exists(filePath))) {
       throw new FileNotFoundError(filePath);
     }
 
@@ -165,79 +166,69 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
       const content = await this.fileSystem.readFile(filePath, 'utf-8');
       return JSON.parse(content as string);
     } catch (error) {
-      this.logger.error('Error parsing test result JSON', error as Error, {
-        filePath,
-      });
+      this.logger.error('Error parsing JSON', error as Error, { filePath });
       throw new Error(`Invalid JSON in file: ${filePath}`);
     }
   }
 
   async exists(directory: string): Promise<boolean> {
     try {
-      const [prefix, ...rest] = directory.split('/');
+      const [repositoryId, ...rest] = directory.split('/');
       const actualDir = rest.join('/');
 
       let resultsDir: string;
-      if (prefix.startsWith('repo:')) {
-        const repoId = prefix.substring(5);
-        resultsDir = `${this.repositoriesPath}/${repoId}/results`;
+      if (repositoryId === 'default') {
+        resultsDir = await this.findDefaultResultsDirectory();
       } else {
-        resultsDir = await this.findResultsDirectory();
+        resultsDir = `${this.repositoriesPath}/${repositoryId}/results`;
       }
 
-      const dirPath = actualDir.endsWith('.json')
+      const targetPath = actualDir.endsWith('.json')
         ? `${resultsDir}/${actualDir}`
         : `${resultsDir}/${actualDir}`;
 
-      return await this.fileSystem.exists(dirPath);
+      return await this.fileSystem.exists(targetPath);
     } catch {
       return false;
     }
   }
 
   async ensureDirectoryExists(path: string): Promise<void> {
-    const exists = await this.fileSystem.exists(path);
-    if (!exists) {
+    if (!(await this.fileSystem.exists(path))) {
       await this.fileSystem.mkdir(path, true);
       this.logger.info('Created directory', { path });
     }
   }
 
-  private async findResultsDirectory(): Promise<string> {
+  private async findDefaultResultsDirectory(): Promise<string> {
     const possiblePaths = [
       `${this.config.getK6TestsDir()}/results`,
       this.config.getResultsDir(),
       '/results',
     ];
 
-    for (const resultsPath of possiblePaths) {
+    for (const path of possiblePaths) {
       try {
-        const exists = await this.fileSystem.exists(resultsPath);
-        if (exists) {
-          const stats = await this.fileSystem.stat(resultsPath);
+        if (await this.fileSystem.exists(path)) {
+          const stats = await this.fileSystem.stat(path);
           if (stats.isDirectory()) {
-            return resultsPath;
+            return path;
           }
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
 
     const defaultPath = possiblePaths[0];
-    try {
-      await this.fileSystem.mkdir(defaultPath, true);
-    } catch (error) {
-      console.error(`Failed to create results directory: ${error}`);
-    }
+    await this.fileSystem.mkdir(defaultPath, true);
     return defaultPath;
   }
 
   private extractDateFromDirectoryName(name: string): Date {
     const match = name.match(/(\d{8}_\d{6})/);
     if (match) {
-      const dateStr = match[1];
-      return this.parseDateTime(dateStr);
+      return this.parseDateTime(match[1]);
     }
     return new Date();
   }
@@ -245,8 +236,7 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
   private extractDateFromFileName(name: string): Date {
     const match = name.match(/^(\d{8})_(\d{6})_/);
     if (match) {
-      const dateStr = `${match[1]}_${match[2]}`;
-      return this.parseDateTime(dateStr);
+      return this.parseDateTime(`${match[1]}_${match[2]}`);
     }
     return new Date();
   }
@@ -258,7 +248,6 @@ export class MultiRepositoryTestResultRepository implements ITestResultRepositor
     const hour = parseInt(dateTimeStr.substr(9, 2));
     const minute = parseInt(dateTimeStr.substr(11, 2));
     const second = parseInt(dateTimeStr.substr(13, 2));
-
     return new Date(year, month, day, hour, minute, second);
   }
 }

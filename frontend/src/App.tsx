@@ -17,6 +17,7 @@ function App() {
                             <Route path="/" element={<Dashboard />} />
                             <Route path="/results" element={<TestResults />} />
                             <Route path="/results/:directory" element={<TestResults />} />
+                            <Route path="/results/repo:*" element={<TestResults />} />
                             <Route path="/test-runner" element={<TestRunner />} />
                         </Routes>
                     </Layout>

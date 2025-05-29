@@ -37,24 +37,64 @@ const Dashboard: React.FC = () => {
                 const selectedDir = directories.find(d => d.name === selectedTestRun);
                 if (!selectedDir) return;
 
+                console.log('🔍 Loading results for directory:', selectedDir.name);
+
                 const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000/api'}/results/${selectedDir.name}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const files = await response.json();
+                console.log('📁 API Response:', files);
+
+                // 🔧 SPRAWDŹ CZY RESPONSE TO TABLICA
+                if (!Array.isArray(files)) {
+                    console.error('❌ API returned non-array:', typeof files, files);
+                    // setError(`API returned invalid data format: expected array, got ${typeof files}`);
+                    return;
+                }
+
+                if (files.length === 0) {
+                    console.log('📭 No files found in directory');
+                    setLatestResults({});
+                    return;
+                }
 
                 const results: Record<string, TestResult> = {};
 
+                // 🔧 BEZPIECZNE SLICE + ERROR HANDLING
+                const filesToProcess = files.slice(0, Math.min(10, files.length));
+                console.log(`📊 Processing ${filesToProcess.length} files out of ${files.length} total`);
+
                 // Load all test results for comprehensive analysis
-                for (const file of files.slice(0, 10)) { // Load up to 10 tests for better analysis
+                for (const file of filesToProcess) {
                     try {
+                        console.log('📄 Processing file:', file);
+
+                        // 🔧 SPRAWDŹ STRUKTURĘ FILE OBJECT
+                        if (!file || !file.name) {
+                            console.warn('⚠️ Invalid file object:', file);
+                            continue;
+                        }
+
                         const result = await fetchTestResult(selectedDir.name, file.name);
-                        results[file.name.replace('.json', '')] = result;
+                        const testKey = file.name.replace('.json', '');
+                        results[testKey] = result;
+
+                        console.log('✅ Loaded result for:', testKey);
                     } catch (err) {
-                        console.error(`Error loading result for ${file.name}:`, err);
+                        console.error(`❌ Error loading result for ${file?.name || 'unknown'}:`, err);
+                        // Continue with other files instead of failing completely
                     }
                 }
 
+                console.log('🎯 Final results:', Object.keys(results));
                 setLatestResults(results);
+
             } catch (err) {
-                console.error('Error loading latest results:', err);
+                console.error('💥 Error loading latest results:', err);
+                // setError(`Failed to load test results: ${err instanceof Error ? err.message : 'Unknown error'}`);
             } finally {
                 setLatestResultsLoading(false);
             }
@@ -62,6 +102,7 @@ const Dashboard: React.FC = () => {
 
         loadLatestResults();
     }, [directories, selectedTestRun]);
+
 
     // Safe accessor function for metric values with proper type checking and defaults
     const getMetricValue = (metric: any, property: string, defaultValue: number = 0): number => {
@@ -90,29 +131,49 @@ const Dashboard: React.FC = () => {
     };
 
     const getTotalRequests = () => {
-        return Object.values(latestResults).reduce((total, result) => {
-            return total + (result.metrics?.http_reqs?.count || 0);
-        }, 0);
+        try {
+            return Object.values(latestResults).reduce((total, result) => {
+                const count = result.metrics?.http_reqs?.count || 0;
+                return total + (typeof count === 'number' ? count : 0);
+            }, 0);
+        } catch (error) {
+            console.error('❌ Error calculating total requests:', error);
+            return 0;
+        }
     };
 
     const getAverageResponseTime = () => {
-        const total = Object.values(latestResults).reduce((total, result) => {
-            return total + (result.metrics?.http_req_duration?.avg || 0);
-        }, 0);
+        try {
+            const values = Object.values(latestResults);
+            if (values.length === 0) return '0';
 
-        return Object.keys(latestResults).length > 0
-            ? (total / Object.keys(latestResults).length).toFixed(2)
-            : '0';
+            const total = values.reduce((total, result) => {
+                const avg = result.metrics?.http_req_duration?.avg || 0;
+                return total + (typeof avg === 'number' ? avg : 0);
+            }, 0);
+
+            return (total / values.length).toFixed(2);
+        } catch (error) {
+            console.error('❌ Error calculating average response time:', error);
+            return '0';
+        }
     };
 
     const getErrorRate = () => {
-        const total = Object.values(latestResults).reduce((total, result) => {
-            return total + (result.metrics?.http_req_failed?.value || 0);
-        }, 0);
+        try {
+            const values = Object.values(latestResults);
+            if (values.length === 0) return '0';
 
-        return Object.keys(latestResults).length > 0
-            ? ((total / Object.keys(latestResults).length) * 100).toFixed(2)
-            : '0';
+            const total = values.reduce((total, result) => {
+                const rate = result.metrics?.http_req_failed?.value || 0;
+                return total + (typeof rate === 'number' ? rate : 0);
+            }, 0);
+
+            return ((total / values.length) * 100).toFixed(2);
+        } catch (error) {
+            console.error('❌ Error calculating error rate:', error);
+            return '0';
+        }
     };
 
     const getLastRunTime = () => {
@@ -121,18 +182,41 @@ const Dashboard: React.FC = () => {
         const selectedDir = directories.find(d => d.name === selectedTestRun);
         if (!selectedDir) return 'Selected run not found';
 
-        const date = new Date(selectedDir.date);
-        // Format in Polish timezone
-        return date.toLocaleString("pl-PL", {
-            timeZone: "Europe/Warsaw",
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
+        try {
+            let date: Date;
+
+            if (selectedDir.date instanceof Date) {
+                date = selectedDir.date;
+            } else if (typeof selectedDir.date === 'string') {
+                date = new Date(selectedDir.date);
+            } else if (typeof selectedDir.date === 'number') {
+                date = new Date(selectedDir.date);
+            } else {
+                console.warn('⚠️ Invalid date format:', selectedDir.date);
+                return 'Invalid date format';
+            }
+
+            if (isNaN(date.getTime())) {
+                console.warn('⚠️ Invalid date value:', selectedDir.date);
+                return 'Invalid date';
+            }
+
+            // Format in Polish timezone
+            return date.toLocaleString("pl-PL", {
+                timeZone: "Europe/Warsaw",
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        } catch (error) {
+            console.error('❌ Error formatting date:', error);
+            return 'Date format error';
+        }
     };
+
 
     // Prepare data for Response Time Comparison Chart
     const getResponseTimeComparisonData = () => {
