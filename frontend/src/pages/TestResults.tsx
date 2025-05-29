@@ -21,14 +21,38 @@ const TestResults: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState<boolean>(false);
 
-    // If directory is provided in the URL, update selectedDirectory in context
     useEffect(() => {
-        if (directory && directory !== selectedDirectory) {
-            setSelectedDirectory(directory);
-        } else if (!directory && selectedDirectory) {
+        console.log('🔍 URL Analysis:', {
+            directory,
+            pathname: location.pathname,
+            selectedDirectory
+        });
+
+        let targetDirectory: string | null = null;
+
+        if (directory) {
+            // Przypadek: /results/directory (może być zwykły directory lub repoId)
+            targetDirectory = directory;
+            console.log('📁 Directory from params:', targetDirectory);
+        } else {
+            // Przypadek: /results/repoId/filename.json - parsuj z pathname
+            const pathParts = location.pathname.split('/').filter(Boolean); // ['results', 'repoId', 'filename.json']
+            if (pathParts.length >= 3 && pathParts[0] === 'results') {
+                const repoId = pathParts[1];
+                const remainingPath = pathParts.slice(2).join('/');
+                targetDirectory = `${repoId}/${remainingPath}`;
+                console.log('📁 Repository path detected:', targetDirectory);
+            }
+        }
+
+        if (targetDirectory && targetDirectory !== selectedDirectory) {
+            console.log('🔄 Setting selected directory:', targetDirectory);
+            setSelectedDirectory(targetDirectory);
+        } else if (!targetDirectory && selectedDirectory) {
+            console.log('🔄 Navigating to selected directory:', selectedDirectory);
             navigate(`/results/${selectedDirectory}`);
         }
-    }, [directory, selectedDirectory, setSelectedDirectory, navigate]);
+    }, [directory, location.pathname, selectedDirectory, setSelectedDirectory, navigate]);
 
     // Load files when the directory changes
     useEffect(() => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchTestResult } from '../api/results';
+import { fetchTestResult, fetchResultFiles } from '../api/results';
 import { TestResult } from '../types/testResults';
 import SummaryCard from '../components/SummaryCard';
 import StatusCard from '../components/StatusCard';
@@ -39,62 +39,87 @@ const Dashboard: React.FC = () => {
 
                 console.log('🔍 Loading results for directory:', selectedDir.name);
 
-                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000/api'}/results/${selectedDir.name}`);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const files = await response.json();
-                console.log('📁 API Response:', files);
-
-                // 🔧 SPRAWDŹ CZY RESPONSE TO TABLICA
-                if (!Array.isArray(files)) {
-                    console.error('❌ API returned non-array:', typeof files, files);
-                    // setError(`API returned invalid data format: expected array, got ${typeof files}`);
-                    return;
-                }
-
-                if (files.length === 0) {
-                    console.log('📭 No files found in directory');
-                    setLatestResults({});
-                    return;
-                }
-
                 const results: Record<string, TestResult> = {};
 
-                // 🔧 BEZPIECZNE SLICE + ERROR HANDLING
-                const filesToProcess = files.slice(0, Math.min(10, files.length));
-                console.log(`📊 Processing ${filesToProcess.length} files out of ${files.length} total`);
+                // 🔧 SPRAWDŹ CZY TO VIRTUAL DIRECTORY (pojedynczy plik JSON)
+                if (selectedDir.name.endsWith('.json')) {
+                    console.log('📄 Virtual directory detected - loading single file result');
 
-                // Load all test results for comprehensive analysis
-                for (const file of filesToProcess) {
                     try {
-                        console.log('📄 Processing file:', file);
+                        // Dla virtual directory, nazwa zawiera pełną ścieżkę: "repoId/timestamp_test.json"
+                        const pathParts = selectedDir.name.split('/');
+                        const fileName = pathParts[pathParts.length - 1]; // "timestamp_test.json"
+                        const testKey = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, ''); // "test"
 
-                        // 🔧 SPRAWDŹ STRUKTURĘ FILE OBJECT
-                        if (!file || !file.name) {
-                            console.warn('⚠️ Invalid file object:', file);
-                            continue;
-                        }
+                        console.log('📄 Loading virtual file:', {
+                            selectedDirName: selectedDir.name,
+                            fileName,
+                            testKey
+                        });
 
-                        const result = await fetchTestResult(selectedDir.name, file.name);
-                        const testKey = file.name.replace('.json', '');
+                        // Użyj pełnej ścieżki jako directory parameter
+                        const result = await fetchTestResult(selectedDir.name, fileName);
                         results[testKey] = result;
 
-                        console.log('✅ Loaded result for:', testKey);
+                        console.log('✅ Loaded virtual directory result:', testKey);
                     } catch (err) {
-                        console.error(`❌ Error loading result for ${file?.name || 'unknown'}:`, err);
-                        // Continue with other files instead of failing completely
+                        console.error('❌ Error loading virtual directory result:', err);
+                        // Pokaż błąd ale kontynuuj
+                    }
+                } else {
+                    console.log('📁 Real directory detected - loading files list');
+
+                    try {
+                        // Dla normalnego directory, pobierz listę plików
+                        const files = await fetchResultFiles(selectedDir.name);
+                        console.log('📁 Files found:', files);
+
+                        if (files.length === 0) {
+                            console.log('📭 No files found in directory');
+                            setLatestResults({});
+                            return;
+                        }
+
+                        // Przetwórz max 10 plików
+                        const filesToProcess = files.slice(0, Math.min(10, files.length));
+                        console.log(`📊 Processing ${filesToProcess.length} files out of ${files.length} total`);
+
+                        // Załaduj wyniki testów
+                        for (const file of filesToProcess) {
+                            try {
+                                if (!file || !file.name) {
+                                    console.warn('⚠️ Invalid file object:', file);
+                                    continue;
+                                }
+
+                                console.log('📄 Processing file:', file.name);
+
+                                const result = await fetchTestResult(selectedDir.name, file.name);
+                                const testKey = file.name.replace('.json', '');
+                                results[testKey] = result;
+
+                                console.log('✅ Loaded result for:', testKey);
+                            } catch (err) {
+                                console.error(`❌ Error loading result for ${file?.name || 'unknown'}:`, err);
+                                // Kontynuuj z innymi plikami
+                            }
+                        }
+                    } catch (err) {
+                        console.error('❌ Error loading files from directory:', err);
+                        // Pokaż błąd ale kontynuuj
                     }
                 }
 
-                console.log('🎯 Final results:', Object.keys(results));
+                console.log('🎯 Final results loaded:', {
+                    testCount: Object.keys(results).length,
+                    testNames: Object.keys(results)
+                });
+
                 setLatestResults(results);
 
             } catch (err) {
-                console.error('💥 Error loading latest results:', err);
-                // setError(`Failed to load test results: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                console.error('💥 Critical error loading latest results:', err);
+                // Nie ustawiaj error state, żeby nie zepsuć całego UI
             } finally {
                 setLatestResultsLoading(false);
             }

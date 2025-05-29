@@ -1,3 +1,5 @@
+// frontend/src/App.tsx
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -17,7 +19,8 @@ function App() {
                             <Route path="/" element={<Dashboard />} />
                             <Route path="/results" element={<TestResults />} />
                             <Route path="/results/:directory" element={<TestResults />} />
-                            <Route path="/results/repo:*" element={<TestResults />} />
+                            {/* 🔧 POPRAWKA: dodano obsługę repository paths */}
+                            <Route path="/results/:repositoryId/*" element={<TestResults />} />
                             <Route path="/test-runner" element={<TestRunner />} />
                         </Routes>
                     </Layout>
