@@ -5,7 +5,8 @@ export class TestDirectory {
     public readonly date: Date,
     public readonly type: 'directory' | 'virtual' = 'directory',
     public readonly repositoryId?: string,
-    public readonly repositoryName?: string
+    public readonly repositoryName?: string,
+    public readonly testName?: string
   ) {}
 
   isVirtual(): boolean {
