@@ -31,7 +31,7 @@ const TestRunSelector: React.FC<TestRunSelectorProps> = ({
             return '📋'; // Sequential tests
         } else if (directoryName.includes('parallel_')) {
             return '⚡'; // Parallel tests
-        } else if (directoryName.includes('individual_')) {
+        } else if (directoryName.endsWith('.json')) {
             return '🎯'; // Individual tests
         } else {
             return '📊'; // Generic test
@@ -43,8 +43,8 @@ const TestRunSelector: React.FC<TestRunSelectorProps> = ({
             return 'Sequential';
         } else if (directoryName.includes('parallel_')) {
             return 'Parallel';
-        } else if (directoryName.includes('individual_')) {
-            return 'Individual';
+        } else if (directoryName.endsWith('.json')) {
+            return 'Individual Test';
         } else {
             return 'Test Run';
         }
@@ -52,6 +52,62 @@ const TestRunSelector: React.FC<TestRunSelectorProps> = ({
 
     const isLatestRun = (directory: TestDirectory, index: number) => {
         return index === 0; // First item is the latest
+    };
+
+    const getDisplayName = (directory: TestDirectory) => {
+        console.log(`🔍 TestRunSelector getDisplayName:`, {
+            directoryName: directory.name,
+            repositoryName: directory.repositoryName,
+            repositoryId: directory.repositoryId,
+            testName: directory.testName
+        });
+
+        if (directory.repositoryName && directory.testName) {
+            // "My API Tests / Contractors Test"
+            const formattedTestName = directory.testName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            const result = `${directory.repositoryName} / ${formattedTestName}`;
+            console.log(`✅ Using repository + test name: ${result}`);
+            return result;
+        }
+
+        if (directory.repositoryName) {
+            const result = `${directory.repositoryName} - ${getTestTypeLabel(directory.name)}`;
+            console.log(`✅ Using repository name: ${result}`);
+            return result;
+        }
+
+        if (directory.testName) {
+            const formattedTestName = directory.testName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            console.log(`⚠️ Using test name only: ${formattedTestName}`);
+            return formattedTestName;
+        }
+
+        // Fallback - wyciągnij z nazwy
+        let fallbackName = directory.name;
+        if (directory.name.endsWith('.json')) {
+            const fileName = directory.name.split('/').pop() || '';
+            fallbackName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+        }
+
+        const formatted = fallbackName
+            .replace(/-/g, ' ')
+            .replace(/_/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        console.log(`❌ Using fallback name: ${formatted}`);
+        return formatted;
     };
 
     return (
@@ -100,7 +156,7 @@ const TestRunSelector: React.FC<TestRunSelectorProps> = ({
 
                     {directories.map((dir, index) => (
                         <option key={dir.name} value={dir.name}>
-                            {getTestTypeIcon(dir.name)} {getTestTypeLabel(dir.name)} - {formatDate(dir.date)}
+                            {getTestTypeIcon(dir.name)} {getDisplayName(dir)} - {formatDate(dir.date)}
                             {isLatestRun(dir, index) && ' 🆕 (Latest)'}
                         </option>
                     ))}
@@ -115,14 +171,46 @@ const TestRunSelector: React.FC<TestRunSelectorProps> = ({
                             <p className="text-sm font-medium text-gray-900">
                                 {getTestTypeIcon(selectedDirectory)} Currently Analyzing
                             </p>
+                            {/* 🔧 POPRAWKA: Pokazuj czytelną nazwę zamiast UUID */}
                             <p className="text-xs text-gray-600 mt-1">
-                                {selectedDirectory}
+                                {(() => {
+                                    const dir = directories.find(d => d.name === selectedDirectory);
+                                    console.log(`🔍 Currently Analyzing lookup:`, {
+                                        selectedDirectory,
+                                        foundDir: dir ? {
+                                            name: dir.name,
+                                            repositoryName: dir.repositoryName,
+                                            repositoryId: dir.repositoryId,
+                                            testName: dir.testName
+                                        } : null
+                                    });
+
+                                    if (dir) {
+                                        const displayName = getDisplayName(dir);
+                                        console.log(`✅ Currently Analyzing display name: ${displayName}`);
+                                        return displayName;
+                                    } else {
+                                        console.log(`❌ Directory not found, using selectedDirectory: ${selectedDirectory}`);
+                                        // Fallback: wyciągnij z selectedDirectory
+                                        if (selectedDirectory.endsWith('.json')) {
+                                            const fileName = selectedDirectory.split('/').pop() || '';
+                                            const testName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+                                            return testName
+                                                .replace(/-/g, ' ')
+                                                .replace(/_/g, ' ')
+                                                .split(' ')
+                                                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                                .join(' ');
+                                        }
+                                        return selectedDirectory;
+                                    }
+                                })()}
                             </p>
                         </div>
 
                         <div className="text-right">
                             <p className="text-xs text-gray-500">
-                                {getTestTypeLabel(selectedDirectory)} Run
+                                {getTestTypeLabel(selectedDirectory)}
                             </p>
                             {directories.find(d => d.name === selectedDirectory) && (
                                 <p className="text-xs text-gray-600">
@@ -131,6 +219,24 @@ const TestRunSelector: React.FC<TestRunSelectorProps> = ({
                             )}
                         </div>
                     </div>
+
+                    {/* Repository Info */}
+                    {(() => {
+                        const selectedDir = directories.find(d => d.name === selectedDirectory);
+                        console.log(`🔍 Currently Analyzing repository info:`, {
+                            selectedDirectory,
+                            hasRepositoryName: !!selectedDir?.repositoryName,
+                            repositoryName: selectedDir?.repositoryName
+                        });
+
+                        return selectedDir?.repositoryName && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                                <p className="text-xs text-gray-500">
+                                    📦 Repository: <span className="font-medium text-gray-700">{selectedDir.repositoryName}</span>
+                                </p>
+                            </div>
+                        );
+                    })()}
 
                     {/* Comparison Helper */}
                     {directories.length > 1 && (
