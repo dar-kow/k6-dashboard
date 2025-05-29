@@ -174,7 +174,6 @@ const DirectorySelector: React.FC<DirectorySelectorProps> = ({
                             <p className="text-sm font-medium text-gray-900">
                                 {getTestTypeIcon(selectedDirectory)} Currently Analyzing
                             </p>
-                            {/* 🔧 POPRAWKA: Pokazuj czytelną nazwę */}
                             <p className="text-xs text-gray-600 mt-1">
                                 {(() => {
                                     const dir = directories.find(d => d.name === selectedDirectory);
