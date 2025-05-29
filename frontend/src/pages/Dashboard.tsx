@@ -407,14 +407,15 @@ const Dashboard: React.FC = () => {
                             {/* Test Run Type Badge */}
                             {selectedTestRun && (
                                 <div className="flex items-center space-x-2">
+                                    {/* 🔧 POPRAWKA: Pokazuj typ testu na podstawie danych */}
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedTestRun.includes('sequential_') ? 'bg-blue-100 text-blue-800' :
                                         selectedTestRun.includes('parallel_') ? 'bg-green-100 text-green-800' :
-                                            selectedTestRun.includes('individual_') ? 'bg-purple-100 text-purple-800' :
+                                            selectedTestRun.endsWith('.json') ? 'bg-purple-100 text-purple-800' :
                                                 'bg-gray-100 text-gray-800'
                                         }`}>
                                         {selectedTestRun.includes('sequential_') ? '📋 Sequential' :
                                             selectedTestRun.includes('parallel_') ? '⚡ Parallel' :
-                                                selectedTestRun.includes('individual_') ? '🎯 Individual' :
+                                                selectedTestRun.endsWith('.json') ? '🎯 Individual Test' :
                                                     '📊 Test Run'}
                                     </span>
 
@@ -432,9 +433,87 @@ const Dashboard: React.FC = () => {
                                 <p className="text-gray-600">
                                     <span className="font-medium">Run Time:</span> {getLastRunTime()}
                                 </p>
+
+                                {/* 🔧 POPRAWKA: Pokazuj repository name zamiast UUID */}
                                 <p className="text-gray-600 mt-2">
-                                    <span className="font-medium">Directory:</span> {selectedTestRun || 'None selected'}
+                                    <span className="font-medium">Repository:</span> {
+                                        selectedTestRun ? (() => {
+                                            const selectedDir = directories.find(d => d.name === selectedTestRun);
+                                            console.log(`🔍 Dashboard repository lookup:`, {
+                                                selectedTestRun,
+                                                selectedDir: selectedDir ? {
+                                                    name: selectedDir.name,
+                                                    repositoryName: selectedDir.repositoryName,
+                                                    repositoryId: selectedDir.repositoryId,
+                                                    testName: selectedDir.testName
+                                                } : null
+                                            });
+
+                                            if (selectedDir?.repositoryName) {
+                                                console.log(`✅ Using repository name: ${selectedDir.repositoryName}`);
+                                                return selectedDir.repositoryName;
+                                            }
+
+                                            // Fallback: jeśli nie ma repository name, spróbuj wyciągnąć z nazwy
+                                            if (selectedDir?.name.includes('/')) {
+                                                const parts = selectedDir.name.split('/');
+                                                const repoId = parts[0];
+                                                console.log(`⚠️ No repository name, using fallback for ID: ${repoId}`);
+                                                return `Repository ${repoId.substring(0, 8)}...`; // Pokaż pierwsze 8 znaków UUID
+                                            }
+
+                                            console.log(`❌ No repository info available`);
+                                            return 'Default Tests';
+                                        })() : 'None selected'
+                                    }
                                 </p>
+
+                                {/* 🔧 POPRAWKA: Pokazuj test name zamiast pełnej ścieżki */}
+                                <p className="text-gray-600 mt-2">
+                                    <span className="font-medium">Test:</span> {
+                                        selectedTestRun ? (() => {
+                                            const selectedDir = directories.find(d => d.name === selectedTestRun);
+                                            console.log(`🔍 Dashboard test lookup:`, {
+                                                selectedTestRun,
+                                                selectedDir: selectedDir ? {
+                                                    name: selectedDir.name,
+                                                    testName: selectedDir.testName,
+                                                    isVirtual: selectedDir.name.endsWith('.json')
+                                                } : null
+                                            });
+
+                                            if (selectedDir?.testName) {
+                                                const formattedTestName = selectedDir.testName
+                                                    .replace(/-/g, ' ')
+                                                    .replace(/_/g, ' ')
+                                                    .split(' ')
+                                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                                    .join(' ');
+                                                console.log(`✅ Using formatted test name: ${formattedTestName}`);
+                                                return formattedTestName;
+                                            }
+
+                                            // Fallback: wyciągnij z nazwy pliku
+                                            if (selectedDir?.name.endsWith('.json')) {
+                                                const fileName = selectedDir.name.split('/').pop() || '';
+                                                const testName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+                                                const formatted = testName
+                                                    .replace(/-/g, ' ')
+                                                    .replace(/_/g, ' ')
+                                                    .split(' ')
+                                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                                    .join(' ');
+                                                console.log(`⚠️ Using fallback test name: ${formatted}`);
+                                                return formatted;
+                                            }
+
+                                            console.log(`❌ No test info available, using multiple tests`);
+                                            return 'Multiple Tests';
+                                        })() : 'None selected'
+                                    }
+
+                                </p>
+
                                 <p className="text-gray-600 mt-2">
                                     <span className="font-medium">Tests Analyzed:</span> {Object.keys(latestResults).length}
                                 </p>
