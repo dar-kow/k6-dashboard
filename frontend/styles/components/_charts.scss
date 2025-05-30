@@ -1,0 +1,53 @@
+.base-chart {
+    position: relative;
+    width: 100%;
+
+    &--loading,
+    &--error {
+        @include flex-center;
+        background-color: $gray-50;
+        border: 1px solid $gray-200;
+        border-radius: $border-radius-md;
+    }
+
+    &__error-content {
+        text-align: center;
+        color: $gray-600;
+    }
+
+    &__error-message {
+        margin: 0;
+        font-size: $font-size-sm;
+    }
+}
+
+// Recharts custom styles
+.recharts-tooltip-wrapper {
+    .recharts-default-tooltip {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border: 1px solid $gray-200 !important;
+        border-radius: $border-radius-md !important;
+        box-shadow: $shadow-lg !important;
+    }
+}
+
+.pie-chart-tooltip {
+    background-color: rgba(255, 255, 255, 0.95);
+    border: 1px solid $gray-200;
+    border-radius: $border-radius-md;
+    padding: $spacing-3;
+    box-shadow: $shadow-md;
+
+    &__label {
+        font-weight: $font-weight-semibold;
+        color: $gray-900;
+        margin: 0 0 $spacing-1;
+        font-size: $font-size-sm;
+    }
+
+    &__value {
+        color: $gray-600;
+        margin: 0;
+        font-size: $font-size-xs;
+    }
+}

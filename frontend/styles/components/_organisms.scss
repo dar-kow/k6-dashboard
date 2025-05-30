@@ -1,0 +1,308 @@
+// Sidebar
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: $gray-800;
+    color: white;
+
+    &__header {
+        padding: $spacing-6;
+        border-bottom: 1px solid $gray-700;
+    }
+
+    &__logo {
+        display: flex;
+        align-items: center;
+        gap: $spacing-3;
+    }
+
+    &__brand {
+        font-size: $font-size-xl;
+        font-weight: $font-weight-bold;
+        color: white;
+        margin: 0;
+    }
+
+    &__nav {
+        flex: 1;
+        padding: $spacing-4 0;
+    }
+
+    &__nav-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    &__nav-item {
+        margin-bottom: $spacing-2;
+    }
+
+    &__nav-link {
+        display: flex;
+        align-items: center;
+        padding: $spacing-3 $spacing-6;
+        color: $gray-300;
+        text-decoration: none;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background-color: $gray-700;
+            color: white;
+            text-decoration: none;
+        }
+
+        &--active {
+            background-color: $primary-color;
+            color: white;
+        }
+    }
+
+    &__nav-icon {
+        margin-right: $spacing-3;
+    }
+
+    &__nav-label {
+        font-weight: $font-weight-medium;
+    }
+
+    &__footer {
+        padding: $spacing-4 $spacing-6;
+        border-top: 1px solid $gray-700;
+    }
+
+    &__status {
+        display: flex;
+        justify-content: center;
+    }
+}
+
+// Header
+.header {
+    background-color: white;
+    border-bottom: 1px solid $gray-200;
+    padding: $spacing-4 $spacing-6;
+
+    &__content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    &__title {
+        font-size: $font-size-2xl;
+        font-weight: $font-weight-bold;
+        color: $gray-900;
+        margin: 0;
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+    }
+}
+
+// Chart Container
+.chart-container {
+    @include card;
+
+    &--fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        border-radius: 0;
+    }
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: $spacing-4;
+        padding-bottom: $spacing-4;
+        border-bottom: 1px solid $gray-200;
+    }
+
+    &__title {
+        font-size: $font-size-lg;
+        font-weight: $font-weight-semibold;
+        color: $gray-900;
+        margin: 0;
+    }
+
+    &__subtitle {
+        font-size: $font-size-sm;
+        color: $gray-600;
+        margin: $spacing-1 0 0;
+    }
+
+    &__actions {
+        display: flex;
+        gap: $spacing-2;
+    }
+
+    &__content {
+        position: relative;
+        min-height: 200px;
+    }
+
+    &__loading,
+    &__error {
+        @include flex-center;
+        flex-direction: column;
+        min-height: 200px;
+        gap: $spacing-4;
+    }
+
+    &__error {
+        color: $error-color;
+        text-align: center;
+
+        h4 {
+            margin: 0 0 $spacing-2;
+            color: $error-color;
+        }
+
+        p {
+            margin: 0 0 $spacing-4;
+            color: $gray-600;
+        }
+    }
+}
+
+// Test Results Table
+.test-results-table {
+    &--loading {
+        @include flex-center;
+        flex-direction: column;
+        min-height: 200px;
+        gap: $spacing-4;
+
+        p {
+            color: $gray-600;
+            margin: 0;
+        }
+    }
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: $spacing-6;
+    }
+
+    &__title {
+        display: flex;
+        align-items: center;
+        gap: $spacing-3;
+        font-size: $font-size-xl;
+        font-weight: $font-weight-semibold;
+        color: $gray-900;
+        margin: 0;
+    }
+
+    &__empty {
+        @include flex-center;
+        flex-direction: column;
+        padding: $spacing-12;
+        text-align: center;
+
+        h3 {
+            margin: $spacing-4 0 $spacing-2;
+            color: $gray-900;
+        }
+
+        p {
+            margin: 0;
+            color: $gray-600;
+        }
+    }
+
+    &__container {
+        overflow-x: auto;
+        border: 1px solid $gray-200;
+        border-radius: $border-radius-lg;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+
+        th {
+            background-color: $gray-50;
+            font-weight: $font-weight-semibold;
+            color: $gray-700;
+            padding: $spacing-4;
+            text-align: left;
+            border-bottom: 2px solid $gray-200;
+            font-size: $font-size-sm;
+        }
+
+        td {
+            padding: $spacing-4;
+            border-bottom: 1px solid $gray-200;
+            font-size: $font-size-sm;
+        }
+    }
+
+    &__row {
+        transition: background-color 0.15s ease;
+
+        &:hover {
+            background-color: $gray-50;
+        }
+
+        &--clickable {
+            cursor: pointer;
+        }
+    }
+
+    &__cell {
+        &--name {
+            font-weight: $font-weight-medium;
+            color: $gray-900;
+        }
+
+        &--date {
+            color: $gray-500;
+            font-size: $font-size-xs;
+        }
+    }
+
+    &__error-rate {
+        &--high {
+            color: $error-color;
+            font-weight: $font-weight-semibold;
+        }
+    }
+
+    &__pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: $spacing-4;
+        border-top: 1px solid $gray-200;
+        background-color: $gray-50;
+    }
+
+    &__pagination-info {
+        font-size: $font-size-sm;
+        color: $gray-600;
+    }
+
+    &__pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+    }
+
+    &__pagination-pages {
+        font-size: $font-size-sm;
+        color: $gray-700;
+        font-weight: $font-weight-medium;
+    }
+}
