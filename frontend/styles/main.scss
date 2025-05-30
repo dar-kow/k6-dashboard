@@ -1,0 +1,46 @@
+// Import abstracts
+@import 'abstracts/variables';
+@import 'abstracts/mixins';
+
+// Import base styles
+@import 'base/reset';
+@import 'base/typography';
+
+// Import component styles (these will be imported automatically by components)
+
+// Global styles
+.app {
+    min-height: 100vh;
+    font-family: $font-family-primary;
+    color: $gray-900;
+    background-color: $gray-50;
+}
+
+.page-loader {
+    @include flex-center;
+    height: 100vh;
+    flex-direction: column;
+    gap: $spacing-4;
+
+    p {
+        color: $gray-600;
+        font-size: $font-size-lg;
+    }
+}
+
+// Utility classes
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.truncate {
+    @include truncate-text;
+}
