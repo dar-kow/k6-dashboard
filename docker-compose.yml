@@ -1,62 +1,30 @@
 services:
-  # Backend
   backend:
     build:
       context: .
       dockerfile: docker/Dockerfile.backend
-    container_name: k6-dashboard-backend
-    volumes:
-      - ./backend:/app
-      - ./k6-tests:/k6-tests
-      - ./results:/results
     ports:
       - "4000:4000"
     environment:
       - NODE_ENV=development
       - PORT=4000
-      - FRONTEND_URL=http://localhost
+      - FRONTEND_URL=http://localhost:3000
     networks:
-      - k6-dashboard-network
+      - k6-network
 
-  # Frontend Development (Vite dev server)
   frontend:
-    image: node:18-alpine
-    container_name: k6-dashboard-frontend
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules  # Anonymous volume for better performance
-    ports:
-      - "3000:80"
-    command: sh -c "
-      echo '🎯 Installing frontend dependencies...' &&
-      npm install &&
-      echo '🚀 Starting Vite dev server...' &&
-      npm run dev -- --host 0.0.0.0 --port 3000
-      "
-    environment:
-      - VITE_API_URL=http://localhost:4000/api
-      - CHOKIDAR_USEPOLLING=true
-    networks:
-      - k6-dashboard-network
-    depends_on:
-      - backend
-
-  # Frontend Production (nginx build) - optional
-  frontend-prod:
     build:
       context: .
-      dockerfile: docker/Dockerfile.frontend
-    container_name: k6-dashboard-frontend-prod
+      dockerfile: docker/Dockerfile.frontend.dev
     ports:
-      - "80:80"
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
     depends_on:
       - backend
     networks:
-      - k6-dashboard-network
-    profiles:
-      - prod
+      - k6-network
 
 networks:
-  k6-dashboard-network:
+  k6-network:
     driver: bridge
