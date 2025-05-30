@@ -1,0 +1,49 @@
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-6;
+
+    &__header-actions {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+    }
+
+    &__search {
+        width: 300px;
+    }
+
+    &__selector {
+        @include card;
+    }
+
+    &__metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: $spacing-4;
+
+        @include responsive($breakpoint-lg) {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    &__charts {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: $spacing-6;
+
+        @include responsive($breakpoint-md) {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        @include responsive($breakpoint-lg) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    &__table {
+        @include card;
+        padding: 0;
+        overflow: hidden;
+    }
+}

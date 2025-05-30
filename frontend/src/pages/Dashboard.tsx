@@ -4,10 +4,10 @@ import { fetchTestResult, fetchResultFiles } from '../api/results';
 import { TestResult } from '../types/testResults';
 import SummaryCard from '../components/SummaryCard';
 import StatusCard from '../components/StatusCard';
-import BarChart from '../components/charts/BarChart';
+import { BarChart } from '@components/charts/BarChart';
 import MultiBarChart from '../components/charts/MultiBarChart';
-import PieChart from '../components/charts/PieChart';
-import AreaChart from '../components/charts/AreaChart';
+import { PieChart } from '@components/charts/PieChart';
+import { AreaChart } from '../components/charts/AreaChart';
 import MultiLineChart from '../components/charts/MultiLineChart';
 import TestRunSelector from '../components/TestRunSelector';
 import TestRunComparison from '../components/TestRunComparison';
@@ -298,7 +298,7 @@ const Dashboard: React.FC = () => {
     const getCheckResultsData = () => {
         const checkData: { name: string, passes: number, fails: number }[] = [];
 
-        Object.entries(latestResults).forEach(([testName, result]) => {
+        Object.entries(latestResults).forEach(([_testName, result]) => {
             if (result.root_group?.checks) {
                 Object.values(result.root_group.checks).forEach((check: any) => {
                     const existingCheck = checkData.find(c => c.name === check.name);
@@ -573,7 +573,7 @@ const Dashboard: React.FC = () => {
                                     <div className="bg-white rounded-lg shadow-md p-6">
                                         <div className="h-80">
                                             <BarChart
-                                                title="Request Volume by Test"
+                                                title="Request Volume"
                                                 data={getRequestVolumeData()}
                                                 xKey="name"
                                                 yKey="requests"
