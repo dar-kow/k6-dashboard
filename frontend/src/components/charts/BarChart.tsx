@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo } from 'react';
 import {
     BarChart as RechartsBarChart,
     Bar,
@@ -7,71 +7,70 @@ import {
     CartesianGrid,
     Tooltip,
     Legend,
-    ResponsiveContainer,
 } from 'recharts';
+import { BaseChart, BaseChartProps } from './BaseChart';
+import { APP_CONSTANTS } from '@utils/constants';
 
-interface BarChartProps {
-    title?: string;
+export interface BarChartProps extends Omit<BaseChartProps, 'children'> {
+    title?: string;  // Added title prop
     data: Array<Record<string, any>>;
     xKey: string;
     yKey: string;
+    xLabel?: string;
     yLabel?: string;
     color?: string;
 }
 
-const BarChart: React.FC<BarChartProps> = ({
-    title,
+export const BarChart = memo<BarChartProps>(({
+    title,  // Added title
     data,
     xKey,
     yKey,
+    xLabel,
     yLabel,
-    color = '#3b82f6',
+    color = APP_CONSTANTS.CHART_COLORS.PRIMARY,
+    ...baseProps
 }) => {
     return (
-        <div className="h-full w-full">
-            {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-            <ResponsiveContainer width="100%" height="100%">
-                <RechartsBarChart
-                    data={data}
-                    margin={{
-                        top: 5,
-                        right: 30,
-                        left: 20,
-                        bottom: 20,
-                    }}
-                >
-                    <CartesianGrid strokeDasharray="3 3" />
+        <div className="bar-chart">
+            {title && <h3 className="chart-title">{title}</h3>}
+            <BaseChart {...baseProps}>
+                <RechartsBarChart data={data}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+
                     <XAxis
                         dataKey={xKey}
-                        tick={{ fontSize: 12 }}
-                        tickLine={{ stroke: '#E5E7EB' }}
-                        axisLine={{ stroke: '#E5E7EB' }}
+                        tick={{ fontSize: 12, fill: '#666' }}
+                        tickLine={{ stroke: '#e0e0e0' }}
+                        axisLine={{ stroke: '#e0e0e0' }}
+                        {...(xLabel && { label: { value: xLabel, position: 'insideBottom', offset: -10 } })}
                     />
+
                     <YAxis
-                        label={
-                            yLabel
-                                ? { value: yLabel, angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }
-                                : undefined
-                        }
-                        tick={{ fontSize: 12 }}
-                        tickLine={{ stroke: '#E5E7EB' }}
-                        axisLine={{ stroke: '#E5E7EB' }}
+                        tick={{ fontSize: 12, fill: '#666' }}
+                        tickLine={{ stroke: '#e0e0e0' }}
+                        axisLine={{ stroke: '#e0e0e0' }}
+                        {...(yLabel && { label: { value: yLabel, angle: -90, position: 'insideLeft' } })}
                     />
+
                     <Tooltip
                         contentStyle={{
                             backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            border: '1px solid #E5E7EB',
-                            borderRadius: '4px',
-                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
                             fontSize: '12px',
                         }}
+                        labelStyle={{ color: '#333', fontWeight: 'bold' }}
                     />
+
                     <Legend
                         wrapperStyle={{
-                            paddingTop: 10,
+                            paddingTop: '20px',
                             fontSize: '12px',
                         }}
                     />
+
                     <Bar
                         dataKey={yKey}
                         fill={color}
@@ -79,9 +78,9 @@ const BarChart: React.FC<BarChartProps> = ({
                         radius={[4, 4, 0, 0]}
                     />
                 </RechartsBarChart>
-            </ResponsiveContainer>
+            </BaseChart>
         </div>
     );
-};
+});
 
-export default BarChart;
+BarChart.displayName = 'BarChart';

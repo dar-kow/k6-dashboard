@@ -1,84 +1,103 @@
-import React from 'react';
+import { memo } from 'react';
 import {
     PieChart as RechartsPieChart,
     Pie,
     Cell,
     Tooltip,
     Legend,
-    ResponsiveContainer,
 } from 'recharts';
+import { BaseChart, BaseChartProps } from './BaseChart';
+import { APP_CONSTANTS } from '@utils/constants';
 
-interface PieChartProps {
-    title?: string;
+export interface PieChartProps extends Omit<BaseChartProps, 'children'> {
+    title?: string;  // Added title prop
     data: Array<Record<string, any>>;
     nameKey: string;
     valueKey: string;
     colors?: string[];
+    showLabels?: boolean;
+    showLegend?: boolean;
 }
 
-const PieChart: React.FC<PieChartProps> = ({
-    title,
+const DEFAULT_COLORS = [
+    APP_CONSTANTS.CHART_COLORS.PRIMARY,
+    APP_CONSTANTS.CHART_COLORS.SUCCESS,
+    APP_CONSTANTS.CHART_COLORS.WARNING,
+    APP_CONSTANTS.CHART_COLORS.ERROR,
+    APP_CONSTANTS.CHART_COLORS.INFO,
+    APP_CONSTANTS.CHART_COLORS.SECONDARY,
+];
+
+export const PieChart = memo<PieChartProps>(({
+    title,  // Added title
     data,
     nameKey,
     valueKey,
-    colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'],
+    colors = DEFAULT_COLORS,
+    showLabels = true,
+    showLegend = true,
+    ...baseProps
 }) => {
-    // Calculate total value for percentage
     const total = data.reduce((acc, item) => acc + (item[valueKey] || 0), 0);
 
-    // Custom tooltip that shows percentage
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {
-            const value = payload[0].value;
-            const percentage = ((value / total) * 100).toFixed(2);
-            const name = payload[0].name;
+            const data = payload[0].payload;
+            const percentage = total > 0 ? ((data[valueKey] / total) * 100).toFixed(1) : '0';
 
             return (
-                <div className="bg-white p-2 border border-gray-200 shadow-sm rounded-md text-sm">
-                    <p className="font-medium">{name}</p>
-                    <p className="text-gray-600">
-                        {value.toLocaleString()} ({percentage}%)
+                <div className="pie-chart-tooltip">
+                    <p className="pie-chart-tooltip__label">{data[nameKey]}</p>
+                    <p className="pie-chart-tooltip__value">
+                        {data[valueKey].toLocaleString()} ({percentage}%)
                     </p>
                 </div>
             );
         }
-
         return null;
     };
 
-    // Add percentage to the legend
-    const renderLegendText = (value: string, entry: any) => {
-        const { payload } = entry;
-        const percentage = ((payload.value / total) * 100).toFixed(2);
-        return `${value} (${percentage}%)`;
+    const renderLabel = ({ name, value }: any) => {
+        if (!showLabels) return '';
+        const percentage = total > 0 ? ((value / total) * 100).toFixed(0) : '0';
+        return `${percentage}%`;
     };
 
     return (
-        <div className="h-full w-full">
-            {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="pie-chart">
+            {title && <h3 className="chart-title">{title}</h3>}
+            <BaseChart {...baseProps}>
                 <RechartsPieChart>
                     <Pie
                         data={data}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
+                        label={renderLabel}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey={valueKey}
                         nameKey={nameKey}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                     >
-                        {data.map((entry, index) => (
+                        {data.map((_entry, index) => (
                             <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                         ))}
                     </Pie>
+
                     <Tooltip content={<CustomTooltip />} />
-                    <Legend formatter={renderLegendText} />
+
+                    {showLegend && (
+                        <Legend
+                            wrapperStyle={{
+                                paddingTop: '20px',
+                                fontSize: '12px',
+                            }}
+                        />
+                    )}
                 </RechartsPieChart>
-            </ResponsiveContainer>
+            </BaseChart>
         </div>
     );
-};
+});
 
-export default PieChart;
+PieChart.displayName = 'PieChart';
