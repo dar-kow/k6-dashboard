@@ -1,0 +1,105 @@
+.notification-container {
+    position: fixed;
+    top: $spacing-4;
+    right: $spacing-4;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-3;
+    max-width: 400px;
+    width: 100%;
+
+    @include responsive($breakpoint-sm) {
+        max-width: 500px;
+    }
+}
+
+.notification {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-3;
+    padding: $spacing-4;
+    background: white;
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-lg;
+    border-left: 4px solid;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease-out;
+
+    &--visible {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    &--leaving {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+
+    &--success {
+        border-left-color: $success-color;
+
+        .notification__icon {
+            color: $success-color;
+        }
+    }
+
+    &--error {
+        border-left-color: $error-color;
+
+        .notification__icon {
+            color: $error-color;
+        }
+    }
+
+    &--warning {
+        border-left-color: $warning-color;
+
+        .notification__icon {
+            color: $warning-color;
+        }
+    }
+
+    &--info {
+        border-left-color: $info-color;
+
+        .notification__icon {
+            color: $info-color;
+        }
+    }
+
+    &__icon {
+        flex-shrink: 0;
+        margin-top: $spacing-1;
+    }
+
+    &__content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__title {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-semibold;
+        color: $gray-900;
+        margin: 0 0 $spacing-1;
+    }
+
+    &__message {
+        font-size: $font-size-sm;
+        color: $gray-600;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    &__close {
+        flex-shrink: 0;
+        margin-left: auto;
+        color: $gray-400;
+
+        &:hover {
+            color: $gray-600;
+        }
+    }
+}
