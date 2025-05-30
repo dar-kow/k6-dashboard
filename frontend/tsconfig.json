@@ -1,12 +1,7 @@
-// frontend/tsconfig.json
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "target": "ES2020",
+    "lib": ["DOM", "DOM.Iterable", "ES6"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -14,14 +9,68 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "removeComments": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@components/*": ["components/*"],
+      "@components/atoms": ["components/atoms"],
+      "@components/molecules": ["components/molecules"],
+      "@components/organisms": ["components/organisms"],
+      "@components/templates": ["components/templates"],
+      "@components/providers": ["components/providers"],
+      "@components/charts": ["components/charts"],
+      "@pages/*": ["pages/*"],
+      "@pages/index": ["pages/index"],
+      "@store/*": ["store/*"],
+      "@store/index": ["store/index"],
+      "@store/slices": ["store/slices"],
+      "@store/sagas": ["store/sagas"],
+      "@store/selectors": ["store/selectors"],
+      "@hooks/*": ["hooks/*"],
+      "@hooks/index": ["hooks/index"],
+      "@services/*": ["services/*"],
+      "@utils/*": ["utils/*"],
+      "@styles/*": ["styles/*"],
+      "@types/*": ["types/*"],
+      "@assets/*": ["assets/*"]
+    }
   },
   "include": [
-    "src"
+    "src/**/*",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
   ]
 }
