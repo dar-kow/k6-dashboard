@@ -27,7 +27,7 @@ services:
       - ./frontend:/app
       - /app/node_modules  # Anonymous volume for better performance
     ports:
-      - "3000:3000"
+      - "3000:80"
     command: sh -c "
       echo '🎯 Installing frontend dependencies...' &&
       npm install &&
