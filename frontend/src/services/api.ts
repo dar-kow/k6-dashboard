@@ -1,14 +1,14 @@
 /// <reference types="vite/client" />
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
-  // dodaj więcej zmiennych jeśli potrzebujesz
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 
 export interface ApiClient {
   get<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
