@@ -84,3 +84,4 @@ export const BarChart = memo<BarChartProps>(({
 });
 
 BarChart.displayName = 'BarChart';
+export default BarChart;
