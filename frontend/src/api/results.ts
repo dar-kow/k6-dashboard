@@ -2,7 +2,7 @@ import axios from "axios";
 import { TestDirectory, TestFile, TestResult } from "../types/testResults";
 
 const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:4000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -91,7 +91,6 @@ export const fetchResultDirectories = async (
           name: item.name || `unknown-${index}`,
           path: item.path || "",
           date: parseApiDate(item.date),
-          // 🔧 POPRAWKA: Zachowaj repository info z API
           repositoryId: item.repositoryId,
           repositoryName: item.repositoryName,
           testName: item.testName,
