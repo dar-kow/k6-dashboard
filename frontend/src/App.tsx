@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AppProviders } from '@components/providers/AppProviders';
 import { NotificationProvider } from '@components/molecules/NotificationProvider/NotificationProvider';
 import { Spinner } from '@components/atoms';
-import { useAppDispatch } from '@hooks/useAppSelector';
+import { useAppDispatch } from '@hooks/useAppDispatch';
 import { loadPreferences } from '@store/slices/uiSlice';
 import { LazyLoader } from '@components/molecules/LazyLoader/LazyLoader';
 
