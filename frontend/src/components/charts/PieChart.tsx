@@ -101,3 +101,4 @@ export const PieChart = memo<PieChartProps>(({
 });
 
 PieChart.displayName = 'PieChart';
+export default PieChart;
