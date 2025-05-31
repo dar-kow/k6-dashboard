@@ -99,3 +99,4 @@ export const AreaChart = memo<AreaChartProps>(({
 });
 
 AreaChart.displayName = 'AreaChart';
+export default AreaChart;
