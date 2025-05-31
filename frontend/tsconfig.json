@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["DOM", "DOM.Iterable", "ES6"],
+    "target": "es5",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -9,68 +13,55 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "ESNext",
+    "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "declaration": false,
-    "declarationMap": false,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "removeComments": true,
-    "noImplicitAny": true,
+    
+    // 🚀 Enhanced TypeScript settings
+    "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true,
-    "noImplicitThis": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true,
-    "baseUrl": "./src",
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    
+    // 🎯 Path mapping for clean imports
+    "baseUrl": "src",
     "paths": {
-      "@/*": ["*"],
       "@components/*": ["components/*"],
-      "@components/atoms": ["components/atoms"],
-      "@components/molecules": ["components/molecules"],
-      "@components/organisms": ["components/organisms"],
-      "@components/templates": ["components/templates"],
-      "@components/providers": ["components/providers"],
-      "@components/charts": ["components/charts"],
-      "@pages/*": ["pages/*"],
-      "@pages/index": ["pages/index"],
       "@store/*": ["store/*"],
-      "@store/index": ["store/index"],
-      "@store/slices": ["store/slices"],
-      "@store/sagas": ["store/sagas"],
-      "@store/selectors": ["store/selectors"],
       "@hooks/*": ["hooks/*"],
-      "@hooks/index": ["hooks/index"],
-      "@services/*": ["services/*"],
       "@utils/*": ["utils/*"],
-      "@styles/*": ["styles/*"],
+      "@api/*": ["api/*"],
       "@types/*": ["types/*"],
-      "@assets/*": ["assets/*"]
+      "@styles/*": ["styles/*"],
+      "@routes/*": ["routes/*"],
+      "@assets/*": ["assets/*"],
+      "@tests/*": ["__tests__/*"]
     }
   },
   "include": [
     "src/**/*",
-    "src/**/*.ts",
     "src/**/*.tsx",
-    "src/**/*.js",
-    "src/**/*.jsx"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
     "build",
+    "dist",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",
     "**/*.spec.tsx"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
   ]
 }
