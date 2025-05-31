@@ -1,12 +1,10 @@
-// Import abstracts
-@import 'abstracts/variables';
-@import 'abstracts/mixins';
+// // Import abstracts
+// @import 'abstracts/variables';
+// @import 'abstracts/mixins';
 
 // Import base styles
 @import 'base/reset';
 @import 'base/typography';
-
-// Import component styles (these will be imported automatically by components)
 
 // Global styles
 .app {
