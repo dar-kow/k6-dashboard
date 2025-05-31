@@ -1,10 +1,10 @@
-// // Import abstracts
-// @import 'abstracts/variables';
-// @import 'abstracts/mixins';
-
 // Import base styles
 @import 'base/reset';
 @import 'base/typography';
+
+// Import component styles
+@import 'components/charts';
+@import 'components/organisms';
 
 // Global styles
 .app {
@@ -41,4 +41,418 @@
 
 .truncate {
     @include truncate-text;
+}
+
+// Terminal Output Component Styles
+.terminal-output {
+    .bg-gray-900 {
+        background-color: $gray-900;
+    }
+
+    .text-gray-100 {
+        color: $gray-100;
+    }
+
+    .text-gray-400 {
+        color: $gray-400;
+    }
+
+    .text-red-400 {
+        color: #f87171;
+    }
+
+    .text-green-400 {
+        color: #4ade80;
+    }
+
+    .text-blue-400 {
+        color: #60a5fa;
+    }
+
+    .text-cyan-300 {
+        color: #67e8f9;
+    }
+
+    .text-yellow-400 {
+        color: #facc15;
+    }
+
+    .text-purple-400 {
+        color: #c084fc;
+    }
+}
+
+// Repository Selector Styles
+.repository-selector {
+    @include card;
+
+    .text-sm {
+        font-size: $font-size-sm;
+    }
+
+    .font-medium {
+        font-weight: $font-weight-medium;
+    }
+
+    .text-gray-700 {
+        color: $gray-700;
+    }
+}
+
+// Dashboard specific styles
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-6;
+
+    &__header-actions {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+        flex-wrap: wrap;
+
+        @include responsive($breakpoint-sm) {
+            flex-wrap: nowrap;
+        }
+    }
+
+    &__search {
+        width: 100%;
+        max-width: 300px;
+
+        @include responsive($breakpoint-md) {
+            width: 300px;
+        }
+    }
+
+    &__selector {
+        @include card;
+    }
+
+    &__metrics {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: $spacing-4;
+
+        @include responsive($breakpoint-sm) {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        @include responsive($breakpoint-lg) {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    &__charts {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: $spacing-6;
+
+        @include responsive($breakpoint-md) {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        @include responsive($breakpoint-lg) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    &__table {
+        @include card;
+        padding: 0;
+        overflow: hidden;
+    }
+}
+
+// Test Results specific styles
+.test-results {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-6;
+
+    &__header-actions {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+        flex-wrap: wrap;
+
+        @include responsive($breakpoint-md) {
+            flex-wrap: nowrap;
+        }
+    }
+}
+
+// Test Runner specific styles
+.test-runner {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-6;
+
+    &__header-actions {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+        flex-wrap: wrap;
+
+        @include responsive($breakpoint-md) {
+            flex-wrap: nowrap;
+        }
+    }
+}
+
+// Status cards
+.status-card {
+    @include card;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-lg;
+    }
+
+    .text-sm {
+        font-size: $font-size-sm;
+    }
+
+    .font-medium {
+        font-weight: $font-weight-medium;
+    }
+
+    .text-gray-500 {
+        color: $gray-500;
+    }
+
+    .text-2xl {
+        font-size: $font-size-2xl;
+    }
+
+    .font-semibold {
+        font-weight: $font-weight-semibold;
+    }
+}
+
+// Test result detail styles
+.test-result-detail {
+    .text-xs {
+        font-size: $font-size-xs;
+    }
+
+    .text-lg {
+        font-size: $font-size-lg;
+    }
+
+    .font-semibold {
+        font-weight: $font-weight-semibold;
+    }
+
+    .text-gray-500 {
+        color: $gray-500;
+    }
+
+    .text-gray-900 {
+        color: $gray-900;
+    }
+}
+
+// Responsive utilities
+@include responsive($breakpoint-sm) {
+    .responsive-hide-sm {
+        display: none;
+    }
+
+    .responsive-show-sm {
+        display: block;
+    }
+}
+
+@include responsive($breakpoint-md) {
+    .responsive-hide-md {
+        display: none;
+    }
+
+    .responsive-show-md {
+        display: block;
+    }
+}
+
+@include responsive($breakpoint-lg) {
+    .responsive-hide-lg {
+        display: none;
+    }
+
+    .responsive-show-lg {
+        display: block;
+    }
+}
+
+// Animation classes
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+    animation: slideInFromRight 0.3s ease-out;
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+// Loading states
+.loading-skeleton {
+    background: linear-gradient(90deg, $gray-200 25%, $gray-100 50%, $gray-200 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: $border-radius-md;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+// Modal styles
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: $spacing-4;
+}
+
+.modal-content {
+    background: white;
+    border-radius: $border-radius-lg;
+    padding: $spacing-6;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+
+    @include responsive($breakpoint-md) {
+        max-width: 600px;
+    }
+}
+
+// Chart specific styles
+.chart-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $gray-900;
+    margin-bottom: $spacing-4;
+    text-align: center;
+}
+
+// Interactive elements
+.interactive-element {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: $shadow-md;
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+// Focus styles for accessibility
+.focus-visible:focus {
+    outline: 2px solid $primary-color;
+    outline-offset: 2px;
+}
+
+// Dark mode support (optional)
+@media (prefers-color-scheme: dark) {
+    .app {
+        background-color: $gray-900;
+        color: $gray-100;
+    }
+
+    .bg-white {
+        background-color: $gray-800 !important;
+    }
+
+    .text-gray-900 {
+        color: $gray-100 !important;
+    }
+
+    .text-gray-600 {
+        color: $gray-400 !important;
+    }
+
+    .border-gray-200 {
+        border-color: $gray-700 !important;
+    }
+}
+
+// Print styles
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .app {
+        background: white !important;
+        color: black !important;
+    }
+
+    .shadow-md,
+    .shadow-lg {
+        box-shadow: none !important;
+    }
+
+    .bg-blue-600,
+    .bg-green-600,
+    .bg-red-600 {
+        background: $gray-800 !important;
+        color: white !important;
+    }
 }
