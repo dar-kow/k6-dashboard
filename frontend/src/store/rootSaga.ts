@@ -1,8 +1,8 @@
 import { all, fork, takeEvery, put } from "redux-saga/effects";
 
-// Import saga modules (będą dodane w następnych etapach)
-// import { testResultsSaga } from './sagas/testResults.saga';
-// import { repositoriesSaga } from './sagas/repositories.saga';
+// Import saga modules
+import { testResultsSaga } from "./sagas/testResults.saga";
+import { repositoriesSaga } from "./sagas/repositories.saga";
 
 // Temporary saga for initial setup
 function* initSaga() {
@@ -20,9 +20,9 @@ export function* rootSaga() {
     // Fork watching sagas
     fork(watchInitSaga),
 
-    // TODO: Dodamy sagi w ETAPIE 3
-    // fork(testResultsSaga),
-    // fork(repositoriesSaga),
+    // Fork our main sagas
+    fork(testResultsSaga),
+    fork(repositoriesSaga),
   ]);
 }
 
