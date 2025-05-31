@@ -13,14 +13,17 @@ export default defineConfig({
       "@hooks": path.resolve(__dirname, "./src/hooks"),
       "@services": path.resolve(__dirname, "./src/services"),
       "@utils": path.resolve(__dirname, "./src/utils"),
-      "@styles": path.resolve(__dirname, "./src/styles"),
+      "@styles": path.resolve(__dirname, "./styles"),
       "@types": path.resolve(__dirname, "./src/types"),
     },
   },
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `@import "@styles/abstracts/variables"; @import "@styles/abstracts/mixins";`,
+        additionalData: `
+        @use "styles/abstracts/variables" as *;
+        @use "styles/abstracts/mixins" as *;
+      `,
       },
     },
   },
