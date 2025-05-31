@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchTestResult, fetchResultFiles } from '../api/results';
 import { TestResult } from '../types/testResults';
-import SummaryCard from '../components/SummaryCard';
-import StatusCard from '../components/StatusCard';
+
+// ✨ NEW IMPORTS - Using Atomic Design Components
+import { Button, Typography } from '@components/atoms';
+import { SummaryCard, StatusCard } from '@components/molecules';
+
+// 📊 Chart components (keeping existing for now - będą w ETAPIE 7)
 import { BarChart } from '@components/charts/BarChart';
 import MultiBarChart from '../components/charts/MultiBarChart';
 import { PieChart } from '@components/charts/PieChart';
-import { AreaChart } from '../components/charts/AreaChart';
+import { AreaChart } from '@components/charts/AreaChart';
 import MultiLineChart from '../components/charts/MultiLineChart';
+
+// 🧩 Other components (will be refactored in later stages)
 import TestRunSelector from '../components/TestRunSelector';
 import TestRunComparison from '../components/TestRunComparison';
 import { useTestResults } from '../context/TestResultContext';
@@ -118,7 +124,6 @@ const Dashboard: React.FC = () => {
 
         loadLatestResults();
     }, [directories, selectedTestRun]);
-
 
     // Safe accessor function for metric values with proper type checking and defaults
     const getMetricValue = (metric: any, property: string, defaultValue: number = 0): number => {
@@ -233,7 +238,6 @@ const Dashboard: React.FC = () => {
         }
     };
 
-
     // Prepare data for Response Time Comparison Chart
     const getResponseTimeComparisonData = () => {
         return Object.entries(latestResults).map(([testName, result]) => ({
@@ -295,6 +299,7 @@ const Dashboard: React.FC = () => {
         // TODO: Implement comparison logic
         // This could navigate to a comparison page or show side-by-side charts
     };
+
     const getCheckResultsData = () => {
         const checkData: { name: string, passes: number, fails: number }[] = [];
 
@@ -322,7 +327,8 @@ const Dashboard: React.FC = () => {
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
-                <h1 className="text-3xl font-bold">Dashboard</h1>
+                {/* ✨ NEW: Using Typography component */}
+                <Typography variant="h1">Dashboard</Typography>
 
                 {/* Professional PDF Export Button */}
                 <ExportPDFButton
@@ -364,36 +370,47 @@ const Dashboard: React.FC = () => {
                         onCompareWith={handleCompareWith}
                     />
 
-                    {/* Status Cards */}
+                    {/* ✨ NEW: Status Cards using updated components */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                         <StatusCard
                             title="Overall Health"
-                            value={getOverallHealthStatus() === 'healthy' ? 'Healthy' :
-                                getOverallHealthStatus() === 'warning' ? 'Warning' :
-                                    getOverallHealthStatus() === 'critical' ? 'Critical' : 'Unknown'}
+                            value={getOverallHealthStatus() === 'healthy' ? 'System Running Smoothly' :
+                                getOverallHealthStatus() === 'warning' ? 'Performance Issues Detected' :
+                                    getOverallHealthStatus() === 'critical' ? 'Critical Issues Found' : 'Status Unknown'}
                             status={getOverallHealthStatus()}
+                            subtitle="All monitored endpoints"
                         />
+
                         <SummaryCard
                             title="Total Requests"
                             value={getTotalRequests().toLocaleString()}
-                            icon="request"
+                            icon="chart"
+                            color="blue"
+                            subtitle="Across all endpoints"
                         />
+
                         <SummaryCard
                             title="Avg Response Time"
                             value={`${getAverageResponseTime()} ms`}
                             icon="clock"
+                            color="orange"
+                            subtitle="Average across tests"
                         />
+
                         <SummaryCard
                             title="Error Rate"
                             value={`${getErrorRate()}%`}
                             icon="warning"
+                            color={parseFloat(getErrorRate()) > 5 ? "red" : "green"}
+                            subtitle="Failed requests"
                         />
                     </div>
 
                     {/* Last Run Information */}
                     <div className="bg-white rounded-lg shadow-md p-6 mb-8">
                         <div className="flex justify-between items-start mb-4">
-                            <h2 className="text-xl font-semibold">Selected Test Run Analysis</h2>
+                            {/* ✨ NEW: Using Typography component */}
+                            <Typography variant="h3">Selected Test Run Analysis</Typography>
 
                             {/* Test Run Type Badge */}
                             {selectedTestRun && (
@@ -535,20 +552,23 @@ const Dashboard: React.FC = () => {
                             <div className="bg-white rounded-lg shadow-md p-6">
                                 <div className="text-center py-8">
                                     <div className="text-4xl mb-4">📊</div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Test Data Available</h3>
-                                    <p className="text-gray-600 mb-4">
+                                    {/* ✨ NEW: Using Typography component */}
+                                    <Typography variant="h4" className="mb-2">No Test Data Available</Typography>
+                                    <Typography variant="body1" color="secondary" className="mb-4">
                                         {selectedTestRun ?
                                             'The selected test run contains no analyzable data.' :
                                             'Please select a test run to analyze performance data.'
                                         }
-                                    </p>
-                                    <Link
-                                        to="/test-runner"
-                                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                    </Typography>
+
+                                    {/* ✨ NEW: Using Button component */}
+                                    <Button
+                                        variant="primary"
+                                        leftIcon={<span>🚀</span>}
+                                        onClick={() => window.location.href = '/test-runner'}
                                     >
-                                        <span className="mr-2">🚀</span>
                                         Run New Tests
-                                    </Link>
+                                    </Button>
                                 </div>
                             </div>
                         ) : (
@@ -648,7 +668,8 @@ const Dashboard: React.FC = () => {
 
                                 {/* Performance Summary Table */}
                                 <div className="bg-white rounded-lg shadow-md p-6">
-                                    <h2 className="text-xl font-semibold mb-4">Performance Summary</h2>
+                                    {/* ✨ NEW: Using Typography component */}
+                                    <Typography variant="h3" className="mb-4">Performance Summary</Typography>
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-50">
@@ -700,18 +721,19 @@ const Dashboard: React.FC = () => {
                         )}
 
                         <div className="bg-white rounded-lg shadow-md p-6">
-                            <Link
-                                to="/test-runner"
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                            >
-                                <span className="mr-2">
+                            {/* ✨ NEW: Using Button component */}
+                            <Button
+                                variant="primary"
+                                leftIcon={
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
-                                </span>
+                                }
+                                onClick={() => window.location.href = '/test-runner'}
+                            >
                                 Run New Tests
-                            </Link>
+                            </Button>
                         </div>
                     </div>
                 </>

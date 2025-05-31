@@ -1,6 +1,9 @@
 import React from 'react';
 import { TestResult } from '../types/testResults';
-import MetricCard from './MetricCard';
+
+// ✨ NEW IMPORTS - Using Atomic Design Components
+import { Badge, Typography } from '@components/atoms';
+import { MetricCard } from '@components/molecules';
 
 interface TestResultDetailProps {
     testResult: TestResult;
@@ -51,17 +54,6 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
         if (selectedDirectory?.name?.endsWith('.json')) {
             const fileName = selectedDirectory.name.split('/').pop() || '';
             const extractedTestName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
-            interface WordFormatter {
-                (word: string): string;
-            }
-
-            interface FormattedTestName {
-                replace(searchValue: string | RegExp, replaceValue: string): FormattedTestName;
-                split(separator: string): string[];
-            }
-
-            const wordFormatter: WordFormatter = (word: string): string =>
-                word.charAt(0).toUpperCase() + word.slice(1);
 
             const formatted: string = extractedTestName
                 .replace(/-/g, ' ')
@@ -121,13 +113,15 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
 
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
-            {/* it looks bad on UI repeat */}
-            {/* <h2 className="text-2xl font-bold mb-4">{getDisplayTitle()}</h2> */}
-
             {!hasMetrics ? (
                 <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-                    <p className="font-bold">Warning: Invalid Test Data</p>
-                    <p>This test result doesn't contain the expected metrics. It may be a dummy file or corrupted data.</p>
+                    {/* ✨ NEW: Using Typography component */}
+                    <Typography variant="subtitle1" weight="bold" className="mb-2">
+                        Warning: Invalid Test Data
+                    </Typography>
+                    <Typography variant="body2">
+                        This test result doesn't contain the expected metrics. It may be a dummy file or corrupted data.
+                    </Typography>
                 </div>
             ) : (
                 <>
@@ -136,42 +130,51 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
                         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                             <div className="flex items-center space-x-2">
                                 <span className="text-blue-600">📦</span>
-                                <span className="text-sm font-medium text-blue-900">
+                                {/* ✨ NEW: Using Typography component */}
+                                <Typography variant="body2" color="primary" weight="medium">
                                     Repository: <span className="font-bold">{repositoryName}</span>
-                                </span>
-                                <span className="text-sm text-blue-700">
+                                </Typography>
+                                <Typography variant="body2" color="primary">
                                     Test: <span className="font-semibold">{getFormattedTestName()}</span>
-                                </span>
+                                </Typography>
                             </div>
                         </div>
                     )}
-                    {/* Summary Cards */}
+
+                    {/* ✨ NEW: Summary Cards using MetricCard component */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <MetricCard
                             title="Total Requests"
                             value={totalRequests.toLocaleString()}
                             type="number"
+                            subtitle="HTTP requests processed"
                         />
                         <MetricCard
                             title="Request Rate"
                             value={`${safeFormat(requestRate)}/s`}
                             type="rate"
+                            subtitle="Requests per second"
                         />
                         <MetricCard
                             title="Avg Response Time"
                             value={`${safeFormat(avgResponseTime)} ms`}
                             type="time"
+                            subtitle="Average response time"
+                            {...(avgResponseTime < 500 && { trend: { value: 0, isPositive: true } })}
                         />
                         <MetricCard
                             title="Error Rate"
                             value={`${safeFormat(errorRate)}%`}
                             type={errorRate > 5 ? 'error' : 'success'}
+                            subtitle="Failed requests"
+                            {...(errorRate < 1 && { trend: { value: Math.round(100 - errorRate), isPositive: true } })}
                         />
                     </div>
 
                     {/* Detail Tables */}
                     <div className="mb-6">
-                        <h3 className="text-lg font-semibold mb-3">HTTP Request Details</h3>
+                        {/* ✨ NEW: Using Typography component */}
+                        <Typography variant="h4" className="mb-3">HTTP Request Details</Typography>
                         <div className="bg-gray-50 p-4 rounded-lg overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead>
@@ -221,7 +224,8 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
                     {/* Checks */}
                     {testResult.root_group && testResult.root_group.checks && Object.keys(testResult.root_group.checks).length > 0 ? (
                         <div>
-                            <h3 className="text-lg font-semibold mb-3">Checks</h3>
+                            {/* ✨ NEW: Using Typography component */}
+                            <Typography variant="h4" className="mb-3">Checks</Typography>
                             <div className="bg-gray-50 p-4 rounded-lg overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead>
@@ -247,10 +251,13 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fails}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{safeFormat(passRate)}%</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${passRate === 100 ? 'bg-green-100 text-green-800' : passRate >= 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                                                            }`}>
+                                                        {/* ✨ NEW: Using Badge component */}
+                                                        <Badge
+                                                            variant={passRate === 100 ? 'success' : passRate >= 90 ? 'warning' : 'error'}
+                                                            size="sm"
+                                                        >
                                                             {passRate === 100 ? 'PASS' : passRate >= 90 ? 'WARNING' : 'FAIL'}
-                                                        </span>
+                                                        </Badge>
                                                     </td>
                                                 </tr>
                                             );
@@ -261,7 +268,10 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
                         </div>
                     ) : (
                         <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-gray-500">No checks data available for this test.</p>
+                            {/* ✨ NEW: Using Typography component */}
+                            <Typography variant="body1" color="gray">
+                                No checks data available for this test.
+                            </Typography>
                         </div>
                     )}
                 </>
