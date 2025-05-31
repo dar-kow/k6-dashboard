@@ -9,6 +9,10 @@ services:
       - NODE_ENV=development
       - PORT=4000
       - FRONTEND_URL=http://localhost:3000
+    volumes:
+      # Hot reload dla backend (jeśli chcesz)
+      - ./backend:/app
+      - /app/node_modules
     networks:
       - k6-network
 
@@ -20,6 +24,14 @@ services:
       - "3000:3000"
     environment:
       - VITE_API_URL=http://localhost:4000/api
+      - DOCKER_ENV=true
+    volumes:
+      # 🔥 HOT RELOAD - mapowanie źródeł
+      - ./frontend:/app
+      # 📦 Protect node_modules (używamy z kontenera)
+      - /app/node_modules
+      # 🎯 Protect dist folder  
+      - /app/dist
     depends_on:
       - backend
     networks:
