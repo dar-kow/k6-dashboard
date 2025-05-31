@@ -17,19 +17,34 @@ export default defineConfig({
       "@types": path.resolve(__dirname, "./src/types"),
     },
   },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `
-        @use "styles/abstracts/variables" as *;
-        @use "styles/abstracts/mixins" as *;
-      `,
-      },
-    },
-  },
+  // css: {
+  //   preprocessorOptions: {
+  //     scss: {
+  //       additionalData: `
+  //       @use "styles/base/variables" as *;
+  //       // @use "styles/abstracts/mixins" as *;
+  //     `,
+  //     },
+  //   },
+  // },
   server: {
-    host: "0.0.0.0",
+    host: "0.0.0.0", // 🔥 WAŻNE: Dostępność z zewnątrz kontenera
     port: 3000,
+    strictPort: true,
+    
+    // 🚀 Hot Module Replacement dla Dockera
+    hmr: {
+      port: 3000,
+      host: "localhost"
+    },
+    
+    // 📁 Watch options dla lepszego hot reload
+    watch: {
+      usePolling: true, // Dla systemów plików w kontenerach
+      interval: 1000,   // Check co sekundę
+    },
+    
+    // 🔗 Proxy API calls
     proxy: {
       "/api": {
         target: process.env.DOCKER_ENV
@@ -39,6 +54,7 @@ export default defineConfig({
       },
     },
   },
+  
   build: {
     outDir: "dist",
     assetsDir: "assets",
