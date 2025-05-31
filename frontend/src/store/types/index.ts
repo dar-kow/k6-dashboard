@@ -1,15 +1,19 @@
 import { store } from "../index";
+import { rootReducer } from "../rootReducers";
 
-// Redux Types
+// Redux Types from our updated store
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
-// Common async state interface
+// Alternative way to get RootState type from rootReducer
+export type RootStateFromReducer = ReturnType<typeof rootReducer>;
+
+// Common async state interface (imported from existing)
 export interface AsyncState<T = any> {
   data: T | null;
   loading: boolean;
   error: string | null;
-  lastUpdated?: string;
+  lastUpdated?: string | undefined;
 }
 
 // Common API response interface
@@ -78,3 +82,7 @@ export const createEntityState = <T>(): EntityState<T> => ({
   loading: false,
   error: null,
 });
+
+// Ensure type compatibility between the two RootState definitions
+type TypeCheck = RootState extends RootStateFromReducer ? true : false;
+const typeCheck: TypeCheck = true; // This will fail at compile time if types don't match
