@@ -14,7 +14,7 @@ const PieChart = React.lazy(() => import('@components/charts/PieChart'));
 const MultiBarChart = React.lazy(() => import('../../components/charts/MultiBarChart'));
 const MultiLineChart = React.lazy(() => import('../../components/charts/MultiLineChart'));
 
-// Custom status card for overall health
+// Status card for overall health (updated styling)
 interface StatusCardProps {
     title: string;
     value: string;
@@ -51,7 +51,7 @@ const StatusCard: React.FC<StatusCardProps> = memo(({ title, value, status }) =>
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="status-card">
             <div className="flex items-center">
                 <div className={`p-3 rounded-full ${getStatusColor()} mr-4`}>
                     {getStatusIcon()}
@@ -65,7 +65,7 @@ const StatusCard: React.FC<StatusCardProps> = memo(({ title, value, status }) =>
     );
 });
 
-// Test Run Selector
+// Test Run Selector (updated styling)
 interface TestRunSelectorProps {
     directories: TestDirectory[];
     selectedDirectory: string | null;
@@ -135,20 +135,21 @@ const TestRunSelector: React.FC<TestRunSelectorProps> = memo(({
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="dashboard__selector">
             <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">
                     📊 Select Test Run for Analysis
                 </label>
                 <div className="flex items-center space-x-2">
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => onDirectoryChange(directories.length > 0 ? directories[0].name : null)}
-                        className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                         disabled={loading}
-                        title="Switch to latest test run"
+                        leftIcon={<Icon name="refresh" size="sm" />}
                     >
-                        🔄 Latest
-                    </button>
+                        Latest
+                    </Button>
                     <span className="text-xs text-gray-400">
                         {directories.length} runs available
                     </span>
@@ -234,7 +235,7 @@ const TestRunSelector: React.FC<TestRunSelectorProps> = memo(({
     );
 });
 
-// Export PDF Button
+// Export PDF Button (updated styling)
 interface ExportPDFButtonProps {
     latestResults: Record<string, TestResult>;
     totalRequests: number;
@@ -276,6 +277,26 @@ const ExportPDFButton: React.FC<ExportPDFButtonProps> = memo(({
         </Button>
     );
 });
+
+// No Data State Component
+const NoDataState = () => (
+    <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="text-center py-8">
+            <div className="text-6xl mb-4">📊</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Test Data Available</h3>
+            <p className="text-gray-600 mb-6">
+                Run some tests to see detailed performance analytics and metrics.
+            </p>
+            <Link
+                to="/test-runner"
+                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+                <Icon name="play" size="sm" className="mr-2" />
+                Run New Tests
+            </Link>
+        </div>
+    </div>
+);
 
 export const Dashboard = memo(() => {
     // State management
@@ -509,15 +530,6 @@ export const Dashboard = memo(() => {
         ];
     }, [latestResults, getMetricValue]);
 
-    const performanceMetricsData = useMemo(() => {
-        return Object.entries(latestResults).map(([testName, result]) => ({
-            name: testName.replace(/-/g, ' ').substring(0, 8) + '...',
-            'Avg Response': getMetricValue(result.metrics?.http_req_duration, 'avg'),
-            'P95 Response': getMetricValue(result.metrics?.http_req_duration, 'p(95)'),
-            'Error Rate %': getMetricValue(result.metrics?.http_req_failed, 'value') * 100,
-        }));
-    }, [latestResults, getMetricValue]);
-
     const throughputData = useMemo(() => {
         return Object.entries(latestResults).map(([testName, result]) => ({
             name: testName.replace(/-/g, ' ').substring(0, 8) + '...',
@@ -529,14 +541,6 @@ export const Dashboard = memo(() => {
     const handleSearch = useCallback((query: string) => {
         console.log('Search:', query);
     }, []);
-
-    const handleExportPDF = useCallback(() => {
-        console.log('Export PDF');
-    }, []);
-
-    const handleCompareWith = useCallback((compareRunId: string) => {
-        alert(`Comparison feature coming soon!\n\nWould compare:\n• Current: ${selectedTestRun}\n• With: ${compareRunId}`);
-    }, [selectedTestRun]);
 
     // Memoized metrics
     const metrics = useMemo(() => {
@@ -555,7 +559,7 @@ export const Dashboard = memo(() => {
             <SearchBox
                 placeholder="Search test results..."
                 onSearch={handleSearch}
-                className="dashboard__search w-72"
+                className="dashboard__search"
             />
             <ExportPDFButton
                 latestResults={latestResults}
@@ -589,14 +593,12 @@ export const Dashboard = memo(() => {
                 ) : (
                     <>
                         {/* Test Selector */}
-                        <div className="dashboard__selector">
-                            <TestRunSelector
-                                directories={directories}
-                                selectedDirectory={selectedTestRun}
-                                onDirectoryChange={setSelectedTestRun}
-                                loading={latestResultsLoading}
-                            />
-                        </div>
+                        <TestRunSelector
+                            directories={directories}
+                            selectedDirectory={selectedTestRun}
+                            onDirectoryChange={setSelectedTestRun}
+                            loading={latestResultsLoading}
+                        />
 
                         {/* Metrics Overview */}
                         <div className="dashboard__metrics">
@@ -630,15 +632,15 @@ export const Dashboard = memo(() => {
                         </div>
 
                         {/* Selected Test Run Analysis */}
-                        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-                            <div className="flex justify-between items-start mb-4">
-                                <h2 className="text-xl font-semibold">Selected Test Run Analysis</h2>
+                        <div className="dashboard__run-analysis">
+                            <div className="dashboard__run-analysis-header">
+                                <h2 className="dashboard__run-analysis-title">Selected Test Run Analysis</h2>
                                 {selectedTestRun && (
-                                    <div className="flex items-center space-x-2">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedTestRun.includes('sequential_') ? 'bg-blue-100 text-blue-800' :
-                                            selectedTestRun.includes('parallel_') ? 'bg-green-100 text-green-800' :
-                                                selectedTestRun.endsWith('.json') ? 'bg-purple-100 text-purple-800' :
-                                                    'bg-gray-100 text-gray-800'
+                                    <div className="dashboard__run-analysis-badge">
+                                        <span className={`badge ${selectedTestRun.includes('sequential_') ? 'badge--sequential' :
+                                            selectedTestRun.includes('parallel_') ? 'badge--parallel' :
+                                                selectedTestRun.endsWith('.json') ? 'badge--individual' :
+                                                    'badge--sequential'
                                             }`}>
                                             {selectedTestRun.includes('sequential_') ? '📋 Sequential' :
                                                 selectedTestRun.includes('parallel_') ? '⚡ Parallel' :
@@ -646,7 +648,7 @@ export const Dashboard = memo(() => {
                                                         '📊 Test Run'}
                                         </span>
                                         {selectedTestRun === directories[0]?.name && (
-                                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                            <span className="badge badge--latest">
                                                 🆕 Latest
                                             </span>
                                         )}
@@ -654,19 +656,27 @@ export const Dashboard = memo(() => {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-gray-600">
+                            <div className="dashboard__run-analysis-grid">
+                                <div className="dashboard__run-analysis-info">
+                                    <p>
                                         <span className="font-medium">Run Time:</span> {getLastRunTime()}
                                     </p>
-                                    <p className="text-gray-600 mt-2">
+                                    <p>
                                         <span className="font-medium">Tests Analyzed:</span> {Object.keys(latestResults).length}
                                     </p>
+                                    <p>
+                                        <span className="font-medium">Status:</span> <span className={`font-medium ${getOverallHealthStatus() === 'healthy' ? 'text-green-600' :
+                                                getOverallHealthStatus() === 'warning' ? 'text-yellow-600' :
+                                                    getOverallHealthStatus() === 'critical' ? 'text-red-600' : 'text-gray-600'
+                                            }`}>
+                                            {getOverallHealthStatus().charAt(0).toUpperCase() + getOverallHealthStatus().slice(1)}
+                                        </span>
+                                    </p>
                                 </div>
-                                <div className="flex justify-between items-center">
+                                <div className="dashboard__run-analysis-actions">
                                     <Link
                                         to={`/results/${selectedTestRun || ''}`}
-                                        className="text-blue-600 hover:text-blue-800 font-medium"
+                                        className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
                                     >
                                         View Detailed Results →
                                     </Link>
@@ -686,25 +696,7 @@ export const Dashboard = memo(() => {
                                 <p className="mt-2 text-gray-600">Loading detailed analytics...</p>
                             </div>
                         ) : Object.keys(latestResults).length === 0 ? (
-                            <div className="bg-white rounded-lg shadow-md p-6">
-                                <div className="text-center py-8">
-                                    <div className="text-4xl mb-4">📊</div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Test Data Available</h3>
-                                    <p className="text-gray-600 mb-4">
-                                        {selectedTestRun ?
-                                            'The selected test run contains no analyzable data.' :
-                                            'Please select a test run to analyze performance data.'
-                                        }
-                                    </p>
-                                    <Link
-                                        to="/test-runner"
-                                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                                    >
-                                        <span className="mr-2">🚀</span>
-                                        Run New Tests
-                                    </Link>
-                                </div>
-                            </div>
+                            <NoDataState />
                         ) : (
                             <div className="dashboard__charts">
                                 <ChartContainer
@@ -776,7 +768,7 @@ export const Dashboard = memo(() => {
                         <div className="bg-white rounded-lg shadow-md p-6">
                             <Link
                                 to="/test-runner"
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                             >
                                 <Icon name="play" size="sm" className="mr-2" />
                                 Run New Tests

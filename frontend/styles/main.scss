@@ -43,63 +43,7 @@
     @include truncate-text;
 }
 
-// Terminal Output Component Styles
-.terminal-output {
-    .bg-gray-900 {
-        background-color: $gray-900;
-    }
-
-    .text-gray-100 {
-        color: $gray-100;
-    }
-
-    .text-gray-400 {
-        color: $gray-400;
-    }
-
-    .text-red-400 {
-        color: #f87171;
-    }
-
-    .text-green-400 {
-        color: #4ade80;
-    }
-
-    .text-blue-400 {
-        color: #60a5fa;
-    }
-
-    .text-cyan-300 {
-        color: #67e8f9;
-    }
-
-    .text-yellow-400 {
-        color: #facc15;
-    }
-
-    .text-purple-400 {
-        color: #c084fc;
-    }
-}
-
-// Repository Selector Styles
-.repository-selector {
-    @include card;
-
-    .text-sm {
-        font-size: $font-size-sm;
-    }
-
-    .font-medium {
-        font-weight: $font-weight-medium;
-    }
-
-    .text-gray-700 {
-        color: $gray-700;
-    }
-}
-
-// Dashboard specific styles
+// ===== DASHBOARD SPECIFIC STYLES =====
 .dashboard {
     display: flex;
     flex-direction: column;
@@ -162,9 +106,69 @@
         padding: 0;
         overflow: hidden;
     }
+
+    &__run-analysis {
+        @include card;
+
+        &-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: $spacing-4;
+        }
+
+        &-title {
+            font-size: $font-size-xl;
+            font-weight: $font-weight-semibold;
+            color: $gray-900;
+            margin: 0;
+        }
+
+        &-badge {
+            display: flex;
+            align-items: center;
+            gap: $spacing-2;
+            flex-wrap: wrap;
+        }
+
+        &-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: $spacing-4;
+
+            @include responsive($breakpoint-md) {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        &-info {
+            display: flex;
+            flex-direction: column;
+            gap: $spacing-2;
+
+            p {
+                margin: 0;
+                color: $gray-600;
+                font-size: $font-size-sm;
+
+                .font-medium {
+                    font-weight: $font-weight-medium;
+                    color: $gray-900;
+                }
+            }
+        }
+
+        &-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: $spacing-3;
+        }
+    }
 }
 
-// Test Results specific styles
+// ===== TEST RESULTS SPECIFIC STYLES =====
 .test-results {
     display: flex;
     flex-direction: column;
@@ -180,9 +184,63 @@
             flex-wrap: nowrap;
         }
     }
+
+    &__type-info {
+        @include card;
+        background-color: rgba($info-color, 0.05);
+        border: 1px solid rgba($info-color, 0.2);
+        padding: $spacing-4;
+
+        &-content {
+            display: flex;
+            align-items: center;
+            gap: $spacing-3;
+        }
+
+        &-icon {
+            font-size: $font-size-xl;
+            color: $info-color;
+        }
+
+        &-title {
+            font-size: $font-size-base;
+            font-weight: $font-weight-medium;
+            color: $info-color;
+            margin: 0 0 $spacing-1;
+        }
+
+        &-description {
+            font-size: $font-size-sm;
+            color: rgba($info-color, 0.8);
+            margin: 0;
+        }
+    }
+
+    &__no-selection {
+        @include card;
+        text-align: center;
+        padding: $spacing-8;
+
+        &-icon {
+            font-size: 4rem;
+            margin-bottom: $spacing-4;
+        }
+
+        &-title {
+            font-size: $font-size-lg;
+            font-weight: $font-weight-medium;
+            color: $gray-900;
+            margin: 0 0 $spacing-2;
+        }
+
+        &-description {
+            color: $gray-600;
+            margin: 0;
+        }
+    }
 }
 
-// Test Runner specific styles
+// ===== TEST RUNNER SPECIFIC STYLES =====
 .test-runner {
     display: flex;
     flex-direction: column;
@@ -198,9 +256,356 @@
             flex-wrap: nowrap;
         }
     }
+
+    &__config-card {
+        @include card;
+    }
+
+    &__config-header {
+        display: flex;
+        items-center: center;
+        justify-content: space-between;
+        margin-bottom: $spacing-4;
+    }
+
+    &__config-title {
+        font-size: $font-size-xl;
+        font-weight: $font-weight-semibold;
+        color: $gray-900;
+        margin: 0;
+    }
+
+    &__env-controls {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+        flex-wrap: wrap;
+    }
+
+    &__env-label {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-medium;
+        color: $gray-700;
+    }
+
+    &__env-toggle {
+        display: flex;
+        background-color: $gray-100;
+        border-radius: $border-radius-md;
+        padding: $spacing-1;
+
+        button {
+            padding: $spacing-2 $spacing-3;
+            font-size: $font-size-xs;
+            font-weight: $font-weight-medium;
+            border-radius: $border-radius-sm;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+
+            &.active {
+                color: white;
+
+                &.prod {
+                    background-color: $primary-color;
+                }
+
+                &.dev {
+                    background-color: $warning-color;
+                }
+            }
+
+            &:not(.active) {
+                color: $gray-600;
+                background: transparent;
+
+                &:hover {
+                    color: $gray-800;
+                }
+            }
+
+            &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+        }
+    }
+
+    &__status-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: $spacing-4;
+        flex-wrap: wrap;
+        gap: $spacing-3;
+    }
+
+    &__status-left {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+        flex-wrap: wrap;
+    }
+
+    &__connection-status {
+        display: inline-flex;
+        align-items: center;
+        padding: $spacing-2;
+        border-radius: $border-radius-md;
+        font-size: $font-size-sm;
+
+        &.connected {
+            background-color: rgba($success-color, 0.1);
+            color: $success-color;
+        }
+
+        &.disconnected {
+            background-color: rgba($error-color, 0.1);
+            color: $error-color;
+        }
+
+        &-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: $spacing-2;
+
+            &.connected {
+                background-color: $success-color;
+            }
+
+            &.disconnected {
+                background-color: $error-color;
+            }
+        }
+    }
+
+    &__target-info {
+        font-size: $font-size-sm;
+        color: $gray-600;
+
+        .font-medium {
+            font-weight: $font-weight-medium;
+        }
+
+        .custom-active {
+            color: $success-color;
+            margin-left: $spacing-2;
+        }
+    }
+
+    &__running-indicator {
+        display: flex;
+        align-items: center;
+        gap: $spacing-2;
+        padding: $spacing-2 $spacing-3;
+        background-color: rgba($warning-color, 0.1);
+        color: $warning-color;
+        border-radius: $border-radius-md;
+        font-size: $font-size-sm;
+
+        &-dot {
+            width: 8px;
+            height: 8px;
+            background-color: $warning-color;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        &-text {
+            font-weight: $font-weight-medium;
+        }
+    }
+
+    &__form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: $spacing-6;
+        margin-bottom: $spacing-6;
+
+        @include responsive($breakpoint-md) {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    &__form-group {
+        label {
+            display: block;
+            font-size: $font-size-sm;
+            font-weight: $font-weight-medium;
+            color: $gray-700;
+            margin-bottom: $spacing-2;
+        }
+
+        select {
+            display: block;
+            width: 100%;
+            padding: $spacing-2;
+            border: 1px solid $gray-300;
+            border-radius: $border-radius-md;
+            font-size: $font-size-sm;
+            background-color: white;
+            transition: border-color 0.2s ease;
+
+            &:focus {
+                outline: none;
+                border-color: $primary-color;
+                box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+            }
+
+            &:disabled {
+                background-color: $gray-100;
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+        }
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: $spacing-4;
+    }
+
+    &__terminal-card {
+        @include card;
+    }
+
+    &__terminal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: $spacing-4;
+    }
+
+    &__terminal-title {
+        font-size: $font-size-xl;
+        font-weight: $font-weight-semibold;
+        color: $gray-900;
+        margin: 0;
+    }
+
+    &__terminal-info {
+        display: flex;
+        align-items: center;
+        gap: $spacing-4;
+        flex-wrap: wrap;
+    }
+
+    &__running-info {
+        font-size: $font-size-sm;
+        color: $warning-color;
+        background-color: rgba($warning-color, 0.1);
+        padding: $spacing-2 $spacing-3;
+        border-radius: $border-radius-md;
+    }
+
+    &__terminal-tip {
+        font-size: $font-size-sm;
+        color: $gray-500;
+    }
+
+    &__terminal-instructions {
+        background-color: $gray-50;
+        padding: $spacing-3;
+        border-radius: $border-radius-md;
+        margin-bottom: $spacing-4;
+        font-size: $font-size-sm;
+        color: $gray-600;
+
+        p {
+            margin: 0 0 $spacing-1;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+
+            strong {
+                font-weight: $font-weight-medium;
+                color: $gray-700;
+            }
+
+            code {
+                background-color: $gray-200;
+                padding: $spacing-1;
+                border-radius: $border-radius-sm;
+                font-family: $font-family-mono;
+                margin-left: $spacing-1;
+            }
+        }
+
+        .env-label {
+            font-weight: $font-weight-medium;
+
+            &.prod {
+                color: $primary-color;
+            }
+
+            &.dev {
+                color: $warning-color;
+            }
+        }
+    }
 }
 
-// Status cards
+// ===== TERMINAL OUTPUT STYLES =====
+.terminal-output {
+    .bg-gray-900 {
+        background-color: $gray-900;
+    }
+
+    .text-gray-100 {
+        color: $gray-100;
+    }
+
+    .text-gray-400 {
+        color: $gray-400;
+    }
+
+    .text-red-400 {
+        color: #f87171;
+    }
+
+    .text-green-400 {
+        color: #4ade80;
+    }
+
+    .text-blue-400 {
+        color: #60a5fa;
+    }
+
+    .text-cyan-300 {
+        color: #67e8f9;
+    }
+
+    .text-yellow-400 {
+        color: #facc15;
+    }
+
+    .text-purple-400 {
+        color: #c084fc;
+    }
+}
+
+// ===== REPOSITORY SELECTOR STYLES =====
+.repository-selector {
+    @include card;
+
+    .text-sm {
+        font-size: $font-size-sm;
+    }
+
+    .font-medium {
+        font-weight: $font-weight-medium;
+    }
+
+    .text-gray-700 {
+        color: $gray-700;
+    }
+}
+
+// ===== STATUS CARDS =====
 .status-card {
     @include card;
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -231,7 +636,7 @@
     }
 }
 
-// Test result detail styles
+// ===== TEST RESULT DETAIL STYLES =====
 .test-result-detail {
     .text-xs {
         font-size: $font-size-xs;
@@ -254,7 +659,7 @@
     }
 }
 
-// Responsive utilities
+// ===== RESPONSIVE UTILITIES =====
 @include responsive($breakpoint-sm) {
     .responsive-hide-sm {
         display: none;
@@ -285,7 +690,7 @@
     }
 }
 
-// Animation classes
+// ===== ANIMATION CLASSES =====
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -334,7 +739,7 @@
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-// Loading states
+// ===== LOADING STATES =====
 .loading-skeleton {
     background: linear-gradient(90deg, $gray-200 25%, $gray-100 50%, $gray-200 75%);
     background-size: 200% 100%;
@@ -352,7 +757,7 @@
     }
 }
 
-// Modal styles
+// ===== MODAL STYLES =====
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -379,7 +784,7 @@
     }
 }
 
-// Chart specific styles
+// ===== CHART SPECIFIC STYLES =====
 .chart-title {
     font-size: $font-size-lg;
     font-weight: $font-weight-semibold;
@@ -388,7 +793,7 @@
     text-align: center;
 }
 
-// Interactive elements
+// ===== INTERACTIVE ELEMENTS =====
 .interactive-element {
     transition: all 0.2s ease-in-out;
     cursor: pointer;
@@ -403,13 +808,62 @@
     }
 }
 
-// Focus styles for accessibility
+// ===== FOCUS STYLES FOR ACCESSIBILITY =====
 .focus-visible:focus {
     outline: 2px solid $primary-color;
     outline-offset: 2px;
 }
 
-// Dark mode support (optional)
+// ===== BADGE STYLES =====
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-1 $spacing-3;
+    border-radius: $border-radius-xl;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+
+    &--sequential {
+        background-color: rgba($primary-color, 0.1);
+        color: $primary-color;
+    }
+
+    &--parallel {
+        background-color: rgba($success-color, 0.1);
+        color: $success-color;
+    }
+
+    &--individual {
+        background-color: rgba($secondary-color, 0.1);
+        color: $secondary-color;
+    }
+
+    &--latest {
+        background-color: rgba($success-color, 0.1);
+        color: $success-color;
+    }
+}
+
+// ===== PRINT STYLES =====
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .app {
+        background: white !important;
+        color: black !important;
+    }
+
+    .shadow-md,
+    .shadow-lg {
+        box-shadow: none !important;
+    }
+}
+
+// ===== DARK MODE SUPPORT =====
 @media (prefers-color-scheme: dark) {
     .app {
         background-color: $gray-900;
@@ -430,29 +884,5 @@
 
     .border-gray-200 {
         border-color: $gray-700 !important;
-    }
-}
-
-// Print styles
-@media print {
-    .no-print {
-        display: none !important;
-    }
-
-    .app {
-        background: white !important;
-        color: black !important;
-    }
-
-    .shadow-md,
-    .shadow-lg {
-        box-shadow: none !important;
-    }
-
-    .bg-blue-600,
-    .bg-green-600,
-    .bg-red-600 {
-        background: $gray-800 !important;
-        color: white !important;
     }
 }

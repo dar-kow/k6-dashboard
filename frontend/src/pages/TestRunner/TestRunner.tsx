@@ -20,7 +20,7 @@ interface EnvironmentConfig {
     customHost: string;
 }
 
-// Terminal Output Component (atomic design version)
+// Terminal Output Component (updated styling)
 interface TerminalOutputProps {
     output: string[];
     autoScroll?: boolean;
@@ -170,20 +170,12 @@ const TerminalOutput: React.FC<TerminalOutputProps> = memo(({
                 </div>
 
                 <div className="flex items-center space-x-2">
-                    <button
-                        onClick={scrollToTop}
-                        className="px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
-                        title="Scroll to top"
-                    >
+                    <Button variant="ghost" size="sm" onClick={scrollToTop}>
                         ↑ Top
-                    </button>
-                    <button
-                        onClick={scrollToBottom}
-                        className="px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
-                        title="Scroll to bottom"
-                    >
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={scrollToBottom}>
                         ↓ Bottom
-                    </button>
+                    </Button>
                     <div className="flex items-center space-x-1">
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
                             📺 Live Terminal
@@ -195,10 +187,10 @@ const TerminalOutput: React.FC<TerminalOutputProps> = memo(({
     );
 });
 
-// Repository Selector (simplified for atomic design)
+// Repository Selector Component (updated styling)
 const RepositorySelector: React.FC = memo(() => {
     return (
-        <div className="repository-selector bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="repository-selector">
             <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">
                     📦 Test Repository
@@ -214,7 +206,7 @@ const RepositorySelector: React.FC = memo(() => {
     );
 });
 
-// Token Config Modal
+// Token Config Modal (updated styling)
 interface TokenConfigModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -246,23 +238,19 @@ const TokenConfigModal: React.FC<TokenConfigModalProps> = memo(({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+        <div className="modal-overlay">
+            <div className="modal-content">
                 <h3 className="text-lg font-semibold mb-4">Configure Custom Environment</h3>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Custom Host URL
-                    </label>
                     <Input
+                        label="Custom Host URL"
                         value={host}
                         onChange={(e) => setHost(e.target.value)}
                         placeholder="https://api.example.com"
+                        helperText="Leave empty to use the default host from repository config"
                         fullWidth
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                        Leave empty to use the default host from repository config
-                    </p>
                 </div>
 
                 <div className="mb-4">
@@ -309,8 +297,8 @@ const StopConfirmationModal: React.FC<StopConfirmationModalProps> = memo(({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="modal-overlay">
+            <div className="modal-content">
                 <h3 className="text-lg font-semibold mb-4 text-red-600">⚠️ Stop Test Execution</h3>
                 <p className="text-gray-700 mb-6">
                     Are you sure you want to stop the running test? This action cannot be undone.
@@ -590,7 +578,8 @@ export const TestRunner = memo(() => {
                 variant="primary"
                 onClick={runTest}
                 disabled={isRunning || !selectedTest}
-                leftIcon={isRunning ? <Icon name="spinner" size="sm" /> : <Icon name="play" size="sm" />}
+                loading={isRunning}
+                leftIcon={<Icon name="play" size="sm" />}
             >
                 {isRunning ? 'Running...' : 'Run Test'}
             </Button>
@@ -611,36 +600,28 @@ export const TestRunner = memo(() => {
 
                 <RepositorySelector />
 
-                {/* Test Configuration */}
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-semibold">Run Tests</h2>
+                {/* Test Configuration Card */}
+                <div className="test-runner__config-card">
+                    <div className="test-runner__config-header">
+                        <h2 className="test-runner__config-title">Run Tests</h2>
 
-                        <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-2">
-                                <span className="text-sm font-medium text-gray-700">Environment:</span>
-                                <div className="flex bg-gray-100 rounded-md p-1">
-                                    <button
-                                        onClick={() => handleEnvironmentChange('PROD')}
-                                        className={`px-3 py-1 text-xs font-medium rounded transition-colors ${environment === 'PROD'
-                                            ? 'bg-blue-600 text-white'
-                                            : 'text-gray-600 hover:text-gray-800'
-                                            }`}
-                                        disabled={isRunning}
-                                    >
-                                        PROD
-                                    </button>
-                                    <button
-                                        onClick={() => handleEnvironmentChange('DEV')}
-                                        className={`px-3 py-1 text-xs font-medium rounded transition-colors ${environment === 'DEV'
-                                            ? 'bg-orange-600 text-white'
-                                            : 'text-gray-600 hover:text-gray-800'
-                                            }`}
-                                        disabled={isRunning}
-                                    >
-                                        DEV
-                                    </button>
-                                </div>
+                        <div className="test-runner__env-controls">
+                            <span className="test-runner__env-label">Environment:</span>
+                            <div className="test-runner__env-toggle">
+                                <button
+                                    onClick={() => handleEnvironmentChange('PROD')}
+                                    className={environment === 'PROD' ? 'active prod' : ''}
+                                    disabled={isRunning}
+                                >
+                                    PROD
+                                </button>
+                                <button
+                                    onClick={() => handleEnvironmentChange('DEV')}
+                                    className={environment === 'DEV' ? 'active dev' : ''}
+                                    disabled={isRunning}
+                                >
+                                    DEV
+                                </button>
                             </div>
 
                             <Button
@@ -655,34 +636,31 @@ export const TestRunner = memo(() => {
                         </div>
                     </div>
 
-                    <div className="mb-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <div className={`inline-flex items-center px-2 py-1 rounded ${socketConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    <span className={`w-3 h-3 rounded-full mr-2 ${socketConnected ? 'bg-green-600' : 'bg-red-600'}`}></span>
-                                    {socketConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
-                                </div>
-
-                                <div className="text-sm text-gray-600">
-                                    <span className="font-medium">Target:</span> {environment}
-                                    {(customToken || customHost) && <span className="ml-2 text-green-600">• Custom Config Active</span>}
-                                </div>
+                    <div className="test-runner__status-bar">
+                        <div className="test-runner__status-left">
+                            <div className={`test-runner__connection-status ${socketConnected ? 'connected' : 'disconnected'}`}>
+                                <span className={`test-runner__connection-status-indicator ${socketConnected ? 'connected' : 'disconnected'}`}></span>
+                                {socketConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
                             </div>
 
-                            {isRunning && (
-                                <div className="flex items-center space-x-2 px-3 py-1 bg-orange-100 text-orange-800 rounded-md">
-                                    <div className="w-2 h-2 bg-orange-600 rounded-full animate-pulse"></div>
-                                    <span className="text-sm font-medium">Test Running</span>
-                                </div>
-                            )}
+                            <div className="test-runner__target-info">
+                                <span className="font-medium">Target:</span> {environment}
+                                {(customToken || customHost) && <span className="custom-active">• Custom Config Active</span>}
+                            </div>
                         </div>
+
+                        {isRunning && (
+                            <div className="test-runner__running-indicator">
+                                <div className="test-runner__running-indicator-dot"></div>
+                                <span className="test-runner__running-indicator-text">Test Running</span>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Select Test</label>
+                    <div className="test-runner__form-grid">
+                        <div className="test-runner__form-group">
+                            <label>Select Test</label>
                             <select
-                                className="block w-full p-2 border border-gray-300 rounded-md"
                                 value={selectedTest}
                                 onChange={(e) => setSelectedTest(e.target.value)}
                                 disabled={isRunning}
@@ -700,10 +678,9 @@ export const TestRunner = memo(() => {
                             </select>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Select Profile</label>
+                        <div className="test-runner__form-group">
+                            <label>Select Profile</label>
                             <select
-                                className="block w-full p-2 border border-gray-300 rounded-md"
                                 value={selectedProfile}
                                 onChange={(e) => setSelectedProfile(e.target.value)}
                                 disabled={isRunning}
@@ -717,12 +694,13 @@ export const TestRunner = memo(() => {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4">
+                    <div className="test-runner__actions">
                         <Button
                             variant="primary"
                             onClick={runTest}
                             disabled={isRunning || !selectedTest}
                             loading={isRunning}
+                            leftIcon={<Icon name="play" size="sm" />}
                         >
                             Run Selected Test
                         </Button>
@@ -732,6 +710,7 @@ export const TestRunner = memo(() => {
                             onClick={runAllTests}
                             disabled={isRunning}
                             loading={isRunning}
+                            leftIcon={<Icon name="play" size="sm" />}
                         >
                             Run All Tests Sequentially
                         </Button>
@@ -740,45 +719,47 @@ export const TestRunner = memo(() => {
                             <Button
                                 variant="error"
                                 onClick={() => setShowStopConfirmation(true)}
+                                leftIcon={<Icon name="x" size="sm" />}
                             >
-                                🛑 Stop Test
+                                Stop Test
                             </Button>
                         )}
 
                         <Button
                             variant="secondary"
                             onClick={clearOutput}
+                            leftIcon={<Icon name="refresh" size="sm" />}
                         >
                             Clear Output
                         </Button>
                     </div>
                 </div>
 
-                {/* Terminal Output */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-semibold">Test Execution Output</h2>
+                {/* Terminal Output Card */}
+                <div className="test-runner__terminal-card">
+                    <div className="test-runner__terminal-header">
+                        <h2 className="test-runner__terminal-title">Test Execution Output</h2>
 
-                        <div className="flex items-center space-x-4">
+                        <div className="test-runner__terminal-info">
                             {isRunning && runningTestId && (
-                                <div className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-md">
+                                <div className="test-runner__running-info">
                                     Running: {runningTestId.split('-')[0]}
                                 </div>
                             )}
 
-                            <div className="text-sm text-gray-500">
+                            <div className="test-runner__terminal-tip">
                                 💡 Toggle auto-scroll below to control terminal behavior
                             </div>
                         </div>
                     </div>
 
-                    <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                    <div className="test-runner__terminal-instructions">
                         <p>📁 <strong>Results location:</strong>
-                            <code className="bg-gray-200 px-1 rounded ml-1">k6-tests/results/</code>
+                            <code>k6-tests/results/</code>
                         </p>
                         <p>🎛️ <strong>Terminal controls:</strong> Use auto-scroll toggle and manual scroll buttons below</p>
                         <p>🔄 <strong>Auto-scroll:</strong> {autoScroll ? 'Enabled - shows latest output automatically' : 'Disabled - scroll manually to see new output'}</p>
-                        <p>🌐 <strong>Environment:</strong> Running tests against <span className={`font-medium ${environment === 'PROD' ? 'text-blue-600' : 'text-orange-600'}`}>{environment}</span> environment</p>
+                        <p>🌐 <strong>Environment:</strong> Running tests against <span className={`env-label ${environment.toLowerCase()}`}>{environment}</span> environment</p>
                         {isRunning && <p>⚠️ <strong>Running:</strong> Use STOP button above to terminate test execution</p>}
                     </div>
 
