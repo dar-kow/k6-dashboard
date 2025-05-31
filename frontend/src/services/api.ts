@@ -1,4 +1,14 @@
+/// <reference types="vite/client" />
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+
+interface ImportMetaEnv {
+  readonly VITE_API_URL: string;
+  // dodaj więcej zmiennych jeśli potrzebujesz
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
 
 export interface ApiClient {
   get<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
@@ -11,7 +21,7 @@ class ApiClientImpl implements ApiClient {
   private client: AxiosInstance;
 
   constructor(
-    baseURL: string = process.env.REACT_APP_API_URL ||
+    baseURL: string = import.meta.env.VITE_API_URL ||
       "http://localhost:4000/api"
   ) {
     this.client = axios.create({
