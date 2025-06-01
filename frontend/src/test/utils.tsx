@@ -4,18 +4,18 @@ import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
 
-import testResultsSlice from '../store/slices/testResultsSlice';
-import repositorySlice from '../store/slices/repositorySlice';
-import uiSlice from '../store/slices/uiSlice';
-import testRunnerSlice from '../store/slices/testRunnerSlice';
+// import testResultsSlice from '../store/slices/testResultsSlice';
+// import repositorySlice from '../store/slices/repositorySlice';
+// import uiSlice from '../store/slices/uiSlice';
+// import testRunnerSlice from '../store/slices/testRunnerSlice';
 
 const createTestStore = (preloadedState?: any) => {
     return configureStore({
         reducer: {
-            testResults: testResultsSlice,
-            repository: repositorySlice,
-            ui: uiSlice,
-            testRunner: testRunnerSlice,
+            // testResults: testResultsSlice,
+            // repository: repositorySlice,
+            // ui: uiSlice,
+            // testRunner: testRunnerSlice,
         },
         preloadedState,
         middleware: (getDefaultMiddleware) =>
