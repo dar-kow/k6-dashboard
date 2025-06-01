@@ -187,7 +187,6 @@ const PDFReport: React.FC<PDFReportProps> = ({
     averageResponseTime,
     errorRate,
     lastRunTime,
-    overallHealthStatus,
     directoryName = '',
 }) => {
     // Helper function to get metric value safely
