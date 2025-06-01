@@ -1,42 +1,62 @@
+version: '3.8'
+
 services:
+  frontend:
+    image: node:18-alpine
+    container_name: k6-dashboard-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Anonymous volume for node_modules
+    ports:
+      - "80:3000"
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
+      - VITE_WS_URL=http://localhost:4000
+      - VITE_DEV_MODE=true
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    networks:
+      - k6-dashboard-network
+    depends_on:
+      - backend
+
   backend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
+    image: node:18-alpine
+    container_name: k6-dashboard-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./k6-tests:/k6-tests
+      - ./results:/results
+      - ./docker/entrypoint.sh:/entrypoint.sh
     ports:
       - "4000:4000"
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    command: >
+      sh -c "
+        apk add --no-cache bash curl git tar && 
+        echo 'Installing k6...' &&
+        curl -L https://github.com/grafana/k6/releases/download/v0.43.1/k6-v0.43.1-linux-amd64.tar.gz -o k6.tar.gz &&
+        tar xzf k6.tar.gz &&
+        cp k6-v0.43.1-linux-amd64/k6 /usr/local/bin/ &&
+        chmod +x /usr/local/bin/k6 &&
+        rm -rf k6-v0.43.1-linux-amd64 k6.tar.gz &&
+        echo 'k6 installed successfully:' &&
+        k6 version &&
+        npm install -g ts-node typescript &&
+        npm install &&
+        npm run dev
+      "
     environment:
       - NODE_ENV=development
       - PORT=4000
-      - FRONTEND_URL=http://localhost:3000
-    volumes:
-      # Hot reload dla backend (jeśli chcesz)
-      - ./backend:/app
-      - /app/node_modules
+      - FRONTEND_URL=http://localhost
+      - DEBUG=true
     networks:
-      - k6-network
-
-  frontend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.frontend.dev
-    ports:
-      - "3000:3000"
-    environment:
-      - VITE_API_URL=http://localhost:4000/api
-      - DOCKER_ENV=true
-    volumes:
-      # 🔥 HOT RELOAD - mapowanie źródeł
-      - ./frontend:/app
-      # 📦 Protect node_modules (używamy z kontenera)
-      - /app/node_modules
-      # 🎯 Protect dist folder  
-      - /app/dist
-    depends_on:
-      - backend
-    networks:
-      - k6-network
+      - k6-dashboard-network
 
 networks:
-  k6-network:
+  k6-dashboard-network:
     driver: bridge

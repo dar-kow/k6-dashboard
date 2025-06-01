@@ -1,73 +1,108 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
+import { resolve } from "path";
 
 export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@components": path.resolve(__dirname, "./src/components"),
-      "@pages": path.resolve(__dirname, "./src/pages"),
-      "@store": path.resolve(__dirname, "./src/store"),
-      "@hooks": path.resolve(__dirname, "./src/hooks"),
-      "@services": path.resolve(__dirname, "./src/services"),
-      "@utils": path.resolve(__dirname, "./src/utils"),
-      "@styles": path.resolve(__dirname, "./styles"),
-      "@types": path.resolve(__dirname, "./src/types"),
-    },
-  },
-  // css: {
-  //   preprocessorOptions: {
-  //     scss: {
-  //       additionalData: `
-  //       @use "styles/base/variables" as *;
-  //       // @use "styles/abstracts/mixins" as *;
-  //     `,
-  //     },
-  //   },
-  // },
+  plugins: [
+    react({
+      // Enable Fast Refresh
+      fastRefresh: true,
+      // JSX runtime
+      jsxRuntime: "automatic",
+    }),
+  ],
+
+  // Development server configuration
   server: {
-    host: "0.0.0.0", // 🔥 WAŻNE: Dostępność z zewnątrz kontenera
+    host: "0.0.0.0", // Allow external connections (important for Docker)
     port: 3000,
     strictPort: true,
-    
-    // 🚀 Hot Module Replacement dla Dockera
     hmr: {
-      port: 3000,
-      host: "localhost"
+      port: 3000, // HMR port for Docker
+      host: "localhost",
     },
-    
-    // 📁 Watch options dla lepszego hot reload
     watch: {
-      usePolling: true, // Dla systemów plików w kontenerach
-      interval: 1000,   // Check co sekundę
-    },
-    
-    // 🔗 Proxy API calls
-    proxy: {
-      "/api": {
-        target: process.env.DOCKER_ENV
-          ? "http://backend:4000"
-          : "http://localhost:4000",
-        changeOrigin: true,
-      },
+      usePolling: true, // For Docker file system watching
+      interval: 100,
     },
   },
-  
+
+  // Build configuration
   build: {
     outDir: "dist",
-    assetsDir: "assets",
-    sourcemap: false,
+    sourcemap: true,
+    // Chunk splitting for better caching
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ["react", "react-dom"],
-          router: ["react-router-dom"],
+          // Vendor chunks
+          vendor: ["react", "react-dom", "react-router-dom"],
           redux: ["@reduxjs/toolkit", "react-redux", "redux-saga"],
+          charts: ["recharts"],
+          utils: ["axios", "lodash-es"],
         },
       },
     },
+    // Optimize chunks
+    chunkSizeWarningLimit: 1000,
   },
-  base: "/",
+
+  // Path resolution
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "src"),
+      "@components": resolve(__dirname, "src/components"),
+      "@pages": resolve(__dirname, "src/pages"),
+      "@hooks": resolve(__dirname, "src/hooks"),
+      "@store": resolve(__dirname, "src/store"),
+      "@api": resolve(__dirname, "src/api"),
+      "@utils": resolve(__dirname, "src/utils"),
+      "@styles": resolve(__dirname, "src/styles"),
+      "@types": resolve(__dirname, "src/types"),
+    },
+  },
+
+  // CSS configuration
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `
+          @import "@/styles/abstracts/variables";
+          @import "@/styles/abstracts/mixins";
+        `,
+      },
+    },
+    modules: {
+      localsConvention: "camelCase",
+    },
+  },
+
+  // Environment variables
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
+
+  // Optimize dependencies
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "@reduxjs/toolkit",
+      "react-redux",
+      "redux-saga",
+      "axios",
+      "recharts",
+      "socket.io-client",
+    ],
+    exclude: ["@react-pdf/renderer"], // This might cause issues in development
+  },
+
+  // Preview configuration (for production preview)
+  preview: {
+    host: "0.0.0.0",
+    port: 3000,
+    strictPort: true,
+  },
 });

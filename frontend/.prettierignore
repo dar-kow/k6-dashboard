@@ -1,0 +1,23 @@
+dist/
+build/
+node_modules/
+coverage/
+.next/
+.cache/
+public/
+*.min.js
+*.min.css
+
+# Generated files
+src/types/generated/
+src/**/*.d.ts
+
+# Documentation
+docs/
+README.md
+CHANGELOG.md
+
+# Config files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

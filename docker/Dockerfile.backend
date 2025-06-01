@@ -1,18 +1,19 @@
+# docker/Dockerfile.backend
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache curl bash git dos2unix
+# Install curl for downloading k6 and bash for running scripts
+RUN apk add --no-cache curl bash git
 
-# Install k6
+# Install k6 directly from binary release
 RUN curl -L https://github.com/grafana/k6/releases/download/v0.43.1/k6-v0.43.1-linux-amd64.tar.gz -o k6.tar.gz \
     && tar xzf k6.tar.gz \
     && cp k6-v0.43.1-linux-amd64/k6 /usr/local/bin/ \
     && rm -rf k6-v0.43.1-linux-amd64 k6.tar.gz \
     && chmod +x /usr/local/bin/k6
 
-# Copy package files
+# Copy package files first for better caching
 COPY backend/package*.json ./
 
 # Install dependencies
@@ -24,9 +25,11 @@ COPY backend/ ./
 # Copy k6 tests
 COPY k6-tests/ ../k6-tests/
 
-# Fix line endings and make executable
-RUN dos2unix start.sh && chmod +x start.sh
+# Copy and make start script executable
+COPY backend/start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 EXPOSE 4000
 
+# Use our start script
 CMD ["./start.sh"]

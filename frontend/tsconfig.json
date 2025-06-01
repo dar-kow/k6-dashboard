@@ -19,49 +19,15 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    
-    // 🚀 Enhanced TypeScript settings
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-    "noPropertyAccessFromIndexSignature": false,
-    "noUncheckedIndexedAccess": false,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitAny": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-    
-    // 🎯 Path mapping for clean imports
-    "baseUrl": "src",
+      "baseUrl": "src",
     "paths": {
       "@components/*": ["components/*"],
-      "@store/*": ["store/*"],
       "@hooks/*": ["hooks/*"],
-      "@utils/*": ["utils/*"],
-      "@api/*": ["api/*"],
       "@types/*": ["types/*"],
-      "@styles/*": ["styles/*"],
-      "@routes/*": ["routes/*"],
-      "@assets/*": ["assets/*"],
-      "@tests/*": ["__tests__/*"]
+      "@store/*": ["store/*"]
     }
   },
   "include": [
-    "src/**/*",
-    "src/**/*.tsx",
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "build",
-    "dist",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx"
+    "src"
   ]
 }

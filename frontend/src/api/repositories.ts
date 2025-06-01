@@ -1,6 +1,10 @@
-import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+import {
+  apiGet,
+  apiPost,
+  apiDelete,
+  apiWithRetry,
+  apiGetCached,
+} from "./client";
 
 export interface Repository {
   id: string;
@@ -43,33 +47,41 @@ export interface RepositoryConfig {
 }
 
 export const fetchRepositories = async (): Promise<Repository[]> => {
-  const response = await axios.get<Repository[]>(`${API_URL}/repositories`);
-  return response.data;
+  return apiWithRetry(
+    () =>
+      apiGetCached<Repository[]>(
+        "/repositories",
+        {},
+        "repositories_list",
+        1 * 60 * 1000
+      ), // 1 minute cache
+    3,
+    1000
+  );
 };
 
 export const createRepository = async (
   data: CreateRepositoryRequest
 ): Promise<Repository> => {
-  const response = await axios.post<Repository>(
-    `${API_URL}/repositories`,
-    data
-  );
-  return response.data;
+  return apiPost<Repository>("/repositories", data);
 };
 
 export const fetchRepositoryConfig = async (
   repositoryId: string
 ): Promise<RepositoryConfig> => {
-  const response = await axios.get<RepositoryConfig>(
-    `${API_URL}/repositories/${repositoryId}/config`
-  );
-  return response.data;
+  const cacheKey = `config_${repositoryId}`;
+  return apiGetCached<RepositoryConfig>(
+    `/repositories/${repositoryId}/config`,
+    {},
+    cacheKey,
+    5 * 60 * 1000
+  ); // 5 minutes cache
 };
 
 export const syncRepository = async (repositoryId: string): Promise<void> => {
-  await axios.post(`${API_URL}/repositories/${repositoryId}/sync`);
+  return apiPost(`/repositories/${repositoryId}/sync`);
 };
 
 export const deleteRepository = async (repositoryId: string): Promise<void> => {
-  await axios.delete(`${API_URL}/repositories/${repositoryId}`);
+  return apiDelete(`/repositories/${repositoryId}`);
 };

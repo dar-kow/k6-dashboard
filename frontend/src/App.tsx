@@ -1,42 +1,90 @@
-import React, { useEffect } from 'react';
-import { Provider } from 'react-redux';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Provider } from 'react-redux';
 import { store } from './store';
-import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import TestResults from './pages/TestResults';
-import TestRunner from './pages/TestRunner';
-import MigrationWrapper from './components/MigrationWrapper';
 
-// Import new styles
-import './styles/main.scss';
+// Lazy loaded components
+const Layout = lazy(() => import('./components/templates/Layout'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const TestResults = lazy(() => import('./pages/TestResults'));
+const TestRunner = lazy(() => import('./pages/TestRunner'));
 
-// 🔄 MIGRATION: Keep legacy context providers for components that haven't been migrated yet
-// These will be removed in later phases as we migrate components to Redux
-import { TestResultProvider } from './context/TestResultContext';
-import { RepositoryProvider } from './context/RepositoryContext';
+// Loading component
+const LoadingFallback = () => (
+    <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center space-x-2">
+            <div className="loading-spinner" />
+            <span className="text-gray-600">Loading...</span>
+        </div>
+    </div>
+);
 
-function App() {
+// Error Boundary
+class ErrorBoundary extends React.Component<
+    { children: React.ReactNode },
+    { hasError: boolean; error?: Error }
+> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        console.error('App Error Boundary caught an error:', error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+                            Oops! Something went wrong
+                        </h1>
+                        <p className="text-gray-600 mb-4">
+                            The application encountered an unexpected error.
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="btn btn--primary"
+                        >
+                            Reload Page
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
+// Theme provider component
+const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     useEffect(() => {
-        // Initialize Redux store on app start
-        store.dispatch({ type: 'INIT_APP' });
+        // Load theme from localStorage
+        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
 
-        console.log('🚀 K6 Dashboard App initialized with Redux!');
-        console.log('📊 Store state:', store.getState());
+        document.documentElement.setAttribute('data-theme', theme);
     }, []);
 
+    return <>{children}</>;
+};
+
+// Main App component
+function App() {
     return (
-        <Provider store={store}>
-            <MigrationWrapper>
-                {/* 
-                🔄 MIGRATION STRATEGY:
-                - Keep legacy providers for backward compatibility
-                - Components will gradually migrate from Context to Redux hooks
-                - Once all components are migrated, these providers will be removed
-                */}
-                <RepositoryProvider>
-                    <TestResultProvider>
-                        <Router>
+        <ErrorBoundary>
+            <Provider store={store}>
+                <ThemeProvider>
+                    <Router>
+                        <Suspense fallback={<LoadingFallback />}>
                             <Layout>
                                 <Routes>
                                     <Route path="/" element={<Dashboard />} />
@@ -46,11 +94,11 @@ function App() {
                                     <Route path="/test-runner" element={<TestRunner />} />
                                 </Routes>
                             </Layout>
-                        </Router>
-                    </TestResultProvider>
-                </RepositoryProvider>
-            </MigrationWrapper>
-        </Provider>
+                        </Suspense>
+                    </Router>
+                </ThemeProvider>
+            </Provider>
+        </ErrorBoundary>
     );
 }
 

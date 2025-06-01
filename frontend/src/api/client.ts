@@ -4,231 +4,263 @@ import axios, {
   AxiosResponse,
   AxiosError,
 } from "axios";
-import { ApiResponse, ApiErrorResponse } from "../types/api";
 
-// 🔗 API Client Configuration for K6 Dashboard
+// Request/Response types
+interface ApiResponse<T = any> {
+  data: T;
+  message?: string;
+  status: "success" | "error";
+}
 
-class ApiClient {
-  private client: AxiosInstance;
-  private requestQueue: Map<string, AbortController> = new Map();
+interface ApiError {
+  message: string;
+  status: number;
+  code?: string;
+}
 
-  constructor() {
-    this.client = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || "http://localhost:4000/api",
-      timeout: 30000, // 30 seconds
-      withCredentials: true,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+// Create axios instance
+const createApiClient = (): AxiosInstance => {
+  const client = axios.create({
+    baseURL: process.env.REACT_APP_API_URL || "http://localhost:4000/api",
+    timeout: 15000, // 15 seconds
+    headers: {
+      "Content-Type": "application/json",
+    },
+    withCredentials: true,
+  });
 
-    this.setupInterceptors();
-  }
-
-  private setupInterceptors() {
-    // Request interceptor
-    this.client.interceptors.request.use(
-      (config) => {
-        // Add request ID for tracking
-        const requestId = `${config.method?.toUpperCase()}_${
-          config.url
-        }_${Date.now()}`;
-        config.metadata = { requestId };
-
-        // Add abort controller for request cancellation
-        const controller = new AbortController();
-        config.signal = controller.signal;
-        this.requestQueue.set(requestId, controller);
-
-        console.log(`📡 API Request [${requestId}]:`, {
-          method: config.method?.toUpperCase(),
-          url: config.url,
-          params: config.params,
-          timestamp: new Date().toISOString(),
-        });
-
-        return config;
-      },
-      (error) => {
-        console.error("📡 Request Error:", error);
-        return Promise.reject(error);
+  // Request interceptor
+  client.interceptors.request.use(
+    (config: AxiosRequestConfig) => {
+      // Add timestamp to prevent caching
+      if (config.method === "get") {
+        config.params = {
+          ...config.params,
+          _t: Date.now(),
+        };
       }
-    );
 
-    // Response interceptor
-    this.client.interceptors.response.use(
-      (response: AxiosResponse) => {
-        const requestId = response.config.metadata?.requestId;
-
-        // Clean up request from queue
-        if (requestId) {
-          this.requestQueue.delete(requestId);
-        }
-
-        console.log(`📡 API Response [${requestId}]:`, {
-          status: response.status,
-          url: response.config.url,
-          responseTime: this.calculateResponseTime(response.config),
-          timestamp: new Date().toISOString(),
-        });
-
-        return response;
-      },
-      (error: AxiosError) => {
-        const requestId = error.config?.metadata?.requestId;
-
-        // Clean up request from queue
-        if (requestId) {
-          this.requestQueue.delete(requestId);
-        }
-
-        console.error(`📡 API Error [${requestId}]:`, {
-          status: error.response?.status,
-          message: error.message,
-          url: error.config?.url,
-          timestamp: new Date().toISOString(),
-        });
-
-        // Transform error for consistent handling
-        const transformedError = this.transformError(error);
-        return Promise.reject(transformedError);
+      // Add auth token if available
+      const token = localStorage.getItem("authToken");
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
-    );
-  }
 
-  private calculateResponseTime(config: any): string {
-    if (!config.metadata?.startTime) return "unknown";
-    const duration = Date.now() - config.metadata.startTime;
-    return `${duration}ms`;
-  }
+      // Log requests in development
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `📡 API Request: ${config.method?.toUpperCase()} ${config.url}`,
+          {
+            params: config.params,
+            data: config.data,
+          }
+        );
+      }
 
-  private transformError(error: AxiosError): ApiErrorResponse {
-    if (error.response?.data) {
-      // Server responded with error
-      return {
-        error: {
-          message: error.response.data.message || error.message,
-          code: error.response.status,
-          details: error.response.data,
-        },
-        status: error.response.status,
-        success: false,
-        timestamp: new Date().toISOString(),
-      };
-    } else if (error.request) {
-      // Network error
-      return {
-        error: {
-          message: "Network error - unable to reach server",
-          code: "NETWORK_ERROR",
-          details: error.message,
-        },
-        status: 0,
-        success: false,
-        timestamp: new Date().toISOString(),
-      };
-    } else {
-      // Something else happened
-      return {
-        error: {
-          message: error.message || "Unknown error occurred",
-          code: "UNKNOWN_ERROR",
-          details: error,
-        },
-        status: 0,
-        success: false,
-        timestamp: new Date().toISOString(),
-      };
+      return config;
+    },
+    (error: AxiosError) => {
+      console.error("📡 Request Error:", error);
+      return Promise.reject(error);
     }
-  }
+  );
 
-  // Public API methods
-  async get<T = any>(
-    url: string,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    const response = await this.client.get(url, config);
-    return this.transformResponse(response);
-  }
+  // Response interceptor
+  client.interceptors.response.use(
+    (response: AxiosResponse) => {
+      // Log responses in development
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `📡 API Response: ${response.status} ${response.config.url}`,
+          {
+            data: response.data,
+            duration: Date.now() - (response.config as any)._requestStart,
+          }
+        );
+      }
 
-  async post<T = any>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    const response = await this.client.post(url, data, config);
-    return this.transformResponse(response);
-  }
+      return response;
+    },
+    (error: AxiosError) => {
+      const apiError: ApiError = {
+        message: "Unknown error occurred",
+        status: 500,
+      };
 
-  async put<T = any>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    const response = await this.client.put(url, data, config);
-    return this.transformResponse(response);
-  }
+      if (error.response) {
+        // Server responded with error status
+        apiError.status = error.response.status;
+        apiError.message = error.response.data?.message || error.message;
+        apiError.code = error.response.data?.code;
 
-  async delete<T = any>(
-    url: string,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    const response = await this.client.delete(url, config);
-    return this.transformResponse(response);
-  }
+        // Handle specific status codes
+        switch (error.response.status) {
+          case 401:
+            // Unauthorized - clear auth token
+            localStorage.removeItem("authToken");
+            apiError.message = "Session expired. Please log in again.";
+            break;
+          case 403:
+            apiError.message = "Access denied.";
+            break;
+          case 404:
+            apiError.message = "Resource not found.";
+            break;
+          case 429:
+            apiError.message = "Too many requests. Please try again later.";
+            break;
+          case 500:
+            apiError.message = "Server error. Please try again later.";
+            break;
+        }
+      } else if (error.request) {
+        // Network error
+        apiError.message = "Network error. Please check your connection.";
+        apiError.status = 0;
+      }
 
-  async patch<T = any>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<ApiResponse<T>> {
-    const response = await this.client.patch(url, data, config);
-    return this.transformResponse(response);
-  }
-
-  // Utility methods
-  cancelRequest(requestId: string): void {
-    const controller = this.requestQueue.get(requestId);
-    if (controller) {
-      controller.abort();
-      this.requestQueue.delete(requestId);
-      console.log(`📡 Request cancelled: ${requestId}`);
+      console.error("📡 API Error:", apiError);
+      return Promise.reject(apiError);
     }
-  }
+  );
 
-  cancelAllRequests(): void {
-    this.requestQueue.forEach((controller, requestId) => {
-      controller.abort();
-      console.log(`📡 Request cancelled: ${requestId}`);
-    });
-    this.requestQueue.clear();
-  }
+  return client;
+};
 
-  // Transform response to consistent format
-  private transformResponse<T>(response: AxiosResponse): ApiResponse<T> {
-    return {
-      data: response.data,
-      status: response.status,
-      success: response.status >= 200 && response.status < 300,
-      timestamp: new Date().toISOString(),
-    };
-  }
+// Create singleton instance
+export const apiClient = createApiClient();
 
-  // Health check method
-  async healthCheck(): Promise<boolean> {
+// Utility functions for common operations
+export const apiGet = async <T>(
+  url: string,
+  config?: AxiosRequestConfig
+): Promise<T> => {
+  const response = await apiClient.get<T>(url, config);
+  return response.data;
+};
+
+export const apiPost = async <T>(
+  url: string,
+  data?: any,
+  config?: AxiosRequestConfig
+): Promise<T> => {
+  const response = await apiClient.post<T>(url, data, config);
+  return response.data;
+};
+
+export const apiPut = async <T>(
+  url: string,
+  data?: any,
+  config?: AxiosRequestConfig
+): Promise<T> => {
+  const response = await apiClient.put<T>(url, data, config);
+  return response.data;
+};
+
+export const apiDelete = async <T>(
+  url: string,
+  config?: AxiosRequestConfig
+): Promise<T> => {
+  const response = await apiClient.delete<T>(url, config);
+  return response.data;
+};
+
+// Retry mechanism
+export const apiWithRetry = async <T>(
+  apiCall: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> => {
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      await this.get("/health");
-      return true;
+      return await apiCall();
     } catch (error) {
-      console.error("Health check failed:", error);
-      return false;
+      lastError = error;
+
+      if (attempt === maxRetries) {
+        break;
+      }
+
+      // Don't retry on client errors (4xx)
+      if (error.status >= 400 && error.status < 500) {
+        break;
+      }
+
+      // Exponential backoff
+      const waitTime = delay * Math.pow(2, attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+
+      console.log(`🔄 Retrying API call, attempt ${attempt + 1}/${maxRetries}`);
     }
+  }
+
+  throw lastError;
+};
+
+// Cache implementation
+class ApiCache {
+  private cache = new Map<
+    string,
+    { data: any; timestamp: number; ttl: number }
+  >();
+
+  set(key: string, data: any, ttl: number = 5 * 60 * 1000): void {
+    // 5 minutes default
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl,
+    });
+  }
+
+  get(key: string): any | null {
+    const item = this.cache.get(key);
+
+    if (!item) return null;
+
+    if (Date.now() - item.timestamp > item.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return item.data;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  delete(key: string): void {
+    this.cache.delete(key);
   }
 }
 
-// Create and export singleton instance
-export const apiClient = new ApiClient();
-export default apiClient;
+export const apiCache = new ApiCache();
 
-// Export types for use in services
-export type { ApiResponse, ApiErrorResponse } from "../types/api";
+// Cached API call
+export const apiGetCached = async <T>(
+  url: string,
+  config?: AxiosRequestConfig,
+  cacheKey?: string,
+  ttl?: number
+): Promise<T> => {
+  const key = cacheKey || `${url}_${JSON.stringify(config?.params || {})}`;
+
+  // Try cache first
+  const cached = apiCache.get(key);
+  if (cached) {
+    console.log(`📦 Cache hit for: ${key}`);
+    return cached;
+  }
+
+  // Fetch from API
+  const data = await apiGet<T>(url, config);
+
+  // Cache the result
+  apiCache.set(key, data, ttl);
+  console.log(`📦 Cached: ${key}`);
+
+  return data;
+};
