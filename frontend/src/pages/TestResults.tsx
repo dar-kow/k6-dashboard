@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchResultFiles, fetchTestResult } from '../api/results';
 import { TestFile, TestResult } from '../types/testResults';
-import DirectorySelector from '../components/DirectorySelector';
-import TestResultTabs from '../components/TestResultTabs';
-import TestResultDetail from '../components/TestResultDetail';
 import { useSingleTestPDFGenerator } from '../context/SingleTestPDFReport';
 import { useTestResults } from '../context/TestResultContext';
+import { DirectorySelector, TestResultDetail, TestResultTabs } from '@/components';
 
 const TestResults: React.FC = () => {
     const { directory } = useParams<{ directory?: string }>();
