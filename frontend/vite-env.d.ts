@@ -15,3 +15,20 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Global declarations for build-time variables
+declare const __APP_VERSION__: string;
+declare const __BUILD_TIME__: string;
+
+// Jest DOM matchers for tests
+declare global {
+  namespace Vi {
+    interface Assertion<T = any> {
+      toBeInTheDocument(): T;
+      toHaveClass(className: string): T;
+      toBeDisabled(): T;
+    }
+  }
+}
+
+export {};

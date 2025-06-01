@@ -1,11 +1,11 @@
-import "@testing-library/jest-dom";
-import { expect, afterEach, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
+import '@testing-library/jest-dom/vitest';
+import { expect, afterEach, vi, beforeEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
 
 // Mock matchMedia
-Object.defineProperty(window, "matchMedia", {
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation((query) => ({
+  value: vi.fn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
@@ -39,6 +39,18 @@ const localStorageMock = {
   clear: vi.fn(),
 };
 global.localStorage = localStorageMock as any;
+
+// Mock import.meta.env
+Object.defineProperty(global, 'import', {
+  value: {
+    meta: {
+      env: {
+        VITE_API_URL: 'http://localhost:4000/api',
+        DEV: true,
+      },
+    },
+  },
+});
 
 // Mock console warnings in tests
 const originalWarn = console.warn;

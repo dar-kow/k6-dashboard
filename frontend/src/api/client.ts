@@ -3,13 +3,14 @@ import axios, {
   AxiosRequestConfig,
   AxiosResponse,
   AxiosError,
-} from "axios";
+  InternalAxiosRequestConfig,
+} from 'axios';
 
 // Request/Response types
 interface ApiResponse<T = any> {
   data: T;
   message?: string;
-  status: "success" | "error";
+  status: 'success' | 'error';
 }
 
 interface ApiError {
@@ -21,19 +22,19 @@ interface ApiError {
 // Create axios instance
 const createApiClient = (): AxiosInstance => {
   const client = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || "http://localhost:4000/api",
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
     timeout: 15000, // 15 seconds
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     withCredentials: true,
   });
 
-  // Request interceptor
+  // Request interceptor - fix for newer Axios versions
   client.interceptors.request.use(
-    (config: AxiosRequestConfig) => {
+    (config: InternalAxiosRequestConfig) => {
       // Add timestamp to prevent caching
-      if (config.method === "get") {
+      if (config.method === 'get') {
         config.params = {
           ...config.params,
           _t: Date.now(),
@@ -41,26 +42,23 @@ const createApiClient = (): AxiosInstance => {
       }
 
       // Add auth token if available
-      const token = localStorage.getItem("authToken");
+      const token = localStorage.getItem('authToken');
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
 
       // Log requests in development
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          `📡 API Request: ${config.method?.toUpperCase()} ${config.url}`,
-          {
-            params: config.params,
-            data: config.data,
-          }
-        );
+      if (import.meta.env.DEV) {
+        console.log(`📡 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
+          params: config.params,
+          data: config.data,
+        });
       }
 
       return config;
     },
     (error: AxiosError) => {
-      console.error("📡 Request Error:", error);
+      console.error('📡 Request Error:', error);
       return Promise.reject(error);
     }
   );
@@ -69,57 +67,54 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       // Log responses in development
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          `📡 API Response: ${response.status} ${response.config.url}`,
-          {
-            data: response.data,
-            duration: Date.now() - (response.config as any)._requestStart,
-          }
-        );
+      if (import.meta.env.DEV) {
+        console.log(`📡 API Response: ${response.status} ${response.config.url}`, {
+          data: response.data,
+        });
       }
 
       return response;
     },
     (error: AxiosError) => {
       const apiError: ApiError = {
-        message: "Unknown error occurred",
+        message: 'Unknown error occurred',
         status: 500,
       };
 
       if (error.response) {
         // Server responded with error status
         apiError.status = error.response.status;
-        apiError.message = error.response.data?.message || error.message;
-        apiError.code = error.response.data?.code;
+        const responseData = error.response.data as any;
+        apiError.message = responseData?.message || error.message;
+        apiError.code = responseData?.code;
 
         // Handle specific status codes
         switch (error.response.status) {
           case 401:
             // Unauthorized - clear auth token
-            localStorage.removeItem("authToken");
-            apiError.message = "Session expired. Please log in again.";
+            localStorage.removeItem('authToken');
+            apiError.message = 'Session expired. Please log in again.';
             break;
           case 403:
-            apiError.message = "Access denied.";
+            apiError.message = 'Access denied.';
             break;
           case 404:
-            apiError.message = "Resource not found.";
+            apiError.message = 'Resource not found.';
             break;
           case 429:
-            apiError.message = "Too many requests. Please try again later.";
+            apiError.message = 'Too many requests. Please try again later.';
             break;
           case 500:
-            apiError.message = "Server error. Please try again later.";
+            apiError.message = 'Server error. Please try again later.';
             break;
         }
       } else if (error.request) {
         // Network error
-        apiError.message = "Network error. Please check your connection.";
+        apiError.message = 'Network error. Please check your connection.';
         apiError.status = 0;
       }
 
-      console.error("📡 API Error:", apiError);
+      console.error('📡 API Error:', apiError);
       return Promise.reject(apiError);
     }
   );
@@ -131,10 +126,7 @@ const createApiClient = (): AxiosInstance => {
 export const apiClient = createApiClient();
 
 // Utility functions for common operations
-export const apiGet = async <T>(
-  url: string,
-  config?: AxiosRequestConfig
-): Promise<T> => {
+export const apiGet = async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
   const response = await apiClient.get<T>(url, config);
   return response.data;
 };
@@ -157,10 +149,7 @@ export const apiPut = async <T>(
   return response.data;
 };
 
-export const apiDelete = async <T>(
-  url: string,
-  config?: AxiosRequestConfig
-): Promise<T> => {
+export const apiDelete = async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
   const response = await apiClient.delete<T>(url, config);
   return response.data;
 };
@@ -176,7 +165,7 @@ export const apiWithRetry = async <T>(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await apiCall();
-    } catch (error) {
+    } catch (error: any) {
       lastError = error;
 
       if (attempt === maxRetries) {
@@ -190,7 +179,7 @@ export const apiWithRetry = async <T>(
 
       // Exponential backoff
       const waitTime = delay * Math.pow(2, attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, waitTime));
+      await new Promise(resolve => setTimeout(resolve, waitTime));
 
       console.log(`🔄 Retrying API call, attempt ${attempt + 1}/${maxRetries}`);
     }
@@ -201,10 +190,7 @@ export const apiWithRetry = async <T>(
 
 // Cache implementation
 class ApiCache {
-  private cache = new Map<
-    string,
-    { data: any; timestamp: number; ttl: number }
-  >();
+  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
   set(key: string, data: any, ttl: number = 5 * 60 * 1000): void {
     // 5 minutes default

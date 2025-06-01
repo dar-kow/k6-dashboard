@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface UseInfiniteScrollOptions {
   threshold?: number;
@@ -10,11 +10,11 @@ export const useInfiniteScroll = (
   callback: () => void | Promise<void>,
   options: UseInfiniteScrollOptions = {}
 ) => {
-  const { threshold = 1.0, rootMargin = "0px", enabled = true } = options;
+  const { threshold = 1.0, rootMargin = '0px', enabled = true } = options;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const observer = useRef<IntersectionObserver>();
+  const observer = useRef<IntersectionObserver | undefined>(undefined);
 
   const lastElementRef = useCallback(
     (node: Element | null) => {
@@ -23,14 +23,14 @@ export const useInfiniteScroll = (
       if (observer.current) observer.current.disconnect();
 
       observer.current = new IntersectionObserver(
-        async (entries) => {
+        async entries => {
           if (entries[0].isIntersecting) {
             try {
               setLoading(true);
               setError(null);
               await callback();
             } catch (err) {
-              setError(err instanceof Error ? err : new Error("Unknown error"));
+              setError(err instanceof Error ? err : new Error('Unknown error'));
             } finally {
               setLoading(false);
             }

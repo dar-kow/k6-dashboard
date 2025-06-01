@@ -1,5 +1,5 @@
-import { useEffect, useCallback } from "react";
-import { useAppSelector, useAppDispatch } from "../store";
+import { useEffect, useCallback } from 'react';
+import { useAppSelector, useAppDispatch } from '../store';
 import {
   selectRepositories,
   selectRepositoriesLoading,
@@ -11,8 +11,8 @@ import {
   createRepositoryStart,
   syncRepositoryStart,
   deleteRepositoryStart,
-} from "../store/slices/repositorySlice";
-import { Repository, CreateRepositoryRequest } from "../api/repositories";
+} from '../store/slices/repositorySlice';
+import { Repository, CreateRepositoryRequest } from '../api/repositories';
 
 export const useRepository = () => {
   const dispatch = useAppDispatch();
@@ -21,9 +21,7 @@ export const useRepository = () => {
   const repositories = useAppSelector(selectRepositories);
   const loading = useAppSelector(selectRepositoriesLoading);
   const selectedRepository = useAppSelector(selectSelectedRepository);
-  const selectedRepositoryConfig = useAppSelector(
-    selectSelectedRepositoryConfig
-  );
+  const selectedRepositoryConfig = useAppSelector(selectSelectedRepositoryConfig);
 
   // Actions
   const refreshRepositories = useCallback(() => {
@@ -70,9 +68,9 @@ export const useRepository = () => {
 
   // Restore selected repository from localStorage
   useEffect(() => {
-    const savedRepoId = localStorage.getItem("selectedRepositoryId");
+    const savedRepoId = localStorage.getItem('selectedRepositoryId');
     if (savedRepoId && repositories.length > 0 && !selectedRepository) {
-      const savedRepo = repositories.find((r) => r.id === savedRepoId);
+      const savedRepo = repositories.find(r => r.id === savedRepoId);
       if (savedRepo) {
         selectRepo(savedRepo);
       }

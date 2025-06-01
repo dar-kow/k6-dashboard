@@ -1,11 +1,10 @@
 import React, { memo, useMemo } from 'react';
-import { MetricCard } from '@components/molecules/MetricCard/MetricCard';
-import { StatusCard } from '@components/molecules/StatusCard/StatusCard';
-import { TestRunSelector } from '@components/organisms/TestRunSelector/TestRunSelector';
-import { PerformanceCharts } from '@components/organisms/PerformanceCharts/PerformanceCharts';
-import { TestResultsTable } from '@components/organisms/TestResultsTable/TestResultsTable';
-import { useDashboardMetrics } from '@hooks/useDashboardMetrics';
-import { TestResult, TestDirectory } from '@types/testResults';
+import { MetricCard } from '../../molecules/MetricCard/MetricCard';
+import { StatusCard } from '../../molecules/StatusCard/StatusCard';
+import TestRunSelector from '../TestRunSelector';
+import { TestResultsTable } from '../TestResultsTable/TestResultsTable';
+import { useDashboardMetrics } from '../../../hooks/useDashboardMetrics';
+import { TestResult, TestDirectory } from '../../../types/testResults';
 
 interface DashboardContentProps {
     results: Record<string, TestResult>;
@@ -26,7 +25,7 @@ const DashboardContent: React.FC<DashboardContentProps> = memo(({
         responseTime: Object.entries(results).map(([name, result]) => ({
             name: name.replace(/-/g, ' '),
             avg: result.metrics?.http_req_duration?.avg || 0,
-            p95: result.metrics?.http_req_duration?.['p(95)'] || 0,
+            p95: result.metrics?.http_req_duration?.p95 || 0,
         })),
         errorDistribution: [
             { name: 'Success', value: Math.round(metrics.totalRequests * (1 - metrics.errorRate / 100)) },
@@ -75,11 +74,18 @@ const DashboardContent: React.FC<DashboardContentProps> = memo(({
                 />
             </div>
 
-            {/* Performance Charts */}
-            <PerformanceCharts
-                data={chartData}
-                loading={loading}
-            />
+            {/* Performance Charts Placeholder */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold mb-4">Performance Overview</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-500">Response Time Chart</span>
+                    </div>
+                    <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-500">Error Distribution Chart</span>
+                    </div>
+                </div>
+            </div>
 
             {/* Detailed Results Table */}
             <div className="bg-white rounded-lg shadow-md p-6">
@@ -106,7 +112,7 @@ const EmptyState: React.FC = memo(() => (
         </p>
         <a
             href="/test-runner"
-            className="btn btn--primary"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
             <span className="mr-2">🚀</span>
             Run Your First Test

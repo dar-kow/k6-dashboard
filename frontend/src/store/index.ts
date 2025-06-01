@@ -1,12 +1,12 @@
-import { configureStore } from "@reduxjs/toolkit";
-import createSagaMiddleware from "redux-saga";
-import { rootSaga } from "./sagas";
+import { configureStore } from '@reduxjs/toolkit';
+import createSagaMiddleware from 'redux-saga';
+import { rootSaga } from './sagas';
 
 // Import slices
-import testResultsSlice from "./slices/testResultsSlice";
-import repositorySlice from "./slices/repositorySlice";
-import uiSlice from "./slices/uiSlice";
-import testRunnerSlice from "./slices/testRunnerSlice";
+import testResultsSlice from './slices/testResultsSlice';
+import repositorySlice from './slices/repositorySlice';
+import uiSlice from './slices/uiSlice';
+import testRunnerSlice from './slices/testRunnerSlice';
 
 // Create saga middleware
 const sagaMiddleware = createSagaMiddleware();
@@ -19,14 +19,14 @@ export const store = configureStore({
     ui: uiSlice,
     testRunner: testRunnerSlice,
   },
-  middleware: (getDefaultMiddleware) =>
+  middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
       thunk: false, // wyłączamy thunk, używamy saga
       serializableCheck: {
-        ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
     }).concat(sagaMiddleware),
-  devTools: process.env.NODE_ENV !== "production",
+  devTools: import.meta.env.DEV,
 });
 
 // Run saga
@@ -37,7 +37,7 @@ export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
 // Export typed hooks
-import { useDispatch, useSelector, TypedUseSelectorHook } from "react-redux";
+import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
 
 export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;

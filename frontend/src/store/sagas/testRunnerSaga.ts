@@ -1,17 +1,8 @@
-import {
-  call,
-  put,
-  select,
-  takeEvery,
-  takeLatest,
-  fork,
-  take,
-  cancel,
-} from "redux-saga/effects";
-import { PayloadAction } from "@reduxjs/toolkit";
-import { eventChannel, EventChannel } from "redux-saga";
-import { io, Socket } from "socket.io-client";
-import axios from "axios";
+import { call, put, select, takeEvery, takeLatest, fork, take, delay } from 'redux-saga/effects';
+import { PayloadAction } from '@reduxjs/toolkit';
+import { eventChannel, EventChannel } from 'redux-saga';
+import { io, Socket } from 'socket.io-client';
+import axios from 'axios';
 import {
   fetchTestsStart,
   fetchTestsSuccess,
@@ -26,13 +17,13 @@ import {
   selectEnvironment,
   selectCustomToken,
   selectCustomHost,
-} from "../slices/testRunnerSlice";
-import { selectSelectedRepository } from "../slices/repositorySlice";
-import { addNotification } from "../slices/uiSlice";
-import { fetchDirectoriesStart } from "../slices/testResultsSlice";
+} from '../slices/testRunnerSlice';
+import { selectSelectedRepository } from '../slices/repositorySlice';
+import { addNotification } from '../slices/uiSlice';
+import { fetchDirectoriesStart } from '../slices/testResultsSlice';
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000/api";
-const BASE_URL = API_URL.replace("/api", "");
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = API_URL.replace('/api', '');
 
 interface TestConfig {
   name: string;
@@ -42,25 +33,25 @@ interface TestConfig {
 
 // WebSocket Event Channel
 function createSocketChannel(socket: Socket): EventChannel<any> {
-  return eventChannel((emit) => {
-    socket.on("connect", () => {
-      emit({ type: "SOCKET_CONNECTED" });
+  return eventChannel((emit: any) => {
+    socket.on('connect', () => {
+      emit({ type: 'SOCKET_CONNECTED' });
     });
 
-    socket.on("disconnect", () => {
-      emit({ type: "SOCKET_DISCONNECTED" });
+    socket.on('disconnect', () => {
+      emit({ type: 'SOCKET_DISCONNECTED' });
     });
 
-    socket.on("connect_error", (error: any) => {
-      emit({ type: "SOCKET_ERROR", payload: error.message });
+    socket.on('connect_error', (error: any) => {
+      emit({ type: 'SOCKET_ERROR', payload: error.message });
     });
 
-    socket.on("testOutput", (message: any) => {
-      emit({ type: "TEST_OUTPUT", payload: message });
+    socket.on('testOutput', (message: any) => {
+      emit({ type: 'TEST_OUTPUT', payload: message });
     });
 
-    socket.on("refreshResults", (message: any) => {
-      emit({ type: "REFRESH_RESULTS", payload: message });
+    socket.on('refreshResults', (message: any) => {
+      emit({ type: 'REFRESH_RESULTS', payload: message });
     });
 
     return () => {
@@ -70,47 +61,50 @@ function createSocketChannel(socket: Socket): EventChannel<any> {
 }
 
 // Worker Sagas
-function* fetchTestsSaga() {
+function* fetchTestsSaga(): Generator<any, void, any> {
   try {
-    const selectedRepository: ReturnType<typeof selectSelectedRepository> =
-      yield select(selectSelectedRepository);
+    const selectedRepository: ReturnType<typeof selectSelectedRepository> = yield select(
+      selectSelectedRepository
+    );
 
     const url = selectedRepository
       ? `${API_URL}/tests?repositoryId=${selectedRepository.id}`
       : `${API_URL}/tests`;
 
-    const response = yield call(axios.get, url);
+    const response: any = yield call(axios.get, url);
     const tests: TestConfig[] = response.data;
 
     yield put(fetchTestsSuccess(tests));
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     yield put(fetchTestsFailure(errorMessage));
 
     yield put(
       addNotification({
-        type: "error",
-        title: "Error loading tests",
+        type: 'error',
+        title: 'Error loading tests',
         message: errorMessage,
       })
     );
   }
 }
 
-function* runTestSaga(action: PayloadAction<{ testType: "single" | "all" }>) {
+function* runTestSaga(
+  action: PayloadAction<{ testType: 'single' | 'all' }>
+): Generator<any, void, any> {
   try {
     // Get current state
     const selectedTest: string = yield select(selectSelectedTest);
     const selectedProfile: string = yield select(selectSelectedProfile);
-    const environment: "PROD" | "DEV" = yield select(selectEnvironment);
+    const environment: 'PROD' | 'DEV' = yield select(selectEnvironment);
     const customToken: string = yield select(selectCustomToken);
     const customHost: string = yield select(selectCustomHost);
-    const selectedRepository: ReturnType<typeof selectSelectedRepository> =
-      yield select(selectSelectedRepository);
+    const selectedRepository: ReturnType<typeof selectSelectedRepository> = yield select(
+      selectSelectedRepository
+    );
 
     const testId = `${
-      action.payload.testType === "all" ? "all-tests" : selectedTest
+      action.payload.testType === 'all' ? 'all-tests' : selectedTest
     }-${Date.now()}`;
 
     // Start test run
@@ -122,7 +116,7 @@ function* runTestSaga(action: PayloadAction<{ testType: "single" | "all" }>) {
     // Prepare request data
     const requestData = {
       testId,
-      test: action.payload.testType === "all" ? "all" : selectedTest,
+      test: action.payload.testType === 'all' ? 'all' : selectedTest,
       profile: selectedProfile,
       environment,
       customToken,
@@ -131,23 +125,22 @@ function* runTestSaga(action: PayloadAction<{ testType: "single" | "all" }>) {
     };
 
     // Make API call
-    const endpoint =
-      action.payload.testType === "all" ? "/run/all" : "/run/test";
+    const endpoint = action.payload.testType === 'all' ? '/run/all' : '/run/test';
     yield call(axios.post, `${API_URL}${endpoint}`, requestData);
   } catch (error) {
     yield put(stopTestRun());
 
     yield put(
       addNotification({
-        type: "error",
-        title: "Error starting test",
-        message: error instanceof Error ? error.message : "Unknown error",
+        type: 'error',
+        title: 'Error starting test',
+        message: error instanceof Error ? error.message : 'Unknown error',
       })
     );
   }
 }
 
-function* stopTestSaga(action: PayloadAction<string>) {
+function* stopTestSaga(action: PayloadAction<string>): Generator<any, void, any> {
   try {
     const testId = action.payload;
 
@@ -157,16 +150,16 @@ function* stopTestSaga(action: PayloadAction<string>) {
   } catch (error) {
     yield put(
       addNotification({
-        type: "error",
-        title: "Error stopping test",
-        message: error instanceof Error ? error.message : "Unknown error",
+        type: 'error',
+        title: 'Error stopping test',
+        message: error instanceof Error ? error.message : 'Unknown error',
       })
     );
   }
 }
 
 // WebSocket Management
-function* manageWebSocketSaga() {
+function* manageWebSocketSaga(): Generator<any, void, any> {
   let socket: Socket | null = null;
   let socketChannel: EventChannel<any> | null = null;
 
@@ -184,63 +177,64 @@ function* manageWebSocketSaga() {
 
     // Listen to socket events
     while (true) {
-      const event = yield take(socketChannel);
+      if (!socketChannel) break;
+      const event: any = yield take(socketChannel);
 
       switch (event.type) {
-        case "SOCKET_CONNECTED":
+        case 'SOCKET_CONNECTED':
           yield put(setSocketConnected(true));
-          yield put(addOutput("WebSocket connection established"));
+          yield put(addOutput('WebSocket connection established'));
           break;
 
-        case "SOCKET_DISCONNECTED":
+        case 'SOCKET_DISCONNECTED':
           yield put(setSocketConnected(false));
-          yield put(addOutput("WebSocket connection closed"));
+          yield put(addOutput('WebSocket connection closed'));
           break;
 
-        case "SOCKET_ERROR":
+        case 'SOCKET_ERROR':
           yield put(
             addNotification({
-              type: "error",
-              title: "WebSocket Error",
+              type: 'error',
+              title: 'WebSocket Error',
               message: `Connection error: ${event.payload}`,
             })
           );
           break;
 
-        case "TEST_OUTPUT":
+        case 'TEST_OUTPUT':
           const message = event.payload;
 
-          if (message.type === "log") {
+          if (message.type === 'log') {
             yield put(addOutput(message.data));
-          } else if (message.type === "error") {
+          } else if (message.type === 'error') {
             yield put(addOutput(`ERROR: ${message.data}`));
-          } else if (message.type === "complete") {
+          } else if (message.type === 'complete') {
             yield put(stopTestRun());
             yield put(addOutput(message.data));
 
             // Auto-refresh results after 2 seconds
-            yield call(delay, 2000);
+            yield delay(2000);
             yield put(fetchDirectoriesStart());
-          } else if (message.type === "stopped") {
+          } else if (message.type === 'stopped') {
             yield put(stopTestRun());
             yield put(addOutput(`🛑 ${message.data}`));
           }
           break;
 
-        case "REFRESH_RESULTS":
+        case 'REFRESH_RESULTS':
           yield put(addOutput(`🔄 ${event.payload.message}`));
           yield put(fetchDirectoriesStart());
           break;
       }
     }
   } catch (error) {
-    console.error("WebSocket saga error:", error);
+    console.error('WebSocket saga error:', error);
 
     yield put(
       addNotification({
-        type: "error",
-        title: "WebSocket Error",
-        message: "Failed to establish WebSocket connection",
+        type: 'error',
+        title: 'WebSocket Error',
+        message: 'Failed to establish WebSocket connection',
       })
     );
   } finally {
@@ -253,36 +247,29 @@ function* manageWebSocketSaga() {
   }
 }
 
-// Helper function for delay
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 // Watcher Sagas
-function* testRunnerSaga() {
+export default function* testRunnerSaga(): Generator<any, void, any> {
   yield takeLatest(fetchTestsStart.type, fetchTestsSaga);
 
   // Test execution
-  yield takeEvery("testRunner/runSingleTest", runTestSaga);
-  yield takeEvery("testRunner/runAllTests", runTestSaga);
-  yield takeEvery("testRunner/stopTest", stopTestSaga);
+  yield takeEvery('testRunner/runSingleTest', runTestSaga);
+  yield takeEvery('testRunner/runAllTests', runTestSaga);
+  yield takeEvery('testRunner/stopTest', stopTestSaga);
 
   // WebSocket management
   yield fork(manageWebSocketSaga);
 }
 
-export default testRunnerSaga;
-
 // Action creators for saga-specific actions
 export const runSingleTest = () => ({
-  type: "testRunner/runSingleTest",
-  payload: { testType: "single" as const },
+  type: 'testRunner/runSingleTest',
+  payload: { testType: 'single' as const },
 });
 export const runAllTests = () => ({
-  type: "testRunner/runAllTests",
-  payload: { testType: "all" as const },
+  type: 'testRunner/runAllTests',
+  payload: { testType: 'all' as const },
 });
 export const stopTest = (testId: string) => ({
-  type: "testRunner/stopTest",
+  type: 'testRunner/stopTest',
   payload: testId,
 });

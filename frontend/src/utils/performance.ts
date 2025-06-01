@@ -1,23 +1,22 @@
-export const measurePerformance = async <T>(
-  name: string,
-  fn: () => Promise<T> | T
-): Promise<T> => {
+import React from 'react';
+
+export const measurePerformance = async <T>(name: string, fn: () => Promise<T> | T): Promise<T> => {
   const start = performance.now();
-  
+
   try {
     const result = await fn();
     const end = performance.now();
     const duration = end - start;
-    
-    if (process.env.NODE_ENV === 'development') {
+
+    if (import.meta.env.DEV) {
       console.log(`⏱️ ${name} took ${duration.toFixed(2)}ms`);
     }
-    
+
     return result;
   } catch (error) {
     const end = performance.now();
     const duration = end - start;
-    
+
     console.error(`❌ ${name} failed after ${duration.toFixed(2)}ms:`, error);
     throw error;
   }
@@ -29,28 +28,28 @@ export const throttle = <T extends (...args: any[]) => any>(
   limit: number
 ): ((...args: Parameters<T>) => void) => {
   let inThrottle: boolean;
-  
-  return function(this: any, ...args: Parameters<T>) {
+
+  return function (this: any, ...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
   };
 };
 
 // Memory usage tracker
 export const trackMemoryUsage = (componentName: string) => {
-  if (process.env.NODE_ENV === 'development' && 'memory' in performance) {
+  if (import.meta.env.DEV && 'memory' in performance) {
     const memory = (performance as any).memory;
     const usage = {
       used: Math.round(memory.usedJSHeapSize / 1048576), // MB
       total: Math.round(memory.totalJSHeapSize / 1048576), // MB
       limit: Math.round(memory.jsHeapSizeLimit / 1048576), // MB
     };
-    
+
     console.log(`🧠 Memory usage in ${componentName}:`, usage);
-    
+
     if (usage.used > usage.limit * 0.9) {
       console.warn(`⚠️ High memory usage detected in ${componentName}!`);
     }
@@ -63,24 +62,28 @@ export const lazyLoad = <T extends React.ComponentType<any>>(
   fallback?: React.ComponentType
 ) => {
   const LazyComponent = React.lazy(importFunc);
-  
-  return React.memo((props: React.ComponentProps<T>) => (
-    <React.Suspense 
-      fallback={fallback ? React.createElement(fallback) : <div>Loading...</div>}
-    >
-      <LazyComponent {...props} />
-    </React.Suspense>
-  ));
+
+  return React.memo((props: React.ComponentProps<T>) =>
+    React.createElement(
+      React.Suspense,
+      {
+        fallback: fallback
+          ? React.createElement(fallback)
+          : React.createElement('div', null, 'Loading...'),
+      },
+      React.createElement(LazyComponent, props)
+    )
+  );
 };
 
 // Bundle size analyzer (development only)
-export const analyzeBundleSize = () => {
-  if (process.env.NODE_ENV === 'development') {
-    import('webpack-bundle-analyzer').then(({ BundleAnalyzerPlugin }) => {
-      // This would need to be integrated into the build process
+export const analyzeBundleSize = async () => {
+  if (import.meta.env.DEV) {
+    try {
+      const { BundleAnalyzerPlugin } = await import('webpack-bundle-analyzer');
       console.log('Bundle analyzer available in development mode');
-    }).catch(() => {
-      // Bundle analyzer not available
-    });
+    } catch {
+      console.log('Bundle analyzer not available - install webpack-bundle-analyzer');
+    }
   }
 };

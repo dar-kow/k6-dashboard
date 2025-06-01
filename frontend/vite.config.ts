@@ -1,12 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
+/// <reference types="vitest" />
 
 export default defineConfig({
   plugins: [
     react({
-      // Enable Fast Refresh
-      fastRefresh: true,
       // JSX runtime
       jsxRuntime: "automatic",
     }),
@@ -39,7 +38,7 @@ export default defineConfig({
           vendor: ["react", "react-dom", "react-router-dom"],
           redux: ["@reduxjs/toolkit", "react-redux", "redux-saga"],
           charts: ["recharts"],
-          utils: ["axios", "lodash-es"],
+          utils: ["axios", "classnames"],
         },
       },
     },
@@ -95,8 +94,18 @@ export default defineConfig({
       "axios",
       "recharts",
       "socket.io-client",
+      "classnames",
+      "react-window",
     ],
     exclude: ["@react-pdf/renderer"], // This might cause issues in development
+  },
+
+  // Test configuration for Vitest
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
+    css: true,
   },
 
   // Preview configuration (for production preview)

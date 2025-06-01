@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useAppDispatch } from "../store";
-import { addNotification } from "../store/slices/uiSlice";
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useAppDispatch } from '../store';
+import { addNotification } from '../store/slices/uiSlice';
 
 interface UseWebSocketOptions {
   url: string;
@@ -25,40 +25,40 @@ export const useWebSocket = (options: UseWebSocketOptions) => {
     enabled = true,
   } = options;
 
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connectionState, setConnectionState] = useState<
-    "connecting" | "open" | "closed" | "error"
-  >("closed");
+    'connecting' | 'open' | 'closed' | 'error'
+  >('closed');
   const ws = useRef<WebSocket | null>(null);
-  const reconnectCount = useRef(0);
-  const reconnectTimeout = useRef<NodeJS.Timeout>();
+  const reconnectCount = useRef<number>(0);
+  const reconnectTimeout = useRef<NodeJS.Timeout | undefined>(undefined);
   const dispatch = useAppDispatch();
 
   const connect = useCallback(() => {
     if (!enabled || ws.current?.readyState === WebSocket.OPEN) return;
 
     try {
-      setConnectionState("connecting");
+      setConnectionState('connecting');
       ws.current = new WebSocket(url);
 
       ws.current.onopen = () => {
         setIsConnected(true);
-        setConnectionState("open");
+        setConnectionState('open');
         reconnectCount.current = 0;
         onOpen?.();
 
         dispatch(
           addNotification({
-            type: "success",
-            title: "Connected",
-            message: "WebSocket connection established",
+            type: 'success',
+            title: 'Connected',
+            message: 'WebSocket connection established',
           })
         );
       };
 
       ws.current.onclose = () => {
         setIsConnected(false);
-        setConnectionState("closed");
+        setConnectionState('closed');
         onClose?.();
 
         // Attempt reconnection
@@ -71,33 +71,32 @@ export const useWebSocket = (options: UseWebSocketOptions) => {
         } else if (reconnectCount.current >= reconnectAttempts) {
           dispatch(
             addNotification({
-              type: "error",
-              title: "Connection Lost",
-              message:
-                "Failed to reconnect to WebSocket after multiple attempts",
+              type: 'error',
+              title: 'Connection Lost',
+              message: 'Failed to reconnect to WebSocket after multiple attempts',
             })
           );
         }
       };
 
-      ws.current.onerror = (error) => {
-        setConnectionState("error");
+      ws.current.onerror = error => {
+        setConnectionState('error');
         onError?.(error);
 
-        console.error("WebSocket error:", error);
+        console.error('WebSocket error:', error);
       };
 
-      ws.current.onmessage = (event) => {
+      ws.current.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
           onMessage?.(data);
         } catch (err) {
-          console.error("Failed to parse WebSocket message:", event.data);
+          console.error('Failed to parse WebSocket message:', event.data);
         }
       };
     } catch (error) {
-      console.error("Failed to create WebSocket connection:", error);
-      setConnectionState("error");
+      console.error('Failed to create WebSocket connection:', error);
+      setConnectionState('error');
     }
   }, [
     url,
@@ -122,7 +121,7 @@ export const useWebSocket = (options: UseWebSocketOptions) => {
     }
 
     setIsConnected(false);
-    setConnectionState("closed");
+    setConnectionState('closed');
   }, []);
 
   const sendMessage = useCallback((data: any) => {

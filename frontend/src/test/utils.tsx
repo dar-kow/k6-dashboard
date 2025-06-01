@@ -20,9 +20,9 @@ const createTestStore = (preloadedState?: any) => {
         preloadedState,
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({
-                thunk: false,
                 serializableCheck: false,
             }),
+        devTools: false,
     });
 };
 
