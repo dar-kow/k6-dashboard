@@ -46,8 +46,10 @@ const PieChart: React.FC<PieChartProps> = ({
         return null;
     };
 
-    // Add percentage to the legend
+    // Add percentage to the legend - Fixed typing
     const renderLegendText = (value: string, entry: any) => {
+        if (!entry || !entry.payload) return value;
+
         const { payload } = entry;
         const percentage = ((payload.value / total) * 100).toFixed(2);
         return `${value} (${percentage}%)`;

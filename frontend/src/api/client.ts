@@ -7,22 +7,24 @@ import axios, {
 } from 'axios';
 
 // Request/Response types
-interface ApiResponse<T = any> {
-  data: T;
-  message?: string;
-  status: 'success' | 'error';
-}
-
 interface ApiError {
   message: string;
   status: number;
   code?: string;
 }
 
+// Environment detection helper
+const getEnvValue = (key: string, defaultValue: string): string => {
+  if (typeof import.meta !== 'undefined' && import.meta?.env) {
+    return import.meta.env[key] || defaultValue;
+  }
+  return defaultValue;
+};
+
 // Create axios instance
 const createApiClient = (): AxiosInstance => {
   const client = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
+    baseURL: getEnvValue('VITE_API_URL', 'http://localhost:4000/api'),
     timeout: 15000, // 15 seconds
     headers: {
       'Content-Type': 'application/json',
@@ -48,7 +50,8 @@ const createApiClient = (): AxiosInstance => {
       }
 
       // Log requests in development
-      if (import.meta.env.DEV) {
+      const isDev = getEnvValue('VITE_DEV_MODE', 'false') === 'true';
+      if (isDev) {
         console.log(`📡 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
           params: config.params,
           data: config.data,
@@ -67,7 +70,8 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       // Log responses in development
-      if (import.meta.env.DEV) {
+      const isDev = getEnvValue('VITE_DEV_MODE', 'false') === 'true';
+      if (isDev) {
         console.log(`📡 API Response: ${response.status} ${response.config.url}`, {
           data: response.data,
         });
@@ -91,7 +95,6 @@ const createApiClient = (): AxiosInstance => {
         // Handle specific status codes
         switch (error.response.status) {
           case 401:
-            // Unauthorized - clear auth token
             localStorage.removeItem('authToken');
             apiError.message = 'Session expired. Please log in again.';
             break;
@@ -193,7 +196,6 @@ class ApiCache {
   private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
   set(key: string, data: any, ttl: number = 5 * 60 * 1000): void {
-    // 5 minutes default
     this.cache.set(key, {
       data,
       timestamp: Date.now(),

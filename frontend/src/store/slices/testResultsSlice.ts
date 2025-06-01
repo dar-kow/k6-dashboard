@@ -83,7 +83,7 @@ const testResultsSlice = createSlice({
     },
 
     // Files actions
-    fetchFilesStart: (state, action: PayloadAction<string>) => {
+    fetchFilesStart: (state) => {
       state.filesLoading = true;
       state.filesError = null;
     },

@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { expect, afterEach, vi, beforeEach } from 'vitest';
+import { afterEach, vi, beforeEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Mock matchMedia
@@ -40,25 +40,53 @@ const localStorageMock = {
 };
 global.localStorage = localStorageMock as any;
 
+// Mock sessionStorage
+const sessionStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+};
+global.sessionStorage = sessionStorageMock as any;
+
 // Mock import.meta.env
 Object.defineProperty(global, 'import', {
   value: {
     meta: {
       env: {
         VITE_API_URL: 'http://localhost:4000/api',
+        VITE_WS_URL: 'http://localhost:4000',
         DEV: true,
+        VITE_DEV_MODE: 'true',
+        VITE_LOG_LEVEL: 'info',
+        VITE_ENABLE_REDUX_DEVTOOLS: 'true',
+        VITE_ENABLE_CACHE: 'true',
+        VITE_CACHE_TTL: '300000',
       },
     },
   },
 });
 
-// Mock console warnings in tests
-const originalWarn = console.warn;
+// Mock console methods to avoid noise in tests
+const originalConsole = {
+  warn: console.warn,
+  error: console.error,
+  log: console.log,
+};
+
 beforeEach(() => {
+  // Mock console methods
   console.warn = vi.fn();
+  console.error = vi.fn();
+  console.log = vi.fn();
 });
 
 afterEach(() => {
-  console.warn = originalWarn;
+  // Restore console methods
+  console.warn = originalConsole.warn;
+  console.error = originalConsole.error;
+  console.log = originalConsole.log;
+  
+  // Cleanup DOM
   cleanup();
 });

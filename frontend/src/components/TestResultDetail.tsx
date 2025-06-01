@@ -1,6 +1,6 @@
 import React from 'react';
-import { TestResult } from '../types/testResults';
-import MetricCard from './MetricCard';
+import type { TestResult } from '../types/testResults';
+import MetricCard from './molecules/MetricCard/MetricCard';
 
 interface TestResultDetailProps {
     testResult: TestResult;
@@ -51,17 +51,6 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
         if (selectedDirectory?.name?.endsWith('.json')) {
             const fileName = selectedDirectory.name.split('/').pop() || '';
             const extractedTestName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
-            interface WordFormatter {
-                (word: string): string;
-            }
-
-            interface FormattedTestName {
-                replace(searchValue: string | RegExp, replaceValue: string): FormattedTestName;
-                split(separator: string): string[];
-            }
-
-            const wordFormatter: WordFormatter = (word: string): string =>
-                word.charAt(0).toUpperCase() + word.slice(1);
 
             const formatted: string = extractedTestName
                 .replace(/-/g, ' ')
@@ -78,25 +67,6 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
         return fallbackFormatted;
     };
 
-    const getDisplayTitle = () => {
-        const formattedTestName = getFormattedTestName();
-
-        if (repositoryName) {
-            return `${repositoryName} / ${formattedTestName} Test Results`;
-        }
-
-        if (directoryName && directoryName.includes('/')) {
-            const parts = directoryName.split('/');
-            if (parts.length >= 2) {
-                const potentialUuid = parts[0];
-                if (potentialUuid.length === 36 && potentialUuid.includes('-')) {
-                    return `${formattedTestName} Test Results`;
-                }
-            }
-        }
-
-        return `${formattedTestName} Test Results`;
-    };
 
     const getMetricValue = (metric: any, property: string, defaultValue: number = 0): number => {
         if (!metric || typeof metric !== 'object' || metric[property] === undefined || metric[property] === null) {
@@ -121,9 +91,6 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
 
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
-            {/* it looks bad on UI repeat */}
-            {/* <h2 className="text-2xl font-bold mb-4">{getDisplayTitle()}</h2> */}
-
             {!hasMetrics ? (
                 <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
                     <p className="font-bold">Warning: Invalid Test Data</p>
@@ -145,6 +112,7 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
                             </div>
                         </div>
                     )}
+
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <MetricCard

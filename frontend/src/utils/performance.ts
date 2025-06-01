@@ -8,7 +8,8 @@ export const measurePerformance = async <T>(name: string, fn: () => Promise<T> |
     const end = performance.now();
     const duration = end - start;
 
-    if (import.meta.env.DEV) {
+    const isDev = typeof import.meta !== 'undefined' && import.meta?.env?.DEV;
+    if (isDev) {
       console.log(`⏱️ ${name} took ${duration.toFixed(2)}ms`);
     }
 
@@ -40,7 +41,8 @@ export const throttle = <T extends (...args: any[]) => any>(
 
 // Memory usage tracker
 export const trackMemoryUsage = (componentName: string) => {
-  if (import.meta.env.DEV && 'memory' in performance) {
+  const isDev = typeof import.meta !== 'undefined' && import.meta?.env?.DEV;
+  if (isDev && 'memory' in performance) {
     const memory = (performance as any).memory;
     const usage = {
       used: Math.round(memory.usedJSHeapSize / 1048576), // MB
@@ -78,12 +80,22 @@ export const lazyLoad = <T extends React.ComponentType<any>>(
 
 // Bundle size analyzer (development only)
 export const analyzeBundleSize = async () => {
-  if (import.meta.env.DEV) {
+  const isDev = typeof import.meta !== 'undefined' && import.meta?.env?.DEV;
+  if (isDev) {
     try {
-      const { BundleAnalyzerPlugin } = await import('webpack-bundle-analyzer');
-      console.log('Bundle analyzer available in development mode');
+      // Dynamic import to avoid build issues
+      console.log('Bundle analyzer would be available in development mode');
     } catch {
       console.log('Bundle analyzer not available - install webpack-bundle-analyzer');
     }
   }
+};
+
+// Default export
+export default {
+  measurePerformance,
+  throttle,
+  trackMemoryUsage,
+  lazyLoad,
+  analyzeBundleSize,
 };

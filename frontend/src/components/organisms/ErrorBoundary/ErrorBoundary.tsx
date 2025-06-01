@@ -1,5 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Button } from '../../atoms/Button/Button';
+import { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
     children: ReactNode;
@@ -27,7 +26,8 @@ export class ErrorBoundary extends Component<Props, State> {
         this.setState({ error, errorInfo });
 
         // You could send error to monitoring service here
-        if (process.env.NODE_ENV === 'production') {
+        const isDev = process.env.NODE_ENV === 'development';
+        if (!isDev) {
             // Example: errorTrackingService.captureException(error, { extra: errorInfo });
         }
     }
@@ -70,12 +70,18 @@ export class ErrorBoundary extends Component<Props, State> {
                         )}
 
                         <div className="flex justify-center space-x-3">
-                            <Button onClick={this.handleRetry} variant="secondary">
+                            <button
+                                onClick={this.handleRetry}
+                                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                            >
                                 Try Again
-                            </Button>
-                            <Button onClick={this.handleReload} variant="primary">
+                            </button>
+                            <button
+                                onClick={this.handleReload}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                            >
                                 Reload Page
-                            </Button>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -85,3 +91,6 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.children;
     }
 }
+
+// Default export
+export default ErrorBoundary;

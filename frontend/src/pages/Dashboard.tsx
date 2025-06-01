@@ -1,12 +1,12 @@
 import React, { memo, Suspense } from 'react';
-import { PageTemplate } from '@components/templates/PageTemplate/PageTemplate';
-import { useTestResults } from '@hooks/useTestResults';
-import { useAppSelector } from '@store';
-import { selectPdfGenerating } from '@store/slices/uiSlice';
+import { PageTemplate } from '../components/templates/PageTemplate/PageTemplate';
+import { useTestResults } from '../hooks/useTestResults';
+import { useAppSelector } from '../store';
+import { selectPdfGenerating } from '../store/slices/uiSlice';
 
 // Lazy loaded components z lepszą organizacją
-const DashboardContent = React.lazy(() => import('@components/organisms/DashboardContent/DashboardContent'));
-const ExportPDFButton = React.lazy(() => import('@components/molecules/ExportPDFButton/ExportPDFButton'));
+const DashboardContent = React.lazy(() => import('../components/organisms/DashboardContent/DashboardContent'));
+const ExportPDFButton = React.lazy(() => import('../components/molecules/ExportPDFButton/ExportPDFButton'));
 
 const Dashboard: React.FC = memo(() => {
     const {

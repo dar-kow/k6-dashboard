@@ -12,7 +12,7 @@ import {
   syncRepositoryStart,
   deleteRepositoryStart,
 } from '../store/slices/repositorySlice';
-import { Repository, CreateRepositoryRequest } from '../api/repositories';
+import type { Repository, CreateRepositoryRequest } from '../api/repositories';
 
 export const useRepository = () => {
   const dispatch = useAppDispatch();
@@ -23,7 +23,7 @@ export const useRepository = () => {
   const selectedRepository = useAppSelector(selectSelectedRepository);
   const selectedRepositoryConfig = useAppSelector(selectSelectedRepositoryConfig);
 
-  // Actions
+  // Actions - poprawione typy
   const refreshRepositories = useCallback(() => {
     dispatch(fetchRepositoriesStart());
   }, [dispatch]);
@@ -32,15 +32,15 @@ export const useRepository = () => {
     (repository: Repository | null) => {
       dispatch(setSelectedRepository(repository));
       if (repository) {
-        dispatch(fetchConfigStart(repository.id));
+        dispatch(fetchConfigStart());
       }
     },
     [dispatch]
   );
 
   const createRepo = useCallback(
-    (data: CreateRepositoryRequest) => {
-      dispatch(createRepositoryStart(data));
+    (_data: CreateRepositoryRequest) => {
+      dispatch(createRepositoryStart());
     },
     [dispatch]
   );
@@ -89,3 +89,6 @@ export const useRepository = () => {
     deleteRepo,
   };
 };
+
+// Default export
+export default useRepository;

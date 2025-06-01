@@ -74,18 +74,43 @@ const DashboardContent: React.FC<DashboardContentProps> = memo(({
                 />
             </div>
 
-            {/* Performance Charts Placeholder */}
+            {/* Performance Charts */}
             <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-xl font-semibold mb-4">Performance Overview</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-500">Response Time Chart</span>
+                    {/* Response Time Chart */}
+                    <div className="h-64 bg-gray-100 rounded-lg flex flex-col items-center justify-center">
+                        <span className="text-gray-500 mb-2">Response Time Chart</span>
+                        <div className="text-xs text-gray-400">
+                            {chartData.responseTime.length} endpoints tracked
+                        </div>
                     </div>
-                    <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-500">Error Distribution Chart</span>
+
+                    {/* Error Distribution Chart */}
+                    <div className="h-64 bg-gray-100 rounded-lg flex flex-col items-center justify-center">
+                        <span className="text-gray-500 mb-2">Error Distribution</span>
+                        <div className="text-xs text-gray-400">
+                            Success: {chartData.errorDistribution[0].value.toLocaleString()},
+                            Errors: {chartData.errorDistribution[1].value.toLocaleString()}
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {/* Directory Info */}
+            {directories.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2">
+                        <span className="text-blue-600">📊</span>
+                        <span className="text-sm font-medium text-blue-900">
+                            Analysis from {directories.length} available test runs
+                        </span>
+                        <span className="text-sm text-blue-700">
+                            Latest: {directories[0]?.date ? new Date(directories[0].date).toLocaleString() : 'N/A'}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {/* Detailed Results Table */}
             <div className="bg-white rounded-lg shadow-md p-6">

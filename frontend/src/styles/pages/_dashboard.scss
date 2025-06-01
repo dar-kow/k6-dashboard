@@ -1,0 +1,14 @@
+.dashboard {
+    padding: var(--spacing-lg);
+
+    &__header {
+        @include flex-between;
+        margin-bottom: var(--spacing-xl);
+    }
+
+    &__title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-gray-900);
+    }
+}

@@ -3,24 +3,27 @@ import { render, RenderOptions } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
-import testResultsSlice from '../store/slices/testResultsSlice';
-import repositorySlice from '../store/slices/repositorySlice';
-import uiSlice from '../store/slices/uiSlice';
-import testRunnerSlice from '../store/slices/testRunnerSlice';
+
+// Import reducers properly with correct structure
+import testResultsReducer from '../store/slices/testResultsSlice';
+import repositoryReducer from '../store/slices/repositorySlice';
+import uiReducer from '../store/slices/uiSlice';
+import testRunnerReducer from '../store/slices/testRunnerSlice';
 
 // Create a test store
 const createTestStore = (preloadedState?: any) => {
     return configureStore({
         reducer: {
-            testResults: testResultsSlice,
-            repository: repositorySlice,
-            ui: uiSlice,
-            testRunner: testRunnerSlice,
+            testResults: testResultsReducer,
+            repository: repositoryReducer,
+            ui: uiReducer,
+            testRunner: testRunnerReducer,
         },
         preloadedState,
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({
                 serializableCheck: false,
+                thunk: false,
             }),
         devTools: false,
     });
@@ -66,23 +69,27 @@ const customRender = (
     return render(ui, { wrapper: Wrapper, ...renderOptions });
 };
 
-// Mock data factories
-export const createMockTestResult = (overrides = {}) => ({
-    metrics: {
-        http_reqs: { count: 1000, rate: 10 },
-        http_req_duration: { avg: 150, min: 50, max: 500, p90: 200, p95: 250 },
-        http_req_failed: { value: 0.02 },
-        data_received: { count: 50000 },
-        ...overrides.metrics,
-    },
-    root_group: {
-        checks: {},
-        ...overrides.root_group,
-    },
-    ...overrides,
-});
+// Mock data factories with proper TypeScript types
+export const createMockTestResult = (overrides: any = {}) => {
+    const defaultResult = {
+        metrics: {
+            http_reqs: { count: 1000, rate: 10 },
+            http_req_duration: { avg: 150, min: 50, max: 500, p90: 200, p95: 250 },
+            http_req_failed: { value: 0.02 },
+            data_received: { count: 50000 },
+            ...overrides.metrics,
+        },
+        root_group: {
+            checks: {},
+            ...overrides.root_group,
+        },
+        ...overrides,
+    };
 
-export const createMockRepository = (overrides = {}) => ({
+    return defaultResult;
+};
+
+export const createMockRepository = (overrides: any = {}) => ({
     id: '123',
     name: 'Test Repository',
     url: 'https://github.com/test/repo.git',
@@ -92,7 +99,7 @@ export const createMockRepository = (overrides = {}) => ({
     ...overrides,
 });
 
-export const createMockDirectory = (overrides = {}) => ({
+export const createMockDirectory = (overrides: any = {}) => ({
     name: 'test-directory',
     path: '/path/to/test',
     date: new Date('2023-01-01'),

@@ -1,7 +1,7 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
-/// <reference types="vitest" />
 
 export default defineConfig({
   plugins: [
@@ -78,7 +78,7 @@ export default defineConfig({
 
   // Environment variables
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || "1.0.0"),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
 
@@ -106,6 +106,16 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: true,
+    // Add coverage configuration
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.d.ts',
+      ],
+    },
   },
 
   // Preview configuration (for production preview)

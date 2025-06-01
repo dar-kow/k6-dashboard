@@ -66,6 +66,7 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
 
     const cardClasses = classNames(
         'metric-card',
+        'bg-white border rounded-lg shadow-sm p-4',
         {
             'cursor-pointer hover:shadow-lg transition-shadow': onClick,
         }
@@ -73,8 +74,8 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
 
     return (
         <div className={cardClasses} onClick={onClick}>
-            <div className="metric-card__header">
-                <div className={`metric-card__icon metric-card__icon--${type}`}>
+            <div className="flex items-center justify-between mb-2">
+                <div className={`p-2 rounded-md ${color}`}>
                     <span className="text-xl">{icon}</span>
                 </div>
 
@@ -91,9 +92,9 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
                 )}
             </div>
 
-            <div className="metric-card__content">
-                <h3 className="metric-card__title">{title}</h3>
-                <p className="metric-card__value">{value}</p>
+            <div>
+                <h3 className="text-xs font-medium text-gray-500 mb-1">{title}</h3>
+                <p className="text-2xl font-semibold">{value}</p>
                 {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
             </div>
         </div>
@@ -101,3 +102,6 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
 });
 
 MetricCard.displayName = 'MetricCard';
+
+// Default export for compatibility
+export default MetricCard;

@@ -1,5 +1,5 @@
-import React, { memo, useMemo, useCallback, useState } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import React, { memo, useMemo, useCallback } from 'react';
+import { FixedSizeList as List, ListOnScrollProps } from 'react-window';
 
 interface VirtualizedListProps<T> {
     items: T[];
@@ -20,20 +20,15 @@ function VirtualizedListComponent<T>({
     onScroll,
     overscan = 5,
 }: VirtualizedListProps<T>) {
-    const [scrollTop, setScrollTop] = useState(0);
-
-    const handleScroll = useCallback(({ scrollTop }: { scrollTop: number }) => {
-        setScrollTop(scrollTop);
-        onScroll?.(scrollTop);
+    // Poprawiony handler - używamy prawidłowego typu z react-window
+    const handleScroll = useCallback((props: ListOnScrollProps) => {
+        onScroll?.(props.scrollOffset);
     }, [onScroll]);
 
     const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
         const item = items[index];
         return renderItem({ index, item, style });
     }, [items, renderItem]);
-
-    // Memoize the total height calculation
-    const totalHeight = useMemo(() => items.length * itemHeight, [items.length, itemHeight]);
 
     return (
         <div className={className}>
@@ -54,5 +49,3 @@ function VirtualizedListComponent<T>({
 export const VirtualizedList = memo(VirtualizedListComponent) as <T>(
     props: VirtualizedListProps<T>
 ) => React.ReactElement;
-
-VirtualizedList.displayName = 'VirtualizedList';

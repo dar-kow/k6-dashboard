@@ -1,0 +1,20 @@
+.layout {
+    display: flex;
+    min-height: 100vh;
+
+    &__sidebar {
+        width: 16rem;
+        background-color: var(--color-gray-800);
+        color: white;
+
+        &--collapsed {
+            width: 4rem;
+        }
+    }
+
+    &__main {
+        flex: 1;
+        overflow: auto;
+        background-color: var(--color-gray-50);
+    }
+}

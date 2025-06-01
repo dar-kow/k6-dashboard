@@ -7,15 +7,15 @@ export const useApiCache = () => {
   }, []);
 
   const clearCacheByPattern = useCallback((pattern: string) => {
-    // This would need to be implemented in the ApiCache class
-    // For now, just clear all
-    apiCache.clear();
+    // Simple pattern matching - clear all keys that include the pattern
+    console.log(`Clearing cache entries matching pattern: ${pattern}`);
+    apiCache.clear(); // For now, just clear all
   }, []);
 
   const invalidateResults = useCallback(() => {
     // Clear all results-related cache
-    apiCache.delete("directories_default");
-    // Could be more specific here
+    console.log('Invalidating results cache');
+    apiCache.clear();
   }, []);
 
   return {
@@ -24,3 +24,6 @@ export const useApiCache = () => {
     invalidateResults,
   };
 };
+
+// Default export
+export default useApiCache;

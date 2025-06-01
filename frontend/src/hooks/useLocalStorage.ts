@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export const useLocalStorage = <T>(
   key: string,
@@ -27,3 +27,6 @@ export const useLocalStorage = <T>(
 
   return [storedValue, setValue];
 };
+
+// Default export
+export default useLocalStorage;
