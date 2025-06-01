@@ -25,9 +25,6 @@ const ExportPDFButton: React.FC<ExportPDFButtonProps> = memo(({
         dispatch(setPdfGenerating(true));
 
         try {
-            // Import PDF generator dynamically
-            const { usePDFReportGenerator } = await import('../../../context/PDFReportGenerator');
-
             // Calculate summary metrics
             const totalRequests = Object.values(results).reduce((total, result) => {
                 const count = result.metrics?.http_reqs?.count || 0;
@@ -56,23 +53,37 @@ const ExportPDFButton: React.FC<ExportPDFButtonProps> = memo(({
                 healthStatus = 'critical';
             }
 
-            // Mock PDF generation (you can implement actual PDF generation here)
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Mock timestamp for now
+            const mockTimestamp = new Date().toLocaleString();
 
+            // Generate a simple text report (this would be replaced with actual PDF generation)
             console.log('PDF would be generated with:', {
                 results,
                 totalRequests,
                 averageResponseTime: avgResponseTime.toFixed(2),
                 errorRate: errorRate.toFixed(2),
                 healthStatus,
+                lastRunTime: mockTimestamp,
             });
 
-            // Create mock download
-            const blob = new Blob(['Mock PDF content'], { type: 'application/pdf' });
+            // For now, create a simple mock download
+            const pdfContent = `K6 Performance Report
+Generated: ${new Date().toLocaleString()}
+Total Requests: ${totalRequests.toLocaleString()}
+Average Response Time: ${avgResponseTime.toFixed(2)}ms
+Error Rate: ${errorRate.toFixed(2)}%
+Health Status: ${healthStatus}
+
+Test Results Summary:
+${Object.entries(results).map(([name, result]) =>
+                `${name}: ${result.metrics?.http_reqs?.count || 0} requests, ${(result.metrics?.http_req_duration?.avg || 0).toFixed(2)}ms avg`
+            ).join('\n')}`;
+
+            const blob = new Blob([pdfContent], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `k6-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+            link.download = `k6-report-${new Date().toISOString().slice(0, 10)}.txt`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -99,7 +110,7 @@ const ExportPDFButton: React.FC<ExportPDFButtonProps> = memo(({
                 </svg>
             }
         >
-            Export PDF Report
+            Export Report
         </Button>
     );
 });
