@@ -34,7 +34,6 @@ function* fetchRepositoriesSaga(): SagaIterator {
     const repositories = yield call(fetchRepositories);
     yield put(fetchRepositoriesSuccess(repositories));
 
-    // Przywracanie wybranego repozytorium z localStorage
     const savedRepoId = localStorage.getItem("selectedRepositoryId");
     if (savedRepoId) {
       const savedRepo = repositories.find(
@@ -101,7 +100,6 @@ function* deleteRepositorySaga(action: PayloadAction<string>): SagaIterator {
     yield call(deleteRepository, action.payload);
     yield put(deleteRepositorySuccess(action.payload));
 
-    // Czyszczenie wyboru jeśli usunięto wybrane repozytorium
     const selectedRepository = yield select(
       (state: RootState) => state.repositories.selectedRepository
     );

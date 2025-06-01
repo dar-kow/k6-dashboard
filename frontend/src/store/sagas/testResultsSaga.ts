@@ -27,7 +27,6 @@ function* fetchDirectoriesSaga(
     const directories = yield call(fetchResultDirectories, action.payload);
     yield put(fetchDirectoriesSuccess(directories));
 
-    // Automatyczny wybór pierwszego katalogu jeśli żaden nie jest wybrany
     const selectedDirectory = yield select(
       (state: RootState) => state.testResults.selectedDirectory
     );
@@ -96,7 +95,6 @@ export function* testResultsSaga() {
   yield takeLatest("testResults/fetchTestResultRequest", fetchTestResultSaga);
   yield takeLatest("testResults/refreshTestResults", refreshTestResultsSaga);
 
-  // Automatyczne pobieranie plików po wyborze katalogu
   yield takeLatest(
     "testResults/setSelectedDirectory",
     function* (action: PayloadAction<string | null>) {
@@ -106,7 +104,6 @@ export function* testResultsSaga() {
     }
   );
 
-  // Automatyczne pobieranie wyniku testu po wyborze pliku
   yield takeLatest(
     "testResults/setSelectedFile",
     function* (action: PayloadAction<string | null>): SagaIterator {

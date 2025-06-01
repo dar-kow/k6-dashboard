@@ -12,7 +12,6 @@ const TestResultTabs: React.FC<TestResultTabsProps> = ({
     selectedFile,
     onFileChange,
 }) => {
-    // Memoizowana funkcja formatująca
     const formatFileName = useCallback((fileName: string) => {
         return fileName
             .replace('.json', '')
@@ -33,8 +32,8 @@ const TestResultTabs: React.FC<TestResultTabsProps> = ({
                             <button
                                 key={file.name}
                                 className={`px-4 py-2 font-medium rounded-md transition-colors ${selectedFile === file.name
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                                 onClick={() => onFileChange(file.name)}
                             >
@@ -48,5 +47,4 @@ const TestResultTabs: React.FC<TestResultTabsProps> = ({
     );
 };
 
-// Wykorzystaj React.memo dla optymalizacji
 export default memo(TestResultTabs);

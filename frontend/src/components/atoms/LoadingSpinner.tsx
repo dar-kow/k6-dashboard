@@ -11,7 +11,6 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     color = '#3b82f6',
     fullPage = false,
 }) => {
-    // Określ rozmiar w pikselach
     const sizeInPixels = {
         sm: 16,
         md: 32,
@@ -32,7 +31,6 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         />
     );
 
-    // Dodaj globalną regułę CSS dla animacji
     if (!document.getElementById('spinner-style')) {
         const styleEl = document.createElement('style');
         styleEl.id = 'spinner-style';

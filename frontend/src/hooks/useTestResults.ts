@@ -13,7 +13,6 @@ import { TestDirectory, TestFile, TestResult } from "@/types/testResults";
 export const useTestResults = () => {
   const dispatch = useDispatch();
 
-  // Selektory dla danych z Redux
   const {
     directories,
     selectedDirectory,
@@ -28,7 +27,6 @@ export const useTestResults = () => {
     (state: RootState) => state.repositories.selectedRepository
   );
 
-  // Zmemoizowane akcje
   const fetchDirectories = useCallback(() => {
     dispatch(fetchDirectoriesRequest(selectedRepository?.id));
   }, [dispatch, selectedRepository?.id]);
@@ -58,7 +56,6 @@ export const useTestResults = () => {
     dispatch(refreshTestResults());
   }, [dispatch]);
 
-  // Zmemoizowane przetworzone dane
   const sortedDirectories = useMemo(() => {
     return [...directories].sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [directories]);

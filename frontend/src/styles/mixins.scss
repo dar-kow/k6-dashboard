@@ -1,6 +1,5 @@
 @import 'variables';
 
-// Mixiny dla Flexbox
 @mixin flex($direction: row, $justify: flex-start, $align: stretch, $wrap: nowrap) {
     display: flex;
     flex-direction: $direction;
@@ -21,7 +20,6 @@
     align-items: center;
 }
 
-// Mixiny dla responsywności
 @mixin responsive($breakpoint) {
     @if $breakpoint ==sm {
         @media (min-width: $breakpoint-sm) {
@@ -54,7 +52,6 @@
     }
 }
 
-// Mixiny dla kart
 @mixin card {
     background-color: white;
     border-radius: $border-radius-lg;
@@ -92,7 +89,6 @@
     }
 }
 
-// Mixin dla animacji
 @mixin fade-in($duration: 0.3s) {
     animation: fadeIn $duration ease-in-out;
 
@@ -107,14 +103,12 @@
     }
 }
 
-// Mixin dla truncate
 @mixin truncate {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-// Mixin dla scrollbarów
 @mixin custom-scrollbar {
     &::-webkit-scrollbar {
         width: 8px;
