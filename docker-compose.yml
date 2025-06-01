@@ -1,27 +1,26 @@
+# docker-compose.yml
+version: '3.8'
+
 services:
   frontend:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: k6-dashboard-frontend
     working_dir: /app
     volumes:
       - ./frontend:/app
-      - /app/node_modules  # Anonymous volume for node_modules
     ports:
-      - "80:3000"
-    command: sh -c "npm install && npm run dev"
+      - "80:3000" # Map to port 80 on host so it's accessible as http://localhost
+    command: sh -c "npm install && npm start"
     environment:
-      - VITE_API_URL=http://localhost:4000/api
-      - VITE_WS_URL=http://localhost:4000
-      - VITE_DEV_MODE=true
-      - CHOKIDAR_USEPOLLING=true
-      - WATCHPACK_POLLING=true
+      - REACT_APP_API_URL=http://localhost:4000/api
+      - CHOKIDAR_USEPOLLING=true # For better hot reloading in Docker
+      - HOST=0.0.0.0 # Make the dev server accessible outside the container
+      - PORT=3000
     networks:
       - k6-dashboard-network
-    depends_on:
-      - backend
 
   backend:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: k6-dashboard-backend
     working_dir: /app
     volumes:
@@ -31,10 +30,14 @@ services:
       - ./docker/entrypoint.sh:/entrypoint.sh
     ports:
       - "4000:4000"
-    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    # Use our custom entrypoint script before running the command
+    entrypoint: [ "/bin/sh", "/entrypoint.sh" ]
     command: >
       sh -c "
+        # Install bash, curl and tar
         apk add --no-cache bash curl git tar && 
+        
+        # Install k6 properly
         echo 'Installing k6...' &&
         curl -L https://github.com/grafana/k6/releases/download/v0.43.1/k6-v0.43.1-linux-amd64.tar.gz -o k6.tar.gz &&
         tar xzf k6.tar.gz &&
@@ -43,15 +46,19 @@ services:
         rm -rf k6-v0.43.1-linux-amd64 k6.tar.gz &&
         echo 'k6 installed successfully:' &&
         k6 version &&
+        
+        # Install TypeScript tooling
         npm install -g ts-node typescript &&
+        
+        # Install dependencies and start the app
         npm install &&
         npm run dev
       "
     environment:
       - NODE_ENV=development
       - PORT=4000
-      - FRONTEND_URL=http://localhost
-      - DEBUG=true
+      - FRONTEND_URL=http://localhost # Allow frontend at localhost
+      - DEBUG=true # Enable debug output
     networks:
       - k6-dashboard-network
 

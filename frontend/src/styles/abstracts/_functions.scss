@@ -1,8 +1,0 @@
-// Helper functions
-@function rem($pixels) {
-    @return #{$pixels / 16}rem;
-}
-
-@function strip-unit($value) {
-    @return $value / ($value * 0 + 1);
-}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
+import TerminalOutput from '../components/TerminalOutput';
 import { useTestResults } from '../context/TestResultContext';
 import { useRepository } from '../context/RepositoryContext';
-import { RepositorySelector, TerminalOutput } from '@/components';
+import RepositorySelector from '../components/RepositorySelector';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
 const BASE_URL = API_URL.replace('/api', '');
