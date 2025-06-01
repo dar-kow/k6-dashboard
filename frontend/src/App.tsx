@@ -1,7 +1,9 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './store';
+import { RepositoryProvider } from './context/RepositoryContext';
+import { TestResultProvider } from './context/TestResultContext';
 
 // Lazy loaded components
 const Layout = lazy(() => import('./components/templates/Layout'));
@@ -13,7 +15,7 @@ const TestRunner = lazy(() => import('./pages/TestRunner'));
 const LoadingFallback = () => (
     <div className="flex items-center justify-center min-h-screen">
         <div className="flex items-center space-x-2">
-            <div className="loading-spinner" />
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-gray-600">Loading...</span>
         </div>
     </div>
@@ -50,7 +52,7 @@ class ErrorBoundary extends React.Component<
                         </p>
                         <button
                             onClick={() => window.location.reload()}
-                            className="btn btn--primary"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                         >
                             Reload Page
                         </button>
@@ -65,7 +67,7 @@ class ErrorBoundary extends React.Component<
 
 // Theme provider component
 const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    useEffect(() => {
+    React.useEffect(() => {
         // Load theme from localStorage
         const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -83,19 +85,23 @@ function App() {
         <ErrorBoundary>
             <Provider store={store}>
                 <ThemeProvider>
-                    <Router>
-                        <Suspense fallback={<LoadingFallback />}>
-                            <Layout>
-                                <Routes>
-                                    <Route path="/" element={<Dashboard />} />
-                                    <Route path="/results" element={<TestResults />} />
-                                    <Route path="/results/:directory" element={<TestResults />} />
-                                    <Route path="/results/:repositoryId/*" element={<TestResults />} />
-                                    <Route path="/test-runner" element={<TestRunner />} />
-                                </Routes>
-                            </Layout>
-                        </Suspense>
-                    </Router>
+                    <RepositoryProvider>
+                        <TestResultProvider>
+                            <Router>
+                                <Suspense fallback={<LoadingFallback />}>
+                                    <Layout>
+                                        <Routes>
+                                            <Route path="/" element={<Dashboard />} />
+                                            <Route path="/results" element={<TestResults />} />
+                                            <Route path="/results/:directory" element={<TestResults />} />
+                                            <Route path="/results/:repositoryId/*" element={<TestResults />} />
+                                            <Route path="/test-runner" element={<TestRunner />} />
+                                        </Routes>
+                                    </Layout>
+                                </Suspense>
+                            </Router>
+                        </TestResultProvider>
+                    </RepositoryProvider>
                 </ThemeProvider>
             </Provider>
         </ErrorBoundary>
