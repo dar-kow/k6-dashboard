@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { TestFile } from '../types/testResults';
 
 interface TestResultTabsProps {
@@ -12,15 +12,14 @@ const TestResultTabs: React.FC<TestResultTabsProps> = ({
     selectedFile,
     onFileChange,
 }) => {
-    // Function to format the file name for display
-    const formatFileName = (fileName: string) => {
+    const formatFileName = useCallback((fileName: string) => {
         return fileName
             .replace('.json', '')
             .replace(/-/g, ' ')
             .split(' ')
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
-    };
+    }, []);
 
     return (
         <div className="bg-white rounded-lg shadow-md mb-6">
@@ -48,4 +47,4 @@ const TestResultTabs: React.FC<TestResultTabsProps> = ({
     );
 };
 
-export default TestResultTabs;
+export default memo(TestResultTabs);

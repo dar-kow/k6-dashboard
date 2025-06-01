@@ -1,8 +1,10 @@
 @import 'variables';
 @import 'mixins';
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+
+// Use proper Tailwind directives instead of @import
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 // Reset & Base
 html,

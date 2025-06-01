@@ -1,4 +1,3 @@
-// src/pages/Dashboard.tsx
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -7,7 +6,8 @@ import {
     setSelectedDirectory,
     fetchTestResultRequest
 } from '../store/slices/testResultsSlice';
-import { useTestResults } from '../hooks/useTestResults';
+import { useTestResults } from '../context/TestResultContext';
+import { useRepository } from '../context/RepositoryContext';
 import { TestResult } from '../types/testResults';
 import SummaryCard from '../components/SummaryCard';
 import StatusCard from '../components/StatusCard';
@@ -20,7 +20,7 @@ import TestRunSelector from '../components/TestRunSelector';
 import TestRunComparison from '../components/TestRunComparison';
 import ExportPDFButton from '../context/ExportPDFButton';
 
-// Tymczasowy prosty komponent LoadingSpinner (zastąpi div z animowanym obramowaniem)
+// Tymczasowy prosty komponent LoadingSpinner
 const LoadingSpinner = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
     const sizeMap = {
         sm: 'w-8 h-8',
@@ -36,51 +36,50 @@ const LoadingSpinner = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
 const Dashboard: React.FC = () => {
     const dispatch = useDispatch();
 
-    // Użyj custom hooka zamiast bezpośrednich wywołań useSelector
+    // FIX: Use Context API hooks - these auto-fetch data
     const {
         directories,
         selectedDirectory,
+        setSelectedDirectory: selectDirectory,
         loading: directoryLoading,
         error: directoryError
     } = useTestResults();
 
-    // Stan rezultatów testów z Redux
+    const { selectedRepository } = useRepository();
+
+    // Redux state for detailed test results (will be refactored later)
     const selectedTestResult = useSelector((state: RootState) => state.testResults.selectedTestResult);
     const loading = useSelector((state: RootState) => state.testResults.loading);
-    const latestResults = useSelector((state: RootState) => {
-        // Pobierz wybrane wyniki testów lub pusty obiekt jeśli nie są dostępne
-        if (!state.testResults.selectedTestResult) return {};
 
+    // Build latestResults from Context data for backward compatibility
+    const latestResults = useMemo(() => {
         const results: Record<string, TestResult> = {};
 
-        // Jeśli mamy pojedynczy wynik testu
-        if (state.testResults.selectedDirectory?.endsWith('.json') && state.testResults.selectedTestResult) {
-            const pathParts = state.testResults.selectedDirectory.split('/');
-            const fileName = pathParts[pathParts.length - 1];
-            const testKey = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
-            results[testKey] = state.testResults.selectedTestResult;
-        }
-        // Jeśli mamy wiele wyników testów w katalogu
-        else if (state.testResults.files && state.testResults.files.length > 0) {
-            // W pełnej implementacji, mielibyśmy tu logikę do obsługi wielu plików z wynikami
-            // Na potrzeby tego przykładu, używamy tylko jednego jeśli istnieje
-            if (state.testResults.selectedFile && state.testResults.selectedTestResult) {
-                const testKey = state.testResults.selectedFile.replace('.json', '');
-                results[testKey] = state.testResults.selectedTestResult;
+        // If we have a single test result in Redux (from detailed view)
+        if (selectedTestResult && selectedDirectory) {
+            if (selectedDirectory.endsWith('.json')) {
+                const pathParts = selectedDirectory.split('/');
+                const fileName = pathParts[pathParts.length - 1];
+                const testKey = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+                results[testKey] = selectedTestResult;
+            } else {
+                // For directory-based results, use directory name as key
+                const testKey = selectedDirectory.split('/').pop() || 'test';
+                results[testKey] = selectedTestResult;
             }
         }
 
         return results;
-    });
+    }, [selectedTestResult, selectedDirectory]);
 
-    // Auto-select najnowszego katalogu z wynikami testów
+    // Auto-select latest directory if none selected
     useEffect(() => {
         if (directories.length > 0 && !selectedDirectory) {
-            dispatch(setSelectedDirectory(directories[0].name));
+            selectDirectory(directories[0].name);
         }
-    }, [directories, selectedDirectory, dispatch]);
+    }, [directories, selectedDirectory, selectDirectory]);
 
-    // Funkcja pomocnicza do bezpiecznego pobierania wartości metryki
+    // Function helpers remain the same...
     const getMetricValue = useCallback((metric: any, property: string, defaultValue: number = 0): number => {
         if (!metric || typeof metric !== 'object' || metric[property] === undefined || metric[property] === null) {
             return defaultValue;
@@ -88,7 +87,7 @@ const Dashboard: React.FC = () => {
         return typeof metric[property] === 'number' ? metric[property] : defaultValue;
     }, []);
 
-    // Zmemoizowane wartości podsumowujące
+    // Memoized calculations remain the same...
     const totalRequests = useMemo(() => {
         try {
             return Object.values(latestResults).reduce((total, result) => {
@@ -153,7 +152,6 @@ const Dashboard: React.FC = () => {
         return 'warning';
     }, [latestResults]);
 
-    // Formatuj datę ostatniego uruchomienia
     const lastRunTime = useMemo(() => {
         if (!selectedDirectory || directories.length === 0) return 'No test run selected';
 
@@ -177,7 +175,6 @@ const Dashboard: React.FC = () => {
                 return 'Invalid date';
             }
 
-            // Format w polskiej strefie czasowej
             return date.toLocaleString("pl-PL", {
                 timeZone: "Europe/Warsaw",
                 year: 'numeric',
@@ -193,7 +190,7 @@ const Dashboard: React.FC = () => {
         }
     }, [selectedDirectory, directories]);
 
-    // Memoizowane dane dla wykresów
+    // Chart data calculations remain the same...
     const responseTimeComparisonData = useMemo(() => {
         return Object.entries(latestResults).map(([testName, result]) => ({
             name: testName.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()),
@@ -267,19 +264,18 @@ const Dashboard: React.FC = () => {
         return checkData.slice(0, 6);
     }, [latestResults]);
 
-    // Callbacki dla akcji użytkownika
+    // Event handlers
     const handleDirectoryChange = useCallback((directory: string | null) => {
         if (directory) {
-            dispatch(setSelectedDirectory(directory));
+            selectDirectory(directory);
         }
-    }, [dispatch]);
+    }, [selectDirectory]);
 
     const handleCompareWith = useCallback((compareRunId: string) => {
-        // W przyszłości tu będzie logika porównywania
         alert(`Comparison feature coming soon!\n\nWould compare:\n• Current: ${selectedDirectory}\n• With: ${compareRunId}`);
     }, [selectedDirectory]);
 
-    // Renderowanie komponentu
+    // Render logic
     if (directoryLoading) {
         return (
             <div className="text-center py-10">
@@ -365,9 +361,9 @@ const Dashboard: React.FC = () => {
                     {selectedDirectory && (
                         <div className="flex items-center space-x-2">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedDirectory.includes('sequential_') ? 'bg-blue-100 text-blue-800' :
-                                    selectedDirectory.includes('parallel_') ? 'bg-green-100 text-green-800' :
-                                        selectedDirectory.endsWith('.json') ? 'bg-purple-100 text-purple-800' :
-                                            'bg-gray-100 text-gray-800'
+                                selectedDirectory.includes('parallel_') ? 'bg-green-100 text-green-800' :
+                                    selectedDirectory.endsWith('.json') ? 'bg-purple-100 text-purple-800' :
+                                        'bg-gray-100 text-gray-800'
                                 }`}>
                                 {selectedDirectory.includes('sequential_') ? '📋 Sequential' :
                                     selectedDirectory.includes('parallel_') ? '⚡ Parallel' :
@@ -384,11 +380,23 @@ const Dashboard: React.FC = () => {
                     )}
                 </div>
 
-                {/* Reszta kodu pozostaje bez zmian */}
-                {/* ... */}
-
-                {/* Sekcja Last Run Information, Detailed Charts, itp. */}
-                {/* ... */}
+                {/* Last Run Info */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">Last Run</p>
+                            <p className="text-lg font-semibold">{lastRunTime}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">Repository</p>
+                            <p className="text-lg font-semibold">{selectedRepository?.name || 'Local Tests'}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">Tests Available</p>
+                            <p className="text-lg font-semibold">{directories.length}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Detailed Charts Section */}
@@ -547,8 +555,8 @@ const Dashboard: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${errorRate < 1 ? 'bg-green-100 text-green-800' :
-                                                                errorRate < 5 ? 'bg-yellow-100 text-yellow-800' :
-                                                                    'bg-red-100 text-red-800'
+                                                            errorRate < 5 ? 'bg-yellow-100 text-yellow-800' :
+                                                                'bg-red-100 text-red-800'
                                                             }`}>
                                                             {errorRate.toFixed(2)}%
                                                         </span>
