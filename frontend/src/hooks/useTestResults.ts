@@ -34,6 +34,14 @@ export const useTestResults = () => {
   const selectDirectory = useCallback(
     (directory: string | null) => {
       dispatch(setSelectedDirectory(directory));
+      if (directory) {
+        dispatch(fetchFilesRequest(directory));
+
+        dispatch({
+          type: "testResults/autoLoadFirstResult",
+          payload: directory,
+        });
+      }
     },
     [dispatch]
   );
