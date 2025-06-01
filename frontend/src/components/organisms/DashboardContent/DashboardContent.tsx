@@ -4,6 +4,7 @@ import { StatusCard } from '../../molecules/StatusCard/StatusCard';
 import TestRunSelector from '../TestRunSelector';
 import { TestResultsTable } from '../TestResultsTable/TestResultsTable';
 import { useDashboardMetrics } from '../../../hooks/useDashboardMetrics';
+import { useTestResults } from '../../../hooks/useTestResults';
 import { TestResult, TestDirectory } from '../../../types/testResults';
 
 interface DashboardContentProps {
@@ -17,6 +18,9 @@ const DashboardContent: React.FC<DashboardContentProps> = memo(({
     directories,
     loading,
 }) => {
+    // Use the test results hook to get the selector functionality
+    const { selectedDirectory, selectTestRun } = useTestResults();
+
     // Custom hook for metrics calculation (memoized)
     const metrics = useDashboardMetrics(results);
 
@@ -40,7 +44,12 @@ const DashboardContent: React.FC<DashboardContentProps> = memo(({
     return (
         <div className="space-y-8">
             {/* Test Run Selection */}
-            <TestRunSelector loading={loading} />
+            <TestRunSelector
+                directories={directories}
+                selectedDirectory={selectedDirectory}
+                onDirectoryChange={selectTestRun}
+                loading={loading}
+            />
 
             {/* Key Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
