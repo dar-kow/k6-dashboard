@@ -1,5 +1,5 @@
 import React, { memo, useCallback } from 'react';
-import { TestFile } from '../types/testResults';
+import { TestFile } from '@/types/testResults';
 
 interface TestResultTabsProps {
     files: TestFile[];
@@ -32,8 +32,8 @@ const TestResultTabs: React.FC<TestResultTabsProps> = ({
                             <button
                                 key={file.name}
                                 className={`px-4 py-2 font-medium rounded-md transition-colors ${selectedFile === file.name
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                                 onClick={() => onFileChange(file.name)}
                             >

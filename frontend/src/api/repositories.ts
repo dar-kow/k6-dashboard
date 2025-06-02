@@ -1,6 +1,4 @@
-import axios from "axios";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000/api";
+import apiClient, { withRetry, apiCache } from "./client";
 
 export interface Repository {
   id: string;
@@ -43,33 +41,81 @@ export interface RepositoryConfig {
 }
 
 export const fetchRepositories = async (): Promise<Repository[]> => {
-  const response = await axios.get<Repository[]>(`${API_URL}/repositories`);
-  return response.data;
+  const cacheKey = "repositories";
+  const cached = apiCache.getCached<Repository[]>(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await withRetry(() =>
+      apiClient.get<Repository[]>("/repositories")
+    );
+    const data = response.data;
+    apiCache.setCache(cacheKey, data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching repositories:", error);
+    throw error;
+  }
 };
 
 export const createRepository = async (
   data: CreateRepositoryRequest
 ): Promise<Repository> => {
-  const response = await axios.post<Repository>(
-    `${API_URL}/repositories`,
-    data
-  );
-  return response.data;
+  try {
+    const response = await apiClient.post<Repository>("/repositories", data);
+    // Unieważnij cache
+    apiCache.invalidateCache("repositories");
+    return response.data;
+  } catch (error) {
+    console.error("Error creating repository:", error);
+    throw error;
+  }
 };
 
 export const fetchRepositoryConfig = async (
   repositoryId: string
 ): Promise<RepositoryConfig> => {
-  const response = await axios.get<RepositoryConfig>(
-    `${API_URL}/repositories/${repositoryId}/config`
-  );
-  return response.data;
+  const cacheKey = `repository_config_${repositoryId}`;
+  const cached = apiCache.getCached<RepositoryConfig>(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await withRetry(() =>
+      apiClient.get<RepositoryConfig>(`/repositories/${repositoryId}/config`)
+    );
+    const data = response.data;
+    apiCache.setCache(cacheKey, data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching repository config:", error);
+    throw error;
+  }
 };
 
 export const syncRepository = async (repositoryId: string): Promise<void> => {
-  await axios.post(`${API_URL}/repositories/${repositoryId}/sync`);
+  try {
+    await apiClient.post(`/repositories/${repositoryId}/sync`);
+    // Unieważnij cache
+    apiCache.invalidateCache();
+  } catch (error) {
+    console.error("Error syncing repository:", error);
+    throw error;
+  }
 };
 
 export const deleteRepository = async (repositoryId: string): Promise<void> => {
-  await axios.delete(`${API_URL}/repositories/${repositoryId}`);
+  try {
+    await apiClient.delete(`/repositories/${repositoryId}`);
+    // Unieważnij cache
+    apiCache.invalidateCache();
+  } catch (error) {
+    console.error("Error deleting repository:", error);
+    throw error;
+  }
 };
