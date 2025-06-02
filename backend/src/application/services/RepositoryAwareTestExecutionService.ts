@@ -217,7 +217,7 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
 
       if (repoCommand.repositoryId) {
         workingDir = `${this.k6TestsDir}/repositories/${repoCommand.repositoryId}`;
-        scriptPath = `${workingDir}/run.sh`;
+        scriptPath = `sequential_tests_script.sh`;
 
         envConfig = await this.getEnvironmentConfig(
           repoCommand.repositoryId,
@@ -228,7 +228,7 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         );
       } else {
         workingDir = this.k6TestsDir;
-        scriptPath = `${workingDir}/sequential-tests.sh`;
+        scriptPath = `sequential-tests.sh`;
 
         const resultsDir = `${workingDir}/results`;
         await this.ensureResultsDirectory(resultsDir);
@@ -245,7 +245,22 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         LOG_LEVEL: 'error',
       };
 
-      const child = this.processExecutor.spawn('bash', [scriptPath, 'all', command.profile], {
+      // ✅ VERIFY SCRIPT EXISTS
+      const fullScriptPath = `${workingDir}/${scriptPath}`;
+      try {
+        const stats = await this.fileSystem.stat(fullScriptPath);
+        if (!stats.isFile()) {
+          this.logger.error('Script is not a file', new Error('Not a file'), { fullScriptPath });
+        }
+      } catch (error) {
+        this.logger.error('Error checking script existence', error as Error, { fullScriptPath });
+      }
+
+      const args = repoCommand.repositoryId
+        ? [scriptPath, command.profile]
+        : [scriptPath, 'all', command.profile];
+
+      const child = this.processExecutor.spawn('bash', args, {
         cwd: workingDir,
         env: processEnv,
       });
@@ -255,6 +270,9 @@ export class RepositoryAwareTestExecutionService implements ITestExecutionServic
         testId,
         pid: child.pid,
         repositoryId: repoCommand.repositoryId,
+        workingDir,
+        scriptPath,
+        args,
       });
 
       this.setupSequentialProcessHandlers(child, execution, repoCommand.repositoryId);
