@@ -1,0 +1,116 @@
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  white-space: nowrap;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  }
+
+  &--small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  &--medium {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+
+  &--large {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
+  &--primary {
+    background-color: #3b82f6;
+    color: white;
+
+    &:hover:not(.button--disabled) {
+      background-color: #2563eb;
+    }
+  }
+
+  &--secondary {
+    background-color: #6b7280;
+    color: white;
+
+    &:hover:not(.button--disabled) {
+      background-color: #4b5563;
+    }
+  }
+
+  &--danger {
+    background-color: #ef4444;
+    color: white;
+
+    &:hover:not(.button--disabled) {
+      background-color: #dc2626;
+    }
+  }
+
+  &--success {
+    background-color: #10b981;
+    color: white;
+
+    &:hover:not(.button--disabled) {
+      background-color: #059669;
+    }
+  }
+
+  &--warning {
+    background-color: #f59e0b;
+    color: white;
+
+    &:hover:not(.button--disabled) {
+      background-color: #d97706;
+    }
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--loading {
+    cursor: wait;
+  }
+
+  &__spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
