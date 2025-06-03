@@ -1,28 +1,14 @@
-
-import { configureStore } from '@reduxjs/toolkit';
-import createSagaMiddleware from 'redux-saga';
-import { testSlice } from './slices/testSlice';
-import { dashboardSlice } from './slices/dashboardSlice';
-import { terminalSlice } from './slices/terminalSlice';
-import { repositorySlice } from './slices/repositorySlice';
-import rootSaga from './sagas';
+import { configureStore } from "@reduxjs/toolkit";
+import createSagaMiddleware from "redux-saga";
+import { rootReducer } from "./reducers";
+import rootSaga from "./sagas";
 
 const sagaMiddleware = createSagaMiddleware();
 
 export const store = configureStore({
-  reducer: {
-    test: testSlice.reducer,
-    dashboard: dashboardSlice.reducer,
-    terminal: terminalSlice.reducer,
-    repository: repositorySlice.reducer,
-  },
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      thunk: false,
-      serializableCheck: {
-        ignoredActions: ['persist/PERSIST'],
-      },
-    }).concat(sagaMiddleware),
+    getDefaultMiddleware({ thunk: false }).concat(sagaMiddleware),
 });
 
 sagaMiddleware.run(rootSaga);

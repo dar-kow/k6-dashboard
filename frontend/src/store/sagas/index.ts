@@ -1,15 +1,7 @@
-
-import { all, fork } from 'redux-saga/effects';
-import testSaga from './testSaga';
-import dashboardSaga from './dashboardSaga';
-import terminalSaga from './terminalSaga';
-import repositorySaga from './repositorySaga';
+import { all } from "redux-saga/effects";
+import { testResultsSaga } from "./testResultsSaga";
+import { repositoriesSaga } from "./repositoriesSaga";
 
 export default function* rootSaga() {
-  yield all([
-    fork(testSaga),
-    fork(dashboardSaga),
-    fork(terminalSaga),
-    fork(repositorySaga),
-  ]);
+  yield all([testResultsSaga(), repositoriesSaga()]);
 }
