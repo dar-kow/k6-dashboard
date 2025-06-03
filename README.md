@@ -24,6 +24,7 @@
 - [Technology Stack](#-technology-stack)
 - [Project Structure](#-project-structure)
 - [Backend Architecture Deep Dive](#-backend-architecture-deep-dive)
+- [Frontend Architecture Deep Dive](#-frontend-architecture-deep-dive)
 - [Installation & Setup](#-installation--setup)
 - [Configuration](#-configuration)
 - [Usage Guide](#-usage-guide)
@@ -43,6 +44,8 @@ K6 Performance Dashboard is a comprehensive, enterprise-grade web application bu
 - **Dependency Injection**: Centralized IoC container for service management
 - **Domain-Driven Design**: Rich domain entities with business logic
 - **Error Handling**: Domain-specific errors with proper HTTP status codes
+- **Modern Frontend**: React 18 with Redux Toolkit, Sagas, and Context API
+- **Real-time Updates**: WebSocket integration with Socket.io
 
 ### Why This Solution?
 
@@ -55,6 +58,7 @@ Traditional performance testing often lacks proper visualization and architectur
 - **Multi-environment support** with custom token management
 - **Historical data analysis** for performance trend tracking
 - **Maintainable codebase** with proper separation of concerns
+- **Modern frontend architecture** with state management and real-time updates
 
 ## 🚀 Features
 
@@ -90,7 +94,92 @@ Traditional performance testing often lacks proper visualization and architectur
 - **Tabbed interface** for easy navigation
 - **Export functionality** for data and reports
 
+### 🔄 Repository Management
+- **Git repository integration** for test source management
+- **Branch selection** and synchronization
+- **Multi-repository support** with context switching
+- **Configuration management** per repository
+
 ## 🏗 Architecture
+
+### Full System Architecture
+
+```mermaid
+graph TB
+    subgraph "Frontend (React + TypeScript + Vite)"
+        subgraph "UI Layer"
+            Pages[Pages]
+            Layout[Layout Components]
+            Routing[React Router]
+        end
+        
+        subgraph "Component Architecture"
+            Atoms[Atoms]
+            Molecules[Molecules]
+            Organisms[Complex Components]
+        end
+        
+        subgraph "State Management"
+            Redux[Redux Toolkit]
+            Sagas[Redux-Saga]
+            Context[Context API]
+            Hooks[Custom Hooks]
+        end
+        
+        subgraph "Services"
+            API[API Client]
+            WS[WebSocket Client]
+            PDFGen[PDF Generator]
+        end
+    end
+    
+    subgraph "Backend (Clean Architecture)"
+        subgraph "Presentation Layer"
+            APIControllers[REST Controllers]
+            WSServer[WebSocket Server]
+            ErrorHandler[Error Handler]
+        end
+        
+        subgraph "Application Layer"
+            TestUseCases[Test Use Cases]
+            ResultUseCases[Result Use Cases]
+            ExecutionUseCases[Execution Use Cases]
+        end
+        
+        subgraph "Domain Layer"
+            TestEntities[Test Entities]
+            ExecutionEntities[Execution Entities]
+            DomainInterfaces[Domain Interfaces]
+        end
+        
+        subgraph "Infrastructure Layer"
+            FileRepos[File Repositories]
+            ProcessService[Process Service]
+            NotificationService[Notification Service]
+        end
+    end
+    
+    subgraph "External Systems"
+        K6_Repo[k6-tests Repository]
+        K6_Binary[K6 Binary]
+        FileSystem[(Test Results)]
+    end
+    
+    Pages --> Redux
+    Pages --> Context
+    Redux --> Sagas
+    Sagas --> API
+    API --> APIControllers
+    WS --> WSServer
+    
+    APIControllers --> TestUseCases
+    TestUseCases --> TestEntities
+    TestUseCases --> FileRepos
+    
+    ProcessService --> K6_Binary
+    K6_Binary --> K6_Repo
+    FileRepos --> FileSystem
+```
 
 ### Clean Architecture Overview
 
@@ -142,68 +231,6 @@ graph TB
     Controllers --> Frontend
 ```
 
-### System Architecture
-
-```mermaid
-graph TB
-    subgraph "Frontend (React + TypeScript)"
-        UI[User Interface]
-        Charts[Interactive Charts]
-        PDF[PDF Generator]
-        WS_Client[WebSocket Client]
-    end
-    
-    subgraph "Backend (Clean Architecture)"
-        subgraph "Presentation Layer"
-            API[REST Controllers]
-            WS_Server[WebSocket Server]
-            ErrorHandler[Error Handler]
-        end
-        
-        subgraph "Application Layer"
-            TestUseCases[Test Use Cases]
-            ResultUseCases[Result Use Cases]
-            ExecutionUseCases[Execution Use Cases]
-        end
-        
-        subgraph "Domain Layer"
-            TestEntities[Test Entities]
-            ExecutionEntities[Execution Entities]
-            DomainInterfaces[Domain Interfaces]
-        end
-        
-        subgraph "Infrastructure Layer"
-            FileRepos[File Repositories]
-            ProcessService[Process Service]
-            NotificationService[Notification Service]
-        end
-    end
-    
-    subgraph "External Integration"
-        K6_Repo[k6-tests Repository]
-        K6_Binary[K6 Binary]
-    end
-    
-    UI --> API
-    UI --> WS_Client
-    WS_Client --> WS_Server
-    API --> TestUseCases
-    API --> ResultUseCases
-    API --> ExecutionUseCases
-    
-    TestUseCases --> TestEntities
-    ResultUseCases --> TestEntities
-    ExecutionUseCases --> ExecutionEntities
-    
-    TestUseCases --> FileRepos
-    ExecutionUseCases --> ProcessService
-    ExecutionUseCases --> NotificationService
-    
-    ProcessService --> K6_Binary
-    K6_Binary --> K6_Repo
-    FileRepos --> FileSystem[(Test Results)]
-```
-
 ### Data Flow with Clean Architecture
 
 1. **Test Execution Flow**
@@ -220,18 +247,22 @@ graph TB
 
 ## 💻 Technology Stack
 
-### Frontend Technologies
+### Frontend Technologies (Modern React Architecture)
 
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| **React** | UI Framework | 18.x |
-| **TypeScript** | Type Safety | 5.x |
-| **Tailwind CSS** | Styling Framework | 3.x |
-| **Recharts** | Data Visualization | 2.x |
-| **@react-pdf/renderer** | PDF Generation | 4.x |
-| **Socket.io-client** | Real-time Communication | 4.x |
-| **React Router** | Navigation | 6.x |
-| **Axios** | HTTP Client | 1.x |
+| Technology | Purpose | Version | Implementation Details |
+|------------|---------|---------|----------------------|
+| **React** | UI Framework | 18.x | Modern functional components with hooks |
+| **TypeScript** | Type Safety | 5.x | Strict mode with comprehensive type checking |
+| **Vite** | Build Tool & Dev Server | 5.x | Fast HMR, optimized builds, ES modules |
+| **Redux Toolkit** | State Management | 2.x | Simplified Redux with RTK Query potential |
+| **Redux-Saga** | Side Effects Management | 1.x | Async flow control, WebSocket management |
+| **Context API** | Local State Management | Built-in | Repository and test result contexts |
+| **Tailwind CSS** | Styling Framework | 3.x | Utility-first CSS with custom components |
+| **Recharts** | Data Visualization | 2.x | Interactive charts and graphs |
+| **@react-pdf/renderer** | PDF Generation | 4.x | Professional PDF reports |
+| **Socket.io-client** | Real-time Communication | 4.x | WebSocket connection management |
+| **React Router** | Navigation | 6.x | Client-side routing with nested routes |
+| **Axios** | HTTP Client | 1.x | API communication with interceptors |
 
 ### Backend Technologies (Clean Architecture)
 
@@ -258,6 +289,8 @@ graph TB
 | **Domain-Driven Design** | Rich domain entities with business logic |
 | **Strategy Pattern** | Different test execution strategies |
 | **Observer Pattern** | WebSocket notifications |
+| **Component Composition** | Atomic design principles |
+| **State Management** | Redux + Context API hybrid approach |
 
 ### Infrastructure & DevOps
 
@@ -274,16 +307,84 @@ graph TB
 k6-dashboard/
 ├── frontend/                     # React frontend application
 │   ├── public/                   # Static assets
+│   │   ├── index.html            # Main HTML template
+│   │   └── favicon.ico           # Application favicon
+│   │
 │   ├── src/
-│   │   ├── api/                  # API client modules
-│   │   ├── components/           # Reusable UI components
-│   │   ├── context/              # React context providers
-│   │   ├── pages/                # Page components
-│   │   ├── types/                # TypeScript type definitions
-│   │   ├── App.tsx               # Main application component
-│   │   └── index.tsx             # Application entry point
-│   ├── package.json
-│   └── tsconfig.json
+│   │   ├── api/                  # 🌐 API Client Layer
+│   │   │   ├── client.ts         # Axios client with interceptors
+│   │   │   ├── repositories.ts   # Repository API endpoints
+│   │   │   └── results.ts        # Test results API endpoints
+│   │   │
+│   │   ├── components/           # 🧩 Component Architecture
+│   │   │   ├── atoms/            # Basic UI elements
+│   │   │   │   └── LoadingSpinner.tsx
+│   │   │   ├── molecules/        # Composed components
+│   │   │   │   └── TestResultTabs.tsx
+│   │   │   ├── charts/           # Data visualization components
+│   │   │   │   ├── AreaChart.tsx
+│   │   │   │   ├── BarChart.tsx
+│   │   │   │   ├── LineChart.tsx
+│   │   │   │   ├── MultiBarChart.tsx
+│   │   │   │   ├── MultiLineChart.tsx
+│   │   │   │   └── PieChart.tsx
+│   │   │   ├── DirectorySelector.tsx
+│   │   │   ├── EnhancedTestSelector.tsx
+│   │   │   ├── Layout.tsx
+│   │   │   ├── MetricCard.tsx
+│   │   │   ├── PerformanceSummary.tsx
+│   │   │   ├── RepositorySelector.tsx
+│   │   │   ├── StatusCard.tsx
+│   │   │   ├── SummaryCard.tsx
+│   │   │   ├── TerminalOutput.tsx
+│   │   │   ├── TestResultDetail.tsx
+│   │   │   ├── TestResultTabs.tsx
+│   │   │   ├── TestRunComparison.tsx
+│   │   │   ├── TestRunSelector.tsx
+│   │   │   └── TestSelector.tsx
+│   │   │
+│   │   ├── context/              # 🎯 Context API Providers
+│   │   │   ├── RepositoryContext.tsx    # Repository state management
+│   │   │   ├── TestResultContext.tsx    # Test results state
+│   │   │   ├── PDFReportGenerator.tsx   # PDF generation context
+│   │   │   ├── ExportPDFButton.tsx      # PDF export component
+│   │   │   └── SingleTestPDFReport.tsx  # Single test PDF reports
+│   │   │
+│   │   ├── hooks/                # 🪝 Custom React Hooks
+│   │   │   ├── useTestResults.ts        # Test results management
+│   │   │   └── useDeduplicatedRequest.ts # Request deduplication
+│   │   │
+│   │   ├── pages/                # 📄 Route Components
+│   │   │   ├── Dashboard.tsx     # Main dashboard with analytics
+│   │   │   ├── TestResults.tsx   # Test results browser
+│   │   │   └── TestRunner.tsx    # Test execution interface
+│   │   │
+│   │   ├── store/                # 🏪 Redux Store Architecture
+│   │   │   ├── slices/           # Redux Toolkit slices
+│   │   │   │   ├── testResultsSlice.ts  # Test results state
+│   │   │   │   └── repositoriesSlice.ts # Repository state
+│   │   │   ├── sagas/            # Redux-Saga side effects
+│   │   │   │   ├── index.ts      # Root saga
+│   │   │   │   ├── testResultsSaga.ts   # Test results sagas
+│   │   │   │   └── repositoriesSaga.ts  # Repository sagas
+│   │   │   ├── reducers.ts       # Combined reducers
+│   │   │   └── index.ts          # Store configuration
+│   │   │
+│   │   ├── types/                # 📝 TypeScript Definitions
+│   │   │   └── testResults.ts    # Domain type definitions
+│   │   │
+│   │   ├── App.tsx               # 🚀 Main application component
+│   │   ├── main.tsx              # Vite entry point
+│   │   └── index.css             # Global styles
+│   │
+│   ├── .env.example              # Environment variables template
+│   ├── .eslintrc.js              # ESLint configuration
+│   ├── package.json              # Dependencies and scripts
+│   ├── postcss.config.js         # PostCSS configuration
+│   ├── tailwind.config.js        # Tailwind CSS configuration
+│   ├── tsconfig.json             # TypeScript configuration
+│   ├── tsconfig.node.json        # Node TypeScript config
+│   └── vite.config.ts            # Vite configuration
 │
 ├── backend/                      # Clean Architecture Backend
 │   ├── src/
@@ -622,6 +723,796 @@ export class DIContainer {
 }
 ```
 
+## 🎯 Frontend Architecture Deep Dive
+
+### Modern React Architecture with Redux Toolkit + Saga
+
+#### 1. 🏪 State Management Architecture
+
+**Redux Toolkit Store Configuration**
+```typescript
+// store/index.ts - Store setup with middleware
+import { configureStore } from "@reduxjs/toolkit";
+import createSagaMiddleware from "redux-saga";
+import { rootReducer } from "./reducers";
+import rootSaga from "./sagas";
+
+const sagaMiddleware = createSagaMiddleware();
+
+export const store = configureStore({
+  reducer: rootReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({ thunk: false }).concat(sagaMiddleware),
+});
+
+sagaMiddleware.run(rootSaga);
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+```
+
+**Redux Toolkit Slices**
+```typescript
+// store/slices/testResultsSlice.ts - Modern Redux with RTK
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { TestDirectory, TestFile, TestResult } from "@/types/testResults";
+
+interface TestResultsState {
+  directories: TestDirectory[];
+  selectedDirectory: string | null;
+  files: TestFile[];
+  selectedFile: string | null;
+  selectedTestResult: TestResult | null;
+  loading: boolean;
+  error: string | null;
+}
+
+const initialState: TestResultsState = {
+  directories: [],
+  selectedDirectory: null,
+  files: [],
+  selectedFile: null,
+  selectedTestResult: null,
+  loading: false,
+  error: null,
+};
+
+export const testResultsSlice = createSlice({
+  name: "testResults",
+  initialState,
+  reducers: {
+    fetchDirectoriesRequest: (state, action: PayloadAction<string | undefined>) => {
+      state.loading = true;
+      state.error = null;
+    },
+    fetchDirectoriesSuccess: (state, action: PayloadAction<TestDirectory[]>) => {
+      state.directories = action.payload;
+      state.loading = false;
+    },
+    fetchDirectoriesFailure: (state, action: PayloadAction<string>) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+    setSelectedDirectory: (state, action: PayloadAction<string | null>) => {
+      state.selectedDirectory = action.payload;
+      state.selectedFile = null;
+      state.selectedTestResult = null;
+    },
+    // ... other reducers
+  },
+});
+```
+
+**Redux-Saga Side Effects Management**
+```typescript
+// store/sagas/testResultsSaga.ts - Side effects with Saga
+import { SagaIterator } from "redux-saga";
+import { call, put, takeLatest, select } from "redux-saga/effects";
+import { PayloadAction } from "@reduxjs/toolkit";
+import { RootState } from "../index";
+import {
+  fetchDirectoriesRequest,
+  fetchDirectoriesSuccess,
+  fetchDirectoriesFailure,
+} from "../slices/testResultsSlice";
+import { fetchResultDirectories } from "@/api/results";
+
+function* fetchDirectoriesSaga(action: PayloadAction<string | undefined>): SagaIterator {
+  try {
+    const directories = yield call(fetchResultDirectories, action.payload);
+    yield put(fetchDirectoriesSuccess(directories));
+
+    const selectedDirectory = yield select(
+      (state: RootState) => state.testResults.selectedDirectory
+    );
+    if (directories.length > 0 && !selectedDirectory) {
+      yield put({
+        type: "testResults/setSelectedDirectory",
+        payload: directories[0].name,
+      });
+    }
+  } catch (error) {
+    yield put(
+      fetchDirectoriesFailure(
+        error instanceof Error ? error.message : "Unknown error"
+      )
+    );
+  }
+}
+
+export function* testResultsSaga() {
+  yield takeLatest("testResults/fetchDirectoriesRequest", fetchDirectoriesSaga);
+  // ... other saga watchers
+}
+```
+
+#### 2. 🎯 Context API for Local State
+
+**Repository Context Provider**
+```typescript
+// context/RepositoryContext.tsx - Context API for repository state
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Repository, RepositoryConfig, fetchRepositories, fetchRepositoryConfig } from '../api/repositories';
+
+interface RepositoryContextType {
+  repositories: Repository[];
+  selectedRepository: Repository | null;
+  selectedRepositoryConfig: RepositoryConfig | null;
+  loading: boolean;
+  error: string | null;
+  selectRepository: (repository: Repository | null) => void;
+  refreshRepositories: () => Promise<void>;
+  refreshConfig: () => Promise<void>;
+}
+
+const RepositoryContext = createContext<RepositoryContextType | undefined>(undefined);
+
+export const useRepository = () => {
+  const context = useContext(RepositoryContext);
+  if (!context) {
+    throw new Error('useRepository must be used within a RepositoryProvider');
+  }
+  return context;
+};
+
+export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
+  const [selectedRepositoryConfig, setSelectedRepositoryConfig] = useState<RepositoryConfig | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // ... context implementation
+
+  return <RepositoryContext.Provider value={value}>{children}</RepositoryContext.Provider>;
+};
+```
+
+#### 3. 🪝 Custom Hooks Architecture
+
+**Advanced Custom Hooks**
+```typescript
+// hooks/useTestResults.ts - Custom hook with Redux integration
+import { useSelector, useDispatch } from "react-redux";
+import { useCallback, useMemo } from "react";
+import { RootState } from "@/store";
+import {
+  fetchDirectoriesRequest,
+  setSelectedDirectory,
+  fetchFilesRequest,
+  setSelectedFile,
+  refreshTestResults,
+} from "@/store/slices/testResultsSlice";
+
+export const useTestResults = () => {
+  const dispatch = useDispatch();
+
+  const {
+    directories,
+    selectedDirectory,
+    files,
+    selectedFile,
+    selectedTestResult,
+    loading,
+    error,
+  } = useSelector((state: RootState) => state.testResults);
+
+  const selectedRepository = useSelector(
+    (state: RootState) => state.repositories.selectedRepository
+  );
+
+  const fetchDirectories = useCallback(() => {
+    dispatch(fetchDirectoriesRequest(selectedRepository?.id));
+  }, [dispatch, selectedRepository?.id]);
+
+  const selectDirectory = useCallback(
+    (directory: string | null) => {
+      dispatch(setSelectedDirectory(directory));
+      if (directory) {
+        dispatch(fetchFilesRequest(directory));
+      }
+    },
+    [dispatch]
+  );
+
+  const sortedDirectories = useMemo(() => {
+    return [...directories].sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [directories]);
+
+  return {
+    directories: sortedDirectories,
+    selectedDirectory,
+    files,
+    selectedFile,
+    selectedTestResult,
+    loading,
+    error,
+    fetchDirectories,
+    selectDirectory,
+    // ... other methods
+  };
+};
+```
+
+**Request Deduplication Hook**
+```typescript
+// hooks/useDeduplicatedRequest.ts - Advanced request optimization
+import { useRef, useCallback } from "react";
+
+export const useDeduplicatedRequest = <T extends (...args: any[]) => Promise<any>>(
+  requestFn: T,
+  cacheKey?: string
+) => {
+  const pendingRequests = useRef<Record<string, Promise<any>>>({});
+
+  const dedupedRequestFn = useCallback(
+    async (...args: Parameters<T>): Promise<ReturnType<T>> => {
+      const key = cacheKey || JSON.stringify(args);
+
+      if (key in pendingRequests.current) {
+        return pendingRequests.current[key];
+      }
+
+      const requestPromise = requestFn(...args) as Promise<ReturnType<T>>;
+      pendingRequests.current[key] = requestPromise;
+
+      try {
+        const result = await requestPromise;
+        return result;
+      } finally {
+        delete pendingRequests.current[key];
+      }
+    },
+    [requestFn, cacheKey]
+  );
+
+  return dedupedRequestFn;
+};
+```
+
+#### 4. 🧩 Component Architecture (Atomic Design)
+
+**Atomic Components Structure**
+```typescript
+// components/atoms/LoadingSpinner.tsx - Atomic component
+import React from 'react';
+
+interface LoadingSpinnerProps {
+  size?: 'sm' | 'md' | 'lg';
+  color?: string;
+  fullPage?: boolean;
+}
+
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+  size = 'md',
+  color = '#3b82f6',
+  fullPage = false,
+}) => {
+  const sizeInPixels = {
+    sm: 16,
+    md: 32,
+    lg: 48,
+  }[size];
+
+  // ... implementation with dynamic styles
+};
+```
+
+**Molecular Components**
+```typescript
+// components/molecules/TestResultTabs.tsx - Composed component
+import React, { memo, useCallback } from 'react';
+import { TestFile } from '@/types/testResults';
+
+interface TestResultTabsProps {
+  files: TestFile[];
+  selectedFile: string | null;
+  onFileChange: (file: string) => void;
+}
+
+const TestResultTabs: React.FC<TestResultTabsProps> = memo(({
+  files,
+  selectedFile,
+  onFileChange,
+}) => {
+  const formatFileName = useCallback((fileName: string) => {
+    return fileName
+      .replace('.json', '')
+      .replace(/-/g, ' ')
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }, []);
+
+  // ... component implementation
+});
+```
+
+#### 5. 🌐 API Client Architecture
+
+**Advanced Axios Client with Interceptors**
+```typescript
+// api/client.ts - Robust API client
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+
+const apiClient: AxiosInstance = axios.create({
+  baseURL: API_URL,
+  timeout: 15000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Request interceptor with logging
+apiClient.interceptors.request.use(
+  (config) => {
+    console.log("📡 API Request:", config.method?.toUpperCase(), config.url);
+    return config;
+  },
+  (error) => {
+    console.error("📡 API Request Error:", error);
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor with error handling
+apiClient.interceptors.response.use(
+  (response: AxiosResponse) => {
+    console.log("📡 API Response:", response.status, response.config.url);
+    return response;
+  },
+  (error: AxiosError) => {
+    console.error("📡 API Error:", error.response?.status, error.message);
+
+    if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          console.error("Unauthorized. Please login again.");
+          break;
+        case 403:
+          console.error("Forbidden. You do not have permission.");
+          break;
+        case 404:
+          console.error("Resource not found.");
+          break;
+        case 500:
+          console.error("Server error. Please try again later.");
+          break;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// Retry mechanism with exponential backoff
+export const withRetry = async <T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  delay = 1000
+): Promise<T> => {
+  let lastError: any;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      console.warn(`Attempt ${attempt + 1} failed. Retrying in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay *= 2; // Exponential backoff
+    }
+  }
+
+  throw lastError;
+};
+
+// API Cache implementation
+export const createApiCache = () => {
+  const cache = new Map<string, { data: any; timestamp: number }>();
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  const getCached = <T>(key: string): T | null => {
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data as T;
+    }
+    return null;
+  };
+
+  const setCache = <T>(key: string, data: T): void => {
+    cache.set(key, { data, timestamp: Date.now() });
+  };
+
+  const invalidateCache = (keyPattern?: string): void => {
+    if (!keyPattern) {
+      cache.clear();
+      return;
+    }
+
+    const regex = new RegExp(keyPattern);
+    for (const key of Array.from(cache.keys())) {
+      if (regex.test(key)) {
+        cache.delete(key);
+      }
+    }
+  };
+
+  return { getCached, setCache, invalidateCache };
+};
+
+export const apiCache = createApiCache();
+export default apiClient;
+```
+
+#### 6. 📊 Advanced Data Visualization
+
+**Chart Components with Recharts**
+```typescript
+// components/charts/MultiLineChart.tsx - Advanced chart component
+import React from 'react';
+import {
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+
+interface DataSeries {
+  key: string;
+  name: string;
+  color?: string;
+}
+
+interface MultiLineChartProps {
+  title?: string;
+  data: Array<Record<string, any>>;
+  xKey: string;
+  series: DataSeries[];
+  yLabel?: string;
+}
+
+const MultiLineChart: React.FC<MultiLineChartProps> = ({
+  title,
+  data,
+  xKey,
+  series,
+  yLabel,
+}) => {
+  const defaultColors = [
+    '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
+    '#8b5cf6', '#ec4899', '#14b8a6', '#f97316',
+  ];
+
+  return (
+    <div className="h-full w-full">
+      {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsLineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey={xKey} tick={{ fontSize: 12 }} />
+          <YAxis
+            label={yLabel ? { value: yLabel, angle: -90, position: 'insideLeft' } : undefined}
+            tick={{ fontSize: 12 }}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid #E5E7EB',
+              borderRadius: '4px',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            }}
+          />
+          <Legend />
+          {series.map((s, index) => (
+            <Line
+              key={s.key}
+              type="monotone"
+              dataKey={s.key}
+              name={s.name}
+              stroke={s.color || defaultColors[index % defaultColors.length]}
+              strokeWidth={2}
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          ))}
+        </RechartsLineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export default MultiLineChart;
+```
+
+#### 7. 📑 Professional PDF Generation
+
+**Advanced PDF Reports with React-PDF**
+```typescript
+// context/PDFReportGenerator.tsx - Professional PDF generation
+import React from 'react';
+import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
+import { TestResult } from '../types/testResults';
+
+const styles = StyleSheet.create({
+  page: {
+    flexDirection: 'column',
+    backgroundColor: '#ffffff',
+    padding: 30,
+    fontFamily: 'Helvetica',
+    fontSize: 11,
+    lineHeight: 1.4,
+  },
+  header: {
+    marginBottom: 25,
+    borderBottom: 2,
+    borderBottomColor: '#3B82F6',
+    paddingBottom: 15,
+  },
+  title: {
+    fontSize: 22,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  // ... comprehensive styles
+});
+
+interface PDFReportProps {
+  latestResults: Record<string, TestResult>;
+  totalRequests: number;
+  averageResponseTime: string;
+  errorRate: string;
+  lastRunTime: string;
+  overallHealthStatus: 'healthy' | 'warning' | 'critical' | 'unknown';
+  directoryName?: string;
+}
+
+const PDFReport: React.FC<PDFReportProps> = ({
+  latestResults,
+  totalRequests,
+  averageResponseTime,
+  errorRate,
+  lastRunTime,
+  overallHealthStatus,
+  directoryName = '',
+}) => {
+  // ... PDF component implementation with multiple pages
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* Executive Summary Page */}
+      </Page>
+      <Page size="A4" style={styles.page}>
+        {/* Detailed Analysis Page */}
+      </Page>
+    </Document>
+  );
+};
+
+// Custom hook for PDF generation
+export const usePDFReportGenerator = (props: PDFReportGeneratorHookProps) => {
+  const generatePDF = async () => {
+    try {
+      const doc = <PDFReport {...props} />;
+      const asPdf = pdf(doc);
+      const blob = await asPdf.toBlob();
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `k6-report-${props.directoryName || 'test'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      throw error;
+    }
+  };
+
+  return { generatePDF };
+};
+```
+
+#### 8. 🔄 Real-time WebSocket Integration
+
+**WebSocket Client with Socket.io**
+```typescript
+// In TestRunner.tsx - Real-time test execution
+import { io, Socket } from 'socket.io-client';
+
+const TestRunner: React.FC = () => {
+  const socketRef = useRef<Socket | null>(null);
+  const [socketConnected, setSocketConnected] = useState<boolean>(false);
+  const [output, setOutput] = useState<string[]>([]);
+
+  useEffect(() => {
+    const socket = io(BASE_URL, {
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('WebSocket connection established');
+      setSocketConnected(true);
+    });
+
+    socket.on('testOutput', (message) => {
+      if (message.type === 'log') {
+        setOutput(prev => [...prev, message.data]);
+      } else if (message.type === 'complete') {
+        setIsRunning(false);
+        // Auto-refresh results
+        setTimeout(() => refreshData(), 2000);
+      }
+    });
+
+    socket.on('disconnect', () => {
+      setSocketConnected(false);
+    });
+
+    return () => socket.disconnect();
+  }, []);
+
+  const runTest = async () => {
+    if (socketRef.current && socketConnected) {
+      socketRef.current.emit('test_request', {
+        testId,
+        test: selectedTest,
+        profile: selectedProfile,
+        environment,
+        customToken,
+      });
+    }
+  };
+
+  // ... component implementation
+};
+```
+
+#### 9. ⚙️ Vite Configuration & Build Optimization
+
+**Advanced Vite Configuration**
+```typescript
+// vite.config.ts - Modern build configuration
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@pages': path.resolve(__dirname, './src/pages'),
+      '@store': path.resolve(__dirname, './src/store'),
+      '@api': path.resolve(__dirname, './src/api'),
+      '@types': path.resolve(__dirname, './src/types'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@context': path.resolve(__dirname, './src/context'),
+    },
+  },
+  server: {
+    port: 3000,
+    host: true, // Allow external connections
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+      '/socket.io': {
+        target: 'http://localhost:4000',
+        ws: true,
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          redux: ['@reduxjs/toolkit', 'redux-saga', 'react-redux'],
+          charts: ['recharts'],
+          pdf: ['@react-pdf/renderer'],
+          socket: ['socket.io-client'],
+        },
+      },
+    },
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+  },
+})
+```
+
+#### 10. 📝 TypeScript Configuration
+
+**Strict TypeScript Setup**
+```json
+// tsconfig.json - Strict TypeScript configuration
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "ESNext",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@components/*": ["components/*"],
+      "@pages/*": ["pages/*"],
+      "@store/*": ["store/*"],
+      "@api/*": ["api/*"],
+      "@types/*": ["types/*"],
+      "@hooks/*": ["hooks/*"],
+      "@context/*": ["context/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["node_modules", "dist"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+```
+
+### Frontend Architecture Benefits
+
+1. **Scalability**: Modular architecture with clear separation of concerns
+2. **Type Safety**: Comprehensive TypeScript coverage with strict mode
+3. **Performance**: Code splitting, lazy loading, and optimized builds
+4. **Developer Experience**: Hot reloading, TypeScript IntelliSense, Redux DevTools
+5. **Maintainability**: Clear component hierarchy and state management patterns
+6. **Testing**: Easy unit testing with isolated components and mocked dependencies
+7. **Real-time Features**: WebSocket integration for live updates
+8. **Professional Output**: High-quality PDF generation capabilities
+
 ### Benefits of Clean Architecture Implementation
 
 1. **Testability**: Easy unit testing with mocked dependencies
@@ -681,25 +1572,51 @@ npm run dev
 ```bash
 # In a new terminal
 cd frontend
+
+# Install dependencies
 npm install
-npm start
+
+# Create environment configuration
+cp .env.example .env
+
+# Edit .env file:
+# VITE_API_URL=http://localhost:4000/api
+
+# Start development server
+npm run dev
 ```
 
 ### Development Tools
 
-#### Path debugging
+#### Frontend Development Scripts
 ```bash
-# Run path debug script
-cd backend
-node debug-paths.js
+# Development
+npm run dev          # Start Vite dev server with HMR
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run type-check   # TypeScript type checking
+npm run lint         # ESLint checking
+npm run lint:fix     # Auto-fix ESLint issues
+
+# Testing
+npm run test         # Run tests
+npm run test:watch   # Watch mode testing
+npm run test:coverage # Generate coverage report
 ```
 
-#### Check configuration
+#### Backend Development Scripts
 ```bash
-# Visit debug endpoints
-curl http://localhost:4000/debug/config
-curl http://localhost:4000/debug/paths
-curl http://localhost:4000/debug/dates
+# Development
+npm run dev          # Start with hot reload
+npm run build        # Build TypeScript
+npm run test         # Run test suite
+npm run test:watch   # Watch mode testing
+npm run test:coverage # Generate coverage report
+npm run lint         # Check code quality
+npm run lint:fix     # Auto-fix linting issues
+
+# Debugging
+npm run debug:paths  # Debug path resolution
 ```
 
 ## ⚙️ Configuration
@@ -731,12 +1648,57 @@ LOG_LEVEL=debug
 # LOG_LEVEL=info
 ```
 
-#### Frontend Configuration
+#### Frontend Configuration (.env)
 ```env
-REACT_APP_API_URL=http://localhost:4000/api
+# API Configuration
+VITE_API_URL=http://localhost:4000/api
+
+# Build Configuration
+VITE_APP_TITLE=K6 Performance Dashboard
+VITE_APP_VERSION=1.0.0
+
+# Development
+VITE_DEBUG=true
 ```
 
 ### TypeScript Configuration
+
+#### Frontend (tsconfig.json)
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "ESNext",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@components/*": ["components/*"],
+      "@pages/*": ["pages/*"],
+      "@store/*": ["store/*"],
+      "@api/*": ["api/*"],
+      "@types/*": ["types/*"],
+      "@hooks/*": ["hooks/*"],
+      "@context/*": ["context/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}
+```
 
 #### Backend (tsconfig.json)
 ```json
@@ -852,6 +1814,28 @@ Returns: TestResult
 Description: Get specific test result data
 ```
 
+#### Repository Management
+```http
+GET /api/repositories
+Returns: Repository[]
+Description: Get all configured repositories
+
+POST /api/repositories
+Body: CreateRepositoryRequest
+Returns: Repository
+Description: Create new repository
+
+GET /api/repositories/:id/config
+Returns: RepositoryConfig
+Description: Get repository configuration
+
+POST /api/repositories/:id/sync
+Description: Sync repository with remote
+
+DELETE /api/repositories/:id
+Description: Delete repository
+```
+
 #### Health & Debug
 ```http
 GET /health
@@ -908,84 +1892,211 @@ Description: File path resolution debug (dev only)
 - **Testing**: Jest with high coverage requirements
 - **Linting**: ESLint + Prettier for consistent code style
 
-### Development Scripts
+### Frontend Development Guidelines
 
-```bash
-# Backend development
-npm run dev          # Start with hot reload
-npm run build        # Build TypeScript
-npm run test         # Run test suite
-npm run test:watch   # Watch mode testing
-npm run test:coverage # Generate coverage report
-npm run lint         # Check code quality
-npm run lint:fix     # Auto-fix linting issues
+#### Component Development
+- **Functional Components**: Use React functional components with hooks
+- **TypeScript**: All components must have proper TypeScript interfaces
+- **Memoization**: Use React.memo for performance optimization
+- **Custom Hooks**: Extract complex logic into reusable hooks
+- **Error Boundaries**: Implement error boundaries for robust error handling
 
-# Debugging
-npm run debug:paths  # Debug path resolution
+#### State Management
+- **Redux Toolkit**: Use RTK for global state management
+- **Redux-Saga**: Handle side effects with sagas
+- **Context API**: Use for localized state that doesn't need global access
+- **Custom Hooks**: Create custom hooks for component state logic
+
+#### Testing Frontend Components
+```typescript
+// Example component test
+import { render, screen, fireEvent } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { store } from '@store/index';
+import TestComponent from './TestComponent';
+
+describe('TestComponent', () => {
+  const renderWithStore = (component: React.ReactElement) => {
+    return render(
+      <Provider store={store}>
+        {component}
+      </Provider>
+    );
+  };
+
+  it('should render component correctly', () => {
+    renderWithStore(<TestComponent />);
+    expect(screen.getByText('Expected Text')).toBeInTheDocument();
+  });
+
+  it('should handle user interactions', () => {
+    renderWithStore(<TestComponent />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(screen.getByText('Updated Text')).toBeInTheDocument();
+  });
+});
 ```
 
 ### Adding New Features
 
-#### 1. New Use Case
+#### 1. New Frontend Feature
 ```typescript
-// 1. Define interface in core/interfaces/
-export interface INewFeatureService {
-  performAction(params: ActionParams): Promise<ActionResult>;
+// 1. Define types
+interface NewFeature {
+  id: string;
+  name: string;
+  data: any;
 }
 
-// 2. Create use case in core/use-cases/
-export class NewFeatureUseCase {
-  constructor(
-    private readonly service: INewFeatureService,
-    private readonly logger: ILogger
-  ) {}
+// 2. Create Redux slice
+const newFeatureSlice = createSlice({
+  name: 'newFeature',
+  initialState,
+  reducers: {
+    fetchNewFeatureRequest: (state) => {
+      state.loading = true;
+    },
+    fetchNewFeatureSuccess: (state, action) => {
+      state.data = action.payload;
+      state.loading = false;
+    },
+  },
+});
 
-  async execute(command: NewFeatureCommand): Promise<NewFeatureResult> {
-    // Business logic here
+// 3. Create saga
+function* fetchNewFeatureSaga() {
+  try {
+    const data = yield call(api.fetchNewFeature);
+    yield put(fetchNewFeatureSuccess(data));
+  } catch (error) {
+    yield put(fetchNewFeatureFailure(error.message));
   }
 }
 
-// 3. Implement service in infrastructure/
-export class NewFeatureService implements INewFeatureService {
-  async performAction(params: ActionParams): Promise<ActionResult> {
-    // Implementation
-  }
-}
+// 4. Create component
+const NewFeatureComponent: React.FC = () => {
+  const dispatch = useDispatch();
+  const { data, loading } = useSelector(state => state.newFeature);
 
-// 4. Add controller in presentation/
-export class NewFeatureController {
-  constructor(private readonly useCase: NewFeatureUseCase) {}
-  
-  handleRequest = async (req: Request, res: Response) => {
-    // HTTP handling
-  };
-}
+  useEffect(() => {
+    dispatch(fetchNewFeatureRequest());
+  }, [dispatch]);
 
-// 5. Register in DI container
-this.register('newFeatureUseCase', new NewFeatureUseCase(/*...*/));
+  return (
+    <div>
+      {loading ? <LoadingSpinner /> : <div>{data}</div>}
+    </div>
+  );
+};
+
+// 5. Add to routing
+<Route path="/new-feature" element={<NewFeatureComponent />} />
 ```
 
-#### 2. New Repository Implementation
+#### 2. New Backend Use Case
 ```typescript
-// 1. Define interface in core/interfaces/repositories/
-export interface INewRepository {
-  findById(id: string): Promise<Entity | null>;
-  save(entity: Entity): Promise<void>;
-}
-
-// 2. Implement in infrastructure/repositories/
-export class DatabaseNewRepository implements INewRepository {
-  async findById(id: string): Promise<Entity | null> {
-    // Database implementation
-  }
-}
-
-// 3. Register in container with proper dependencies
+// Follow the backend patterns shown earlier
+// 1. Define interface in core/interfaces/
+// 2. Create use case in core/use-cases/
+// 3. Implement service in infrastructure/
+// 4. Add controller in presentation/
+// 5. Register in DI container
 ```
 
 ### Testing Strategy
 
-#### Unit Tests
+#### Frontend Testing Pyramid
+
+```mermaid
+graph TB
+    subgraph "Frontend Testing Layers"
+        E2E[E2E Tests - Cypress/Playwright]
+        Integration[Integration Tests - React Testing Library]
+        Unit[Unit Tests - Jest + RTL]
+    end
+    
+    subgraph "Testing Scope"
+        E2E --> FullApp[Full Application Workflows]
+        Integration --> Components[Component Integration]
+        Unit --> Functions[Pure Functions & Hooks]
+    end
+```
+
+#### Unit Tests (Frontend)
+```typescript
+// Testing custom hooks
+import { renderHook, act } from '@testing-library/react';
+import { useTestResults } from '@hooks/useTestResults';
+
+describe('useTestResults', () => {
+  it('should fetch directories on mount', async () => {
+    const { result } = renderHook(() => useTestResults());
+    
+    await act(async () => {
+      result.current.fetchDirectories();
+    });
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.directories).toHaveLength(0);
+  });
+});
+
+// Testing Redux slices
+import { testResultsSlice, fetchDirectoriesSuccess } from '@store/slices/testResultsSlice';
+
+describe('testResultsSlice', () => {
+  it('should handle fetchDirectoriesSuccess', () => {
+    const initialState = { directories: [], loading: true };
+    const directories = [{ name: 'test', path: '/test', date: new Date() }];
+    
+    const action = fetchDirectoriesSuccess(directories);
+    const state = testResultsSlice.reducer(initialState, action);
+
+    expect(state.directories).toEqual(directories);
+    expect(state.loading).toBe(false);
+  });
+});
+```
+
+#### Integration Tests (Frontend)
+```typescript
+// Testing component integration with Redux
+import { render, screen } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import Dashboard from '@pages/Dashboard';
+import { testResultsSlice } from '@store/slices/testResultsSlice';
+
+const createTestStore = (initialState = {}) => {
+  return configureStore({
+    reducer: {
+      testResults: testResultsSlice.reducer,
+    },
+    preloadedState: initialState,
+  });
+};
+
+describe('Dashboard Integration', () => {
+  it('should display test results when available', () => {
+    const store = createTestStore({
+      testResults: {
+        directories: [{ name: 'test', path: '/test', date: new Date() }],
+        loading: false,
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <Dashboard />
+      </Provider>
+    );
+
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+  });
+});
+```
+
+#### Backend Unit Tests
 ```typescript
 describe('ExecuteTestUseCase', () => {
   let useCase: ExecuteTestUseCase;
@@ -1042,7 +2153,7 @@ describe('ExecuteTestUseCase', () => {
 });
 ```
 
-#### Integration Tests
+#### Integration Tests (Backend)
 ```typescript
 describe('TestRunner Integration', () => {
   let app: Application;
@@ -1072,18 +2183,42 @@ describe('TestRunner Integration', () => {
 
 ### Building for Production
 
+#### Frontend Build
 ```bash
-# Backend build
-cd backend
+cd frontend
+
+# Type checking
+npm run type-check
+
+# Build for production
 npm run build
+
+# Preview production build
+npm run preview
+```
+
+#### Backend Build
+```bash
+cd backend
+
+# Build TypeScript
+npm run build
+
+# Run tests
 npm run test
 
-# Frontend build  
-cd frontend
-npm run build
+# Start production server
+NODE_ENV=production npm start
+```
 
-# Docker build
+#### Docker Build
+```bash
+# Build all services
 docker-compose build
+
+# Build specific service
+docker-compose build frontend
+docker-compose build backend
 ```
 
 ## 🚀 Deployment
@@ -1097,7 +2232,14 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ### Manual Deployment
 
-1. **Backend Deployment**
+1. **Frontend Deployment**
+   ```bash
+   cd frontend
+   npm run build
+   # Serve dist/ directory with Nginx or similar
+   ```
+
+2. **Backend Deployment**
    ```bash
    cd backend
    npm run build
@@ -1106,17 +2248,15 @@ docker-compose -f docker-compose.prod.yml up -d
    NODE_ENV=production npm start
    ```
 
-2. **Frontend Deployment**
-   ```bash
-   cd frontend
-   npm run build
-   # Serve build/ directory with Nginx or similar
-   ```
-
 ### Environment-Specific Configuration
 
 #### Development
 ```env
+# Frontend
+VITE_API_URL=http://localhost:4000/api
+VITE_DEBUG=true
+
+# Backend
 NODE_ENV=development
 LOG_LEVEL=debug
 K6_TESTS_DIR=../k6-tests
@@ -1125,6 +2265,11 @@ RESULTS_DIR=../k6-tests/results
 
 #### Production
 ```env
+# Frontend
+VITE_API_URL=https://api.yourdomain.com/api
+VITE_DEBUG=false
+
+# Backend
 NODE_ENV=production
 LOG_LEVEL=info
 K6_TESTS_DIR=/app/k6-tests
@@ -1133,6 +2278,10 @@ RESULTS_DIR=/app/results
 
 #### Docker
 ```env
+# Frontend
+VITE_API_URL=http://localhost:4000/api
+
+# Backend
 NODE_ENV=production
 K6_TESTS_DIR=/k6-tests
 RESULTS_DIR=/results
@@ -1149,7 +2298,24 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Test Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run type-check
+          npm run test -- --coverage --watchAll=false
+          npm run build
+
+  test-backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -1164,16 +2330,9 @@ jobs:
           npm install
           npm run test:coverage
           npm run build
-      
-      - name: Test Frontend
-        run: |
-          cd frontend
-          npm install
-          npm run test -- --coverage --watchAll=false
-          npm run build
 
   deploy:
-    needs: test
+    needs: [test-frontend, test-backend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
@@ -1184,6 +2343,14 @@ jobs:
 
 ## 📊 Performance Considerations
 
+### Frontend Performance
+- **Code Splitting**: Vite automatically splits chunks for optimal loading
+- **Lazy Loading**: Components loaded on demand with React.lazy
+- **Redux Optimization**: Normalized state structure and memoized selectors
+- **Chart Performance**: Virtualized rendering for large datasets
+- **WebSocket Optimization**: Connection pooling and message batching
+
+### Backend Performance
 - **Clean Architecture Benefits**: Clear separation allows for targeted optimizations
 - **Caching Strategy**: Implement Redis adapter for frequently accessed test results
 - **File System Optimization**: Regular cleanup of old test results via scheduled use case
@@ -1193,6 +2360,14 @@ jobs:
 
 ## 🔒 Security Best Practices
 
+### Frontend Security
+- **Input Validation**: All inputs validated at component level
+- **XSS Protection**: React's built-in XSS protection with proper escaping
+- **CORS Configuration**: Strict origin validation
+- **Token Management**: Secure token storage with environment isolation
+- **Content Security Policy**: Implemented via Vite configuration
+
+### Backend Security
 - **Input Validation**: All inputs validated at presentation layer
 - **Domain Validation**: Business rules enforced in use cases
 - **Error Handling**: Domain errors don't leak infrastructure details
@@ -1228,9 +2403,9 @@ graph TB
     Integration --> Infrastructure
 ```
 
-- **Unit Tests**: Domain entities, value objects, use cases (isolated)
-- **Integration Tests**: Repository implementations, external services
-- **E2E Tests**: Full API workflows through presentation layer
+- **Unit Tests**: Domain entities, value objects, use cases, React components, Redux slices
+- **Integration Tests**: Repository implementations, external services, component integration
+- **E2E Tests**: Full API workflows through presentation layer, user journeys
 
 ## 🤝 Contributing
 
@@ -1238,7 +2413,7 @@ graph TB
 
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Follow Clean Architecture principles
+3. Follow Clean Architecture principles (backend) and Component Architecture (frontend)
 4. Write tests for all layers
 5. Ensure TypeScript strict mode compliance
 6. Commit with conventional commits (`git commit -m 'feat: add amazing feature'`)
@@ -1247,6 +2422,15 @@ graph TB
 
 ### Code Review Guidelines
 
+#### Frontend
+- Verify proper component architecture (atoms/molecules/organisms)
+- Check Redux state management patterns
+- Ensure TypeScript strict compliance
+- Review custom hooks implementation
+- Validate WebSocket integration
+- Check PDF generation functionality
+
+#### Backend
 - Verify proper layer separation
 - Check dependency direction (inward only)
 - Ensure comprehensive test coverage
@@ -1260,6 +2444,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) by Robert C. Martin
+- [Redux Toolkit](https://redux-toolkit.js.org/) for simplified Redux
+- [Redux-Saga](https://redux-saga.js.org/) for side effect management
+- [Vite](https://vitejs.dev/) for fast development and building
 - [K6](https://k6.io/) for the excellent load testing tool
 - [Grafana Labs](https://grafana.com/) for maintaining K6
 - [TypeScript](https://www.typescriptlang.org/) community for exceptional tooling
@@ -1270,8 +2457,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 <div align="center">
 
 **Built with ❤️ for the Performance Testing Community**  
-**Following Clean Architecture & SOLID Principles**
+**Following Clean Architecture & Modern React Principles**
 
 [Report Bug](https://github.com/your-username/k6-dashboard/issues) • [Request Feature](https://github.com/your-username/k6-dashboard/issues) • [Architecture Guide](./docs/ARCHITECTURE.md)
 
-</div>
+</div></parameter>
+</invoke>
+</artifacts>
+
