@@ -1,40 +1,42 @@
-import React, { Suspense, lazy } from 'react';
+
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { store } from './store';
-import Layout from './components/Layout';
-import LoadingSpinner from './components/atoms/LoadingSpinner';
-import { TestResultProvider } from './context/TestResultContext';
-import { RepositoryProvider } from './context/RepositoryContext';
-import './styles/main.scss';
+import { store } from '@/store';
+import Sidebar from '@/components/organisms/Sidebar/Sidebar';
+import './App.scss';
 
-// Lazy-loaded pages
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const TestResults = lazy(() => import('./pages/TestResults'));
-const TestRunner = lazy(() => import('./pages/TestRunner'));
+// Lazy load pages
+const Dashboard = React.lazy(() => import('@/pages/Dashboard/Dashboard'));
+const TestResults = React.lazy(() => import('@/pages/TestResults/TestResults'));
+const TestRunner = React.lazy(() => import('@/pages/TestRunner/TestRunner'));
+
+const LoadingSpinner = () => (
+  <div className="loading-spinner">
+    <div className="spinner" />
+    <span>Loading...</span>
+  </div>
+);
 
 function App() {
-    return (
-        <Provider store={store}>
-            <RepositoryProvider>
-                <TestResultProvider>
-                    <Router>
-                        <Layout>
-                            <Suspense fallback={<LoadingSpinner fullPage />}>
-                                <Routes>
-                                    <Route path="/" element={<Dashboard />} />
-                                    <Route path="/results" element={<TestResults />} />
-                                    <Route path="/results/:directory" element={<TestResults />} />
-                                    <Route path="/results/:repositoryId/*" element={<TestResults />} />
-                                    <Route path="/test-runner" element={<TestRunner />} />
-                                </Routes>
-                            </Suspense>
-                        </Layout>
-                    </Router>
-                </TestResultProvider>
-            </RepositoryProvider>
-        </Provider>
-    );
+  return (
+    <Provider store={store}>
+      <Router>
+        <div className="app">
+          <Sidebar />
+          <main className="app__content">
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/test-results" element={<TestResults />} />
+                <Route path="/test-runner" element={<TestRunner />} />
+              </Routes>
+            </Suspense>
+          </main>
+        </div>
+      </Router>
+    </Provider>
+  );
 }
 
 export default App;
