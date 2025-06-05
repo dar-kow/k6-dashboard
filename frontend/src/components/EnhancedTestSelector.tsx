@@ -17,6 +17,48 @@ const EnhancedTestSelector: React.FC<EnhancedTestSelectorProps> = ({
     const [filterType, setFilterType] = useState<'all' | 'single' | 'sequential'>('all');
     const [dateFilter, setDateFilter] = useState<string>('');
 
+    // Helper function to get formatted test name like in TestResults
+    const getFormattedTestName = (dir: TestDirectory) => {
+        if (dir.testName) {
+            return dir.testName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        if (dir.name?.endsWith('.json')) {
+            const fileName = dir.name.split('/').pop() || '';
+            const extractedTestName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+            return extractedTestName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // For sequential/parallel tests, return just the type (no UUID)
+        if (dir.name.includes('sequential_')) {
+            return 'Sequential Test Run';
+        }
+
+        if (dir.name.includes('parallel_')) {
+            return 'Parallel Test Run';
+        }
+
+        // Fallback for other directory names
+        let cleanName = dir.name || '';
+        cleanName = cleanName.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//, '');
+        cleanName = cleanName.replace(/^\d{8}_\d{6}_/, '');
+        cleanName = cleanName.replace(/^(sequential_|parallel_)/, '');
+
+        return cleanName.replace(/_/g, ' ').split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
+
     const filteredDirectories = useMemo(() => {
         let filtered = directories;
 
@@ -52,30 +94,6 @@ const EnhancedTestSelector: React.FC<EnhancedTestSelectorProps> = ({
         return 'Test Suite';
     };
 
-    const formatTestName = (dirName: string) => {
-        if (dirName.endsWith('.json')) {
-            const fileName = dirName.split('/').pop() || '';
-            return fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
-        }
-
-        // Remove UUID and clean up directory name
-        let cleanName = dirName;
-
-        // Remove UUID pattern (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/)
-        cleanName = cleanName.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//, '');
-
-        // Remove timestamp prefix (format: YYYYMMDD_HHMMSS_)
-        cleanName = cleanName.replace(/^\d{8}_\d{6}_/, '');
-
-        // Remove sequential_ or parallel_ prefix only once
-        cleanName = cleanName.replace(/^(sequential_|parallel_)/, '');
-
-        // Replace underscores with spaces and capitalize
-        return cleanName.replace(/_/g, ' ').split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-    };
-
     const getRepositoryDisplayName = (dir: TestDirectory) => {
         // Use the actual repositoryName if available
         if (dir.repositoryName) {
@@ -96,13 +114,26 @@ const EnhancedTestSelector: React.FC<EnhancedTestSelectorProps> = ({
         return 'Unknown Repository';
     };
 
-    // Group entries by type for better organization
-    const groupedDirectories = filteredDirectories.reduce((groups, dir) => {
-        const type = dir.name.endsWith('.json') ? 'individual' : 'sequential';
-        if (!groups[type]) groups[type] = [];
-        groups[type].push(dir);
-        return groups;
-    }, {} as Record<string, TestDirectory[]>);
+    const getDisplayText = (dir: TestDirectory) => {
+        const testName = getFormattedTestName(dir);
+
+        // For single tests, show the actual test name
+        if (dir.name.endsWith('.json')) {
+            return testName;
+        }
+
+        // For sequential/parallel tests, show the type
+        if (dir.name.includes('sequential_')) {
+            return 'Sequential Test Run';
+        }
+
+        if (dir.name.includes('parallel_')) {
+            return 'Parallel Test Run';
+        }
+
+        // Fallback
+        return testName || getTestTypeName(dir.name);
+    };
 
     return (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -139,7 +170,7 @@ const EnhancedTestSelector: React.FC<EnhancedTestSelectorProps> = ({
                         </option>
                         {filteredDirectories.map((dir, index) => (
                             <option key={dir.name} value={dir.name}>
-                                {getTestTypeIcon(dir.name)} {getTestTypeName(dir.name)} - {new Date(dir.date).toLocaleString('pl-PL', {
+                                {getTestTypeIcon(dir.name)} {getDisplayText(dir)} - {new Date(dir.date).toLocaleString('pl-PL', {
                                     timeZone: 'Europe/Warsaw',
                                     year: 'numeric',
                                     month: '2-digit',
@@ -202,7 +233,10 @@ const EnhancedTestSelector: React.FC<EnhancedTestSelectorProps> = ({
                             <span className="text-lg">{getTestTypeIcon(selectedDirectory)}</span>
                             <div>
                                 <p className="font-medium text-gray-900">
-                                    {formatTestName(selectedDirectory)}
+                                    {(() => {
+                                        const selectedDir = directories.find(d => d.name === selectedDirectory);
+                                        return selectedDir ? getFormattedTestName(selectedDir) : getTestTypeName(selectedDirectory);
+                                    })()}
                                 </p>
                                 <p className="text-sm text-gray-500">
                                     {getTestTypeName(selectedDirectory)} • {filteredDirectories.length} results
