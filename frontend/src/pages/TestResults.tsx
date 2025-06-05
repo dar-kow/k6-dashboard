@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchResultFiles, fetchTestResult } from '../api/results';
 import { TestFile, TestResult } from '../types/testResults';
-import DirectorySelector from '../components/DirectorySelector';
 import TestResultTabs from '../components/TestResultTabs';
 import TestResultDetail from '../components/TestResultDetail';
 import { useSingleTestPDFGenerator } from '../context/SingleTestPDFReport';
 import { useTestResults } from '../context/TestResultContext';
+
+// Import the updated DirectorySelector
+const DirectorySelector = React.lazy(() => import('../components/DirectorySelector'));
 
 const TestResults: React.FC = () => {
     const { directory } = useParams<{ directory?: string }>();
@@ -20,6 +22,23 @@ const TestResults: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState<boolean>(false);
+
+    // Auto-select latest test if none selected
+    useEffect(() => {
+        if (!selectedDirectory && directories.length > 0) {
+            // Sort directories by date to get the latest one
+            const sortedDirectories = [...directories].sort((a, b) =>
+                new Date(b.date).getTime() - new Date(a.date).getTime()
+            );
+
+            if (sortedDirectories.length > 0) {
+                const latestDirectory = sortedDirectories[0];
+                console.log('🔄 Auto-selecting latest directory:', latestDirectory.name);
+                setSelectedDirectory(latestDirectory.name);
+                navigate(`/results/${latestDirectory.name}`);
+            }
+        }
+    }, [directories, selectedDirectory, setSelectedDirectory, navigate]);
 
     useEffect(() => {
         console.log('🔍 URL Analysis:', {
