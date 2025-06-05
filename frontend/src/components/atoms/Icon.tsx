@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import React from "react";
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
