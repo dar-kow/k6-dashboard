@@ -24,6 +24,48 @@ const Dashboard: React.FC = () => {
     const [latestResults, setLatestResults] = useState<Record<string, TestResult>>({});
     const [latestResultsLoading, setLatestResultsLoading] = useState<boolean>(true);
 
+    // Helper function to get formatted test name like in TestResults
+    const getFormattedTestName = (selectedDirectory: any) => {
+        if (selectedDirectory?.testName) {
+            return selectedDirectory.testName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        if (selectedDirectory?.name?.endsWith('.json')) {
+            const fileName = selectedDirectory.name.split('/').pop() || '';
+            const extractedTestName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+            return extractedTestName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // For sequential/parallel tests, return just the type (no UUID)
+        if (selectedDirectory?.name?.includes('sequential_')) {
+            return 'Sequential Test Run';
+        }
+
+        if (selectedDirectory?.name?.includes('parallel_')) {
+            return 'Parallel Test Run';
+        }
+
+        // Fallback for directory names
+        let cleanName = selectedDirectory?.name || '';
+        cleanName = cleanName.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//, '');
+        cleanName = cleanName.replace(/^\d{8}_\d{6}_/, '');
+        cleanName = cleanName.replace(/^(sequential_|parallel_)/, '');
+
+        return cleanName.replace(/_/g, ' ').split(' ')
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
+
     // Auto-select latest directory when directories load
     useEffect(() => {
         if (directories.length > 0 && !selectedTestRun) {
@@ -49,7 +91,6 @@ const Dashboard: React.FC = () => {
                     console.log('📄 Virtual directory detected - loading single file result');
 
                     try {
-                        // Dla virtual directory, nazwa zawiera pełną ścieżkę: "repoId/timestamp_test.json"
                         const pathParts = selectedDir.name.split('/');
                         const fileName = pathParts[pathParts.length - 1];
                         const testKey = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
@@ -122,7 +163,6 @@ const Dashboard: React.FC = () => {
 
         loadLatestResults();
     }, [directories, selectedTestRun]);
-
 
     // Safe accessor function for metric values with proper type checking and defaults
     const getMetricValue = (metric: any, property: string, defaultValue: number = 0): number => {
@@ -221,7 +261,6 @@ const Dashboard: React.FC = () => {
                 return 'Invalid date';
             }
 
-            // Format in Polish timezone
             return date.toLocaleString("pl-PL", {
                 timeZone: "Europe/Warsaw",
                 year: 'numeric',
@@ -236,7 +275,6 @@ const Dashboard: React.FC = () => {
             return 'Date format error';
         }
     };
-
 
     // Prepare data for Response Time Comparison Chart
     const getResponseTimeComparisonData = () => {
@@ -293,12 +331,9 @@ const Dashboard: React.FC = () => {
     };
 
     const handleCompareWith = (compareRunId: string) => {
-        // For now, we'll just show an alert. In the future, this could open a comparison view
         alert(`Comparison feature coming soon!\n\nWould compare:\n• Current: ${selectedTestRun}\n• With: ${compareRunId}`);
-
-        // TODO: Implement comparison logic
-        // This could navigate to a comparison page or show side-by-side charts
     };
+
     const getCheckResultsData = () => {
         const checkData: { name: string, passes: number, fails: number }[] = [];
 
@@ -447,7 +482,7 @@ const Dashboard: React.FC = () => {
                                                 return `Repository ${repoId.substring(0, 8)}...`;
                                             }
 
-                                            return 'MAF K6 Test'; // Default repository name
+                                            return 'MAF K6 Test';
                                         })() : 'None selected'
                                     }</span>
                                 </p>
@@ -456,28 +491,7 @@ const Dashboard: React.FC = () => {
                                     <span className="font-medium">Test:</span> <span className="text-blue-600">{
                                         selectedTestRun ? (() => {
                                             const selectedDir = directories.find(d => d.name === selectedTestRun);
-
-                                            if (selectedDir?.testName) {
-                                                return selectedDir.testName
-                                                    .replace(/-/g, ' ')
-                                                    .replace(/_/g, ' ')
-                                                    .split(' ')
-                                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                                                    .join(' ');
-                                            }
-
-                                            if (selectedDir?.name.endsWith('.json')) {
-                                                const fileName = selectedDir.name.split('/').pop() || '';
-                                                const testName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
-                                                return testName
-                                                    .replace(/-/g, ' ')
-                                                    .replace(/_/g, ' ')
-                                                    .split(' ')
-                                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                                                    .join(' ');
-                                            }
-
-                                            return 'Contractors Test'; // Default fallback
+                                            return getFormattedTestName(selectedDir);
                                         })() : 'None selected'
                                     }</span>
                                 </p>
