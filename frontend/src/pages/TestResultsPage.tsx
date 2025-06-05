@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import React, { useState, useEffect, useMemo, useCallback } from "react"; // Added useMemo, useCallback
 import { useParams, useNavigate, useLocation } from "react-router-dom"; // Added useLocation
 import { fetchResultFiles, fetchTestResult } from "../api/results";
@@ -47,9 +46,9 @@ const TestResultsPage: React.FC = () => {
     useEffect(() => {
         const loadFiles = async () => {
             if (!selectedDirectory || directoriesLoading) { // Dont load if parent dir context is loading
-                 setFiles([]); // Clear files if no selectedDirectory
-                 setSelectedFile(null);
-                 setSelectedTestResult(null);
+                setFiles([]); // Clear files if no selectedDirectory
+                setSelectedFile(null);
+                setSelectedTestResult(null);
                 return;
             }
             setLoading(true);
@@ -147,7 +146,7 @@ const TestResultsPage: React.FC = () => {
     }
 
     if (directoriesError) {
-         return <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"><p>{directoriesError}</p></div>;
+        return <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"><p>{directoriesError}</p></div>;
     }
 
     return (

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { fetchTestResult, fetchResultFiles } from "../api/results";
@@ -131,9 +130,9 @@ const DashboardPage: React.FC = () => {
             const rate = getMetricValue(result.metrics?.http_req_failed, "value");
             return total + rate;
         }, 0);
-         // This is an average of failure rates, not a true overall error rate if request counts vary wildly.
-         // For a true overall rate: sum of all failed requests / sum of all requests.
-         // However, sticking to the original logic for now.
+        // This is an average of failure rates, not a true overall error rate if request counts vary wildly.
+        // For a true overall rate: sum of all failed requests / sum of all requests.
+        // However, sticking to the original logic for now.
         return ((totalFailedValueSum / values.length) * 100).toFixed(2);
     }, [latestResults, getMetricValue]);
 
@@ -169,12 +168,12 @@ const DashboardPage: React.FC = () => {
     const successErrorData = useMemo(() => {
         const totalReq = totalRequests; // Use memoized totalRequests
         if (totalReq === 0 && Object.keys(latestResults).length > 0) { // Handle if totalRequests is 0 but there are results (e.g. all results have 0 requests)
-             let totalErrorsInResults = 0;
-             Object.values(latestResults).forEach(result => {
+            let totalErrorsInResults = 0;
+            Object.values(latestResults).forEach(result => {
                 totalErrorsInResults += getMetricValue(result.metrics?.http_reqs, "count") * getMetricValue(result.metrics?.http_req_failed, "value");
-             });
-             if(totalErrorsInResults > 0) return [{ name: "Successful", value: 0 }, { name: "Failed", value: Math.round(totalErrorsInResults) }];
-             return [{ name: "Successful", value: 0 }, { name: "Failed", value: 0 }];
+            });
+            if (totalErrorsInResults > 0) return [{ name: "Successful", value: 0 }, { name: "Failed", value: Math.round(totalErrorsInResults) }];
+            return [{ name: "Successful", value: 0 }, { name: "Failed", value: 0 }];
         }
 
         const totalErrors = Object.values(latestResults).reduce((sum, result) =>
@@ -266,7 +265,7 @@ const DashboardPage: React.FC = () => {
             return `${selectedTestRunDetails.repositoryName} - ${selectedTestRunDetails.name.includes("sequential_") ? "Sequential Tests" : selectedTestRunDetails.name.includes("parallel_") ? "Parallel Tests" : selectedTestRunDetails.name.endsWith(".json") ? "Single Test" : "Test Suite"}`;
         }
         if (selectedTestRunDetails.testName) {
-             return selectedTestRunDetails.testName.replace(/-/g, " ").replace(/_/g, " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+            return selectedTestRunDetails.testName.replace(/-/g, " ").replace(/_/g, " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
         }
         if (selectedTestRunDetails.name.endsWith(".json")) {
             const fileName = selectedTestRunDetails.name.split("/").pop() || "";
