@@ -1,3 +1,4 @@
+import React, { memo } from "react";
 import React from 'react';
 import {
     AreaChart as RechartsAreaChart,
@@ -85,4 +86,4 @@ const AreaChart: React.FC<AreaChartProps> = ({
     );
 };
 
-export default AreaChart;
+export default memo(AreaChart);

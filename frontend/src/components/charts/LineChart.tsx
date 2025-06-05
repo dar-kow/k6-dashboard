@@ -1,3 +1,4 @@
+import React, { memo } from "react";
 import React from 'react';
 import {
     LineChart as RechartsLineChart,
@@ -41,4 +42,4 @@ const LineChart: React.FC<LineChartProps> = ({ data }) => {
     );
 };
 
-export default LineChart;
+export default memo(LineChart);

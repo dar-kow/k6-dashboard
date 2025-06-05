@@ -1,6 +1,6 @@
 import React from 'react';
-import { TestResult } from '../types/testResults';
-import MetricCard from './MetricCard';
+import { TestResult } from '../../types/testResults';
+import MetricDisplay from "../molecules/MetricDisplay";
 
 interface TestResultDetailProps {
     testResult: TestResult;
@@ -147,22 +147,22 @@ const TestResultDetail: React.FC<TestResultDetailProps> = ({
                     )}
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <MetricCard
+                        <MetricDisplay
                             title="Total Requests"
                             value={totalRequests.toLocaleString()}
                             type="number"
                         />
-                        <MetricCard
+                        <MetricDisplay
                             title="Request Rate"
                             value={`${safeFormat(requestRate)}/s`}
                             type="rate"
                         />
-                        <MetricCard
+                        <MetricDisplay
                             title="Avg Response Time"
                             value={`${safeFormat(avgResponseTime)} ms`}
                             type="time"
                         />
-                        <MetricCard
+                        <MetricDisplay
                             title="Error Rate"
                             value={`${safeFormat(errorRate)}%`}
                             type={errorRate > 5 ? 'error' : 'success'}

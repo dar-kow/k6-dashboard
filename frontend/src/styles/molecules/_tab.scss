@@ -1,0 +1,23 @@
+.m-tab { // "m-" prefix for molecule, though Tab can be seen as an Atom too
+  padding: 0.75rem 1rem; // py-3 px-4 like
+  font-weight: 500; // medium
+  border-radius: 0.375rem; // rounded-md
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  cursor: pointer;
+  border: none; // Remove default button border
+  background-color: transparent;
+
+  &--active {
+    // Example: Tailwinds bg-blue-600 text-white
+    background-color: #2563eb; // blue-600
+    color: white;
+  }
+
+  &:not(.m-tab--active) {
+    // Example: Tailwinds text-gray-700 hover:bg-gray-100
+    color: #374151; // gray-700
+    &:hover {
+      background-color: #f3f4f6; // gray-100
+    }
+  }
+}

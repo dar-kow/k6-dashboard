@@ -1,0 +1,27 @@
+.m-card {
+  background-color: white;
+  border-radius: 0.5rem; // rounded-lg
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); // shadow
+  padding: 1rem; // p-4, common padding
+
+  &__header {
+    padding-bottom: 0.75rem; // pb-3
+    border-bottom: 1px solid #e5e7eb; // border-gray-200
+    margin-bottom: 0.75rem; // mb-3
+  }
+
+  &__title {
+    font-size: 1.125rem; // text-lg
+    font-weight: 600;   // font-semibold
+  }
+
+  &__body {
+    // Styles for card body content
+  }
+
+  &__footer {
+    padding-top: 0.75rem; // pt-3
+    border-top: 1px solid #e5e7eb; // border-gray-200
+    margin-top: 0.75rem; // mt-3
+  }
+}

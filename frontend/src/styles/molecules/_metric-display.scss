@@ -1,0 +1,93 @@
+.metric-display {
+  // Base styles for the MetricDisplay container
+  // Example: Tailwinds p-4 rounded-lg shadow
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+
+  // Default text and background colors (can be overridden by type/status)
+  background-color: #f9fafb; // gray-50
+  color: #1f2937; // gray-800
+
+  .metric-display__content {
+    display: flex;
+    align-items: center;
+  }
+
+  .metric-display__icon {
+    // Example: Tailwinds mr-3 h-5 w-5
+    margin-right: 0.75rem;
+    height: 1.25rem; // h-5
+    width: 1.25rem;  // w-5
+    // Icon color can be inherited or set based on type/status
+  }
+
+  .metric-display__text-content {
+    // Container for title and value
+  }
+
+  .metric-display__title {
+    // Example: Tailwinds text-xs font-medium text-gray-500
+    font-size: 0.75rem; // text-xs
+    font-weight: 500;
+    color: #6b7280; // gray-500
+    margin-bottom: 0.25rem;
+  }
+
+  .metric-display__value {
+    // Example: Tailwinds text-lg font-semibold
+    font-size: 1.125rem; // text-lg
+    font-weight: 600;
+  }
+
+  .metric-display__unit {
+    font-size: 0.875rem; // text-sm
+    margin-left: 0.25rem;
+  }
+
+  // Type and Status variations
+  // These would correspond to props in MetricDisplay.tsx
+  &--type-health {
+    &.metric-display--status-healthy {
+      // Example: Tailwinds bg-green-100 text-green-700
+      background-color: #d1fae5; // green-100
+      color: #047857; // green-700
+      .metric-display__title { color: #059669; } // green-600
+      .metric-display__icon { color: #047857; }
+    }
+    &.metric-display--status-warning {
+      background-color: #fef3c7; // yellow-100
+      color: #b45309; // yellow-700
+      .metric-display__title { color: #d97706; } // yellow-600
+      .metric-display__icon { color: #b45309; }
+    }
+    &.metric-display--status-critical {
+      background-color: #fee2e2; // red-100
+      color: #b91c1c; // red-700
+      .metric-display__title { color: #dc2626; } // red-600
+      .metric-display__icon { color: #b91c1c; }
+    }
+    &.metric-display--status-unknown {
+      background-color: #e5e7eb; // gray-200
+      color: #4b5563; // gray-600
+      .metric-display__title { color: #6b7280; } // gray-500
+      .metric-display__icon { color: #4b5563; }
+    }
+  }
+
+  &--type-error,
+  &--type-rate.metric-display--value-high-error { // Hypothetical class if value indicates error
+    background-color: #fee2e2; // red-50
+    color: #b91c1c; // red-700
+    .metric-display__title { color: #dc2626; }
+    .metric-display__icon { color: #b91c1c; }
+  }
+
+  &--type-success,
+  &--type-rate.metric-display--value-low-error { // Hypothetical class if value indicates success
+    background-color: #dcfce7; // green-50
+    color: #166534; // green-700
+    .metric-display__title { color: #15803d; }
+    .metric-display__icon { color: #166534; }
+  }
+}

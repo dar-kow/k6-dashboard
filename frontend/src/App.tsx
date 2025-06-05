@@ -2,16 +2,16 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './store';
-import Layout from './components/Layout';
+import DefaultLayout from "./components/templates/DefaultLayout";
 import LoadingSpinner from './components/atoms/LoadingSpinner';
 import { TestResultProvider } from './context/TestResultContext';
 import { RepositoryProvider } from './context/RepositoryContext';
 import './styles/main.scss';
 
 // Lazy-loaded pages
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const TestResults = lazy(() => import('./pages/TestResults'));
-const TestRunner = lazy(() => import('./pages/TestRunner'));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const TestResultsPage = lazy(() => import("./pages/TestResultsPage"));
+const TestRunnerPage = lazy(() => import("./pages/TestRunnerPage"));
 
 function App() {
     return (
@@ -19,17 +19,17 @@ function App() {
             <RepositoryProvider>
                 <TestResultProvider>
                     <Router>
-                        <Layout>
+                        <DefaultLayout>
                             <Suspense fallback={<LoadingSpinner fullPage />}>
                                 <Routes>
-                                    <Route path="/" element={<Dashboard />} />
-                                    <Route path="/results" element={<TestResults />} />
-                                    <Route path="/results/:directory" element={<TestResults />} />
-                                    <Route path="/results/:repositoryId/*" element={<TestResults />} />
-                                    <Route path="/test-runner" element={<TestRunner />} />
+                                    <Route path="/" element={<DashboardPage />} />
+                                    <Route path="/results" element={<TestResultsPage />} />
+                                    <Route path="/results/:directory" element={<TestResultsPage />} />
+                                    <Route path="/results/:repositoryId/*" element={<TestResultsPage />} />
+                                    <Route path="/test-runner" element={<TestRunnerPage />} />
                                 </Routes>
                             </Suspense>
-                        </Layout>
+                        </DefaultLayout>
                     </Router>
                 </TestResultProvider>
             </RepositoryProvider>

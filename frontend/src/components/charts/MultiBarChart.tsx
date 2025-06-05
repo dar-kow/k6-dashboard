@@ -1,3 +1,4 @@
+import React, { memo } from "react";
 import React from 'react';
 import {
     BarChart as RechartsBarChart,
@@ -106,4 +107,4 @@ const MultiBarChart: React.FC<MultiBarChartProps> = ({
     );
 };
 
-export default MultiBarChart;
+export default memo(MultiBarChart);

@@ -1,0 +1,26 @@
+.m-tab-group {
+  // Example: Tailwinds bg-white rounded-lg shadow-md mb-6
+  background-color: white;
+  border-radius: 0.5rem; // rounded-lg
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); // shadow-md
+  margin-bottom: 1.5rem; // mb-6
+
+  &__nav {
+    // Example: Tailwinds border-b border-gray-200
+    border-bottom: 1px solid #e5e7eb; // gray-200
+  }
+
+  &__list {
+    // Example: Tailwinds flex space-x-2 overflow-x-auto p-2
+    display: flex;
+    gap: 0.5rem; // space-x-2
+    overflow-x: auto;
+    padding: 0.5rem; // p-2
+  }
+
+  &__empty-message {
+    // Example: Tailwinds px-4 py-2 text-gray-500
+    padding: 0.5rem 1rem;
+    color: #6b7280; // gray-500
+  }
+}

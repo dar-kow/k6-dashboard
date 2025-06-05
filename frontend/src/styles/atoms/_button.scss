@@ -1,0 +1,48 @@
+.btn {
+  // Common button styles - placeholder, to be refined
+  // Example: Tailwinds py-2 px-4 rounded font-semibold
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+
+  // Variants - these would map to Button.tsx variant prop
+  &--primary {
+    // Example: Tailwinds bg-blue-500 text-white hover:bg-blue-700
+    background-color: #3b82f6; // blue-500
+    color: white;
+    border: 1px solid #3b82f6;
+    &:hover {
+      background-color: #2563eb; // blue-700
+      border-color: #2563eb;
+    }
+  }
+
+  &--secondary {
+    background-color: #6b7280; // gray-500
+    color: white;
+    border: 1px solid #6b7280;
+    &:hover {
+      background-color: #4b5563; // gray-600
+      border-color: #4b5563;
+    }
+  }
+
+  &--danger {
+    background-color: #ef4444; // red-500
+    color: white;
+    border: 1px solid #ef4444;
+    &:hover {
+      background-color: #dc2626; // red-600
+      border-color: #dc2626;
+    }
+  }
+
+  &--disabled {
+    background-color: #d1d5db; // gray-300
+    color: #6b7280; // gray-500
+    cursor: not-allowed;
+    border-color: #d1d5db;
+  }
+}

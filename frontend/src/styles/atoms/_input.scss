@@ -1,0 +1,18 @@
+.a-input {
+  border: 1px solid #d1d5db; // gray-300
+  padding: 0.5rem 0.75rem;   // Tailwinds p-2 with a bit more horizontal for typical input
+  border-radius: 0.25rem;  // rounded
+  width: 100%;             // Common default for inputs
+
+  &:focus {
+    border-color: #3b82f6; // blue-500
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); // Focus ring
+    outline: none;
+  }
+
+  &--disabled {
+    background-color: #f3f4f6; // gray-100
+    color: #6b7280;       // gray-500
+    cursor: not-allowed;
+  }
+}

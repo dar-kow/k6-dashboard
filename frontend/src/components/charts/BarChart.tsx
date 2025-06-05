@@ -1,3 +1,4 @@
+import React, { memo } from "react";
 import React from 'react';
 import {
     BarChart as RechartsBarChart,
@@ -84,4 +85,4 @@ const BarChart: React.FC<BarChartProps> = ({
     );
 };
 
-export default BarChart;
+export default memo(BarChart);

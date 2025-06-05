@@ -1,3 +1,4 @@
+import React, { memo } from "react";
 import React from 'react';
 import {
     PieChart as RechartsPieChart,
@@ -81,4 +82,4 @@ const PieChart: React.FC<PieChartProps> = ({
     );
 };
 
-export default PieChart;
+export default memo(PieChart);

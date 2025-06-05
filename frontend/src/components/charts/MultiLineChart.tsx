@@ -1,3 +1,4 @@
+import React, { memo } from "react";
 import React from 'react';
 import {
     LineChart as RechartsLineChart,
@@ -106,4 +107,4 @@ const MultiLineChart: React.FC<MultiLineChartProps> = ({
     );
 };
 
-export default MultiLineChart;
+export default memo(MultiLineChart);

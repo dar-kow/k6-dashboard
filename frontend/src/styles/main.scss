@@ -1,159 +1,45 @@
-@import 'variables';
-@import 'mixins';
+@import "variables";
+@import "mixins";
 
-// Use proper Tailwind directives instead of @import
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+// Base styles (if any, e.g., body, html)
+body { font-family: sans-serif; margin: 0; background-color: #f4f7f6; } // Basic body style
 
-// Reset & Base
-html,
-body {
-    height: 100%;
-    font-family: $font-family-base;
-    font-size: $font-size-base;
-    color: $dark;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
+// Atoms
+@import "atoms/button";
+@import "atoms/input";
+@import "atoms/select";
+@import "atoms/icon";
+@import "atoms/loading-spinner";
 
-#root {
-    height: 100%;
-}
+// Molecules
+@import "molecules/card";
+@import "molecules/chart-container";
+@import "molecules/form-field";
+@import "molecules/metric-display";
+@import "molecules/tab";
+@import "molecules/tab-group";
+@import "molecules/test-selector";
 
-// Custom component styles
-.card {
-    @include card;
+// Organisms
+@import "organisms/directory-selector";
+@import "organisms/enhanced-test-selector";
+@import "organisms/header";
+@import "organisms/performance-summary";
+@import "organisms/repository-selector";
+@import "organisms/terminal";
+@import "organisms/test-result-detail";
+@import "organisms/test-run-comparison";
+@import "organisms/test-run-selector";
 
-    &--hover {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+// Templates
+@import "templates/default-layout";
 
-        &:hover {
-            transform: translateY(-4px);
-            box-shadow: $shadow-lg;
-        }
-    }
-}
+// Pages
+@import "pages/dashboard-page";
+@import "pages/test-results-page";
+@import "pages/test-runner-page";
 
-.btn {
-    @include button-base;
-
-    &--primary {
-        @include button-variant($primary, white, darken($primary, 10%));
-    }
-
-    &--secondary {
-        @include button-variant($secondary, white, darken($secondary, 10%));
-    }
-
-    &--danger {
-        @include button-variant($danger, white, darken($danger, 10%));
-    }
-
-    &--success {
-        @include button-variant($success, white, darken($success, 10%));
-    }
-
-    &--warning {
-        @include button-variant($warning, white, darken($warning, 10%));
-    }
-
-    &--outline {
-        background: transparent;
-        border: 1px solid currentColor;
-
-        &.btn--primary {
-            color: $primary;
-
-            &:hover:not(:disabled) {
-                background-color: rgba($primary, 0.1);
-            }
-        }
-    }
-
-    &--icon {
-        padding: $spacing-xs;
-        border-radius: $border-radius-full;
-    }
-}
-
-// Custom transitions
-.fade-enter {
-    opacity: 0;
-}
-
-.fade-enter-active {
-    opacity: 1;
-    transition: opacity 300ms;
-}
-
-.fade-exit {
-    opacity: 1;
-}
-
-.fade-exit-active {
-    opacity: 0;
-    transition: opacity 300ms;
-}
-
-// Terminal styling
-.terminal {
-    @include custom-scrollbar;
-    background-color: #1a1a1a;
-    color: #f8f8f8;
-    font-family: "Consolas", monospace;
-    padding: $spacing-md;
-    border-radius: $border-radius-md;
-
-    &__line {
-        margin: 0;
-        padding: 2px 0;
-
-        &--success {
-            color: #4ade80;
-        }
-
-        &--error {
-            color: #f87171;
-        }
-
-        &--warning {
-            color: #fbbf24;
-        }
-
-        &--info {
-            color: #60a5fa;
-        }
-    }
-}
-
-// Dashboard components
-.metric-card {
-    @include card;
-    @include flex(row, flex-start, center);
-
-    &__icon {
-        @include flex-center;
-        width: 48px;
-        height: 48px;
-        border-radius: $border-radius-md;
-        margin-right: $spacing-md;
-    }
-
-    &__content {
-        flex: 1;
-    }
-
-    &__title {
-        font-size: 0.875rem;
-        color: #6b7280;
-        margin: 0 0 4px 0;
-    }
-
-    &__value {
-        font-size: 1.5rem;
-        font-weight: $font-weight-bold;
-        margin: 0;
-    }
-}
+// Tailwind utilities (imported last)
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
