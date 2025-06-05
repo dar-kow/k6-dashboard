@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-// In EnhancedTestSelector.tsx
 import React, { useState, useMemo, useCallback } from "react"; // Added useCallback
 import { TestDirectory } from "../../types/testResults"; // Adjusted path
 import Select from "../atoms/Select"; // Using Select Atom
@@ -83,10 +81,10 @@ const EnhancedTestSelector: React.FC<EnhancedTestSelectorProps> = ({
                         <option value="" disabled>{loading ? "Loading tests..." : (filteredDirectories.length === 0 ? "No matching tests" : "Select a test run")}</option>
                         {/* Optgroups for better structure if many items */}
                         {Object.entries(groupedDirectories).map(([groupName, dirs]) => (
-                             <optgroup label={groupName.replace("_", " / ").toUpperCase()} key={groupName}>
+                            <optgroup label={groupName.replace("_", " / ").toUpperCase()} key={groupName}>
                                 {dirs.map((dir, index) => (
                                     <option key={dir.name} value={dir.name}>
-                                        {getTestTypeIcon(dir.name)} {getTestTypeName(dir.name)} - {new Date(dir.date).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"})}
+                                        {getTestTypeIcon(dir.name)} {getTestTypeName(dir.name)} - {new Date(dir.date).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                                         {/* Logic for "Latest" needs to compare with the absolute latest, not index within filtered group */}
                                         {directories.length > 0 && directories[0].name === dir.name && " 🆕 (Latest Overall)"}
                                     </option>

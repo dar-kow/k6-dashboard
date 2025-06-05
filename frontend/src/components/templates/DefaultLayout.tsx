@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icon from "../atoms/Icon"; // Import the real Icon atom

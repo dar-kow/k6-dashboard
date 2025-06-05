@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useRepository } from '../context/RepositoryContext';
-import { createRepository, syncRepository, deleteRepository } from '../api/repositories';
+import { useRepository } from '../../context/RepositoryContext';
+import { createRepository, syncRepository, deleteRepository } from '../../api/repositories';
 
 const RepositorySelector: React.FC = () => {
     const { repositories, selectedRepository, selectRepository, refreshRepositories } = useRepository();

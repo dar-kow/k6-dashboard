@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { TestResult } from '../types/testResults';
+import { TestResult } from '../../types/testResults';
 
 interface PerformanceSummaryProps {
     results: Record<string, TestResult>;
@@ -54,14 +54,14 @@ const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ results, onRunN
 
     const overallScore = calculateOverallScore();
     const totalTests = Object.keys(results).length;
-    const totalRequests = Object.values(results).reduce((sum, test) => 
+    const totalRequests = Object.values(results).reduce((sum, test) =>
         sum + getMetricValue(test.metrics?.http_reqs, 'count'), 0);
-    const avgResponseTime = Object.values(results).reduce((sum, test) => 
+    const avgResponseTime = Object.values(results).reduce((sum, test) =>
         sum + getMetricValue(test.metrics?.http_req_duration, 'avg'), 0) / Math.max(1, totalTests);
 
     const recommendations = [
         ...(avgResponseTime > 1000 ? ['Consider optimizing response times - some endpoints exceed 1 second'] : []),
-        ...(Object.values(results).some(test => getMetricValue(test.metrics?.http_req_failed, 'value') > 0) 
+        ...(Object.values(results).some(test => getMetricValue(test.metrics?.http_req_failed, 'value') > 0)
             ? ['Investigate error sources to improve reliability'] : []),
         ...(totalTests < 3 ? ['Consider adding more test scenarios for comprehensive coverage'] : []),
         ...(overallScore >= 90 ? ['Excellent performance! Consider stress testing with higher loads'] : [])
@@ -100,13 +100,13 @@ const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ results, onRunN
                 <div className="space-y-4">
                     <h3 className="font-medium text-gray-900">Performance Insights</h3>
                     <div className="space-y-2">
-                        {Object.values(results).every(test => 
+                        {Object.values(results).every(test =>
                             getMetricValue(test.metrics?.http_req_failed, 'value') === 0) && (
-                            <div className="flex items-center text-sm text-green-600">
-                                <span className="mr-2">✅</span>
-                                <span>Perfect reliability</span>
-                            </div>
-                        )}
+                                <div className="flex items-center text-sm text-green-600">
+                                    <span className="mr-2">✅</span>
+                                    <span>Perfect reliability</span>
+                                </div>
+                            )}
                         {avgResponseTime <= 200 && (
                             <div className="flex items-center text-sm text-green-600">
                                 <span className="mr-2">⚡</span>
@@ -153,7 +153,7 @@ const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ results, onRunN
                         <span className="mr-2">🚀</span>
                         <span>Run New Tests</span>
                     </button>
-                    
+
                     <div className="text-sm text-gray-500">
                         Last updated: {new Date().toLocaleTimeString('pl-PL')}
                     </div>
