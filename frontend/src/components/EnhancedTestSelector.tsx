@@ -168,19 +168,58 @@ const EnhancedTestSelector: React.FC<EnhancedTestSelectorProps> = ({
                         <option value="" disabled>
                             {loading ? 'Loading tests...' : 'Select a test run'}
                         </option>
-                        {filteredDirectories.map((dir, index) => (
-                            <option key={dir.name} value={dir.name}>
-                                {getTestTypeIcon(dir.name)} {getDisplayText(dir)} - {new Date(dir.date).toLocaleString('pl-PL', {
-                                    timeZone: 'Europe/Warsaw',
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    second: '2-digit'
-                                })}{index === 0 && ' 🆕 (Latest)'}
-                            </option>
-                        ))}
+
+                        {/* Group directories like in TestResults */}
+                        {(() => {
+                            const groupedDirectories = filteredDirectories.reduce((groups, dir) => {
+                                const type = dir.name.endsWith('.json') ? 'individual' : 'sequential';
+                                if (!groups[type]) groups[type] = [];
+                                groups[type].push(dir);
+                                return groups;
+                            }, {} as Record<string, typeof filteredDirectories>);
+
+                            return (
+                                <>
+                                    {/* Sequential/Parallel Runs */}
+                                    {groupedDirectories.sequential && groupedDirectories.sequential.length > 0 && (
+                                        <optgroup label="🔄 Sequential & Parallel Test Runs">
+                                            {groupedDirectories.sequential.map((dir, index) => (
+                                                <option key={dir.name} value={dir.name}>
+                                                    {getTestTypeIcon(dir.name)} {getDisplayText(dir)} - {new Date(dir.date).toLocaleString('pl-PL', {
+                                                        timeZone: 'Europe/Warsaw',
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit'
+                                                    })}{index === 0 && filteredDirectories[0].name === dir.name && ' 🆕 (Latest)'}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+
+                                    {/* Individual Tests */}
+                                    {groupedDirectories.individual && groupedDirectories.individual.length > 0 && (
+                                        <optgroup label="🎯 Individual Test Results">
+                                            {groupedDirectories.individual.map((dir, index) => (
+                                                <option key={dir.name} value={dir.name}>
+                                                    {getTestTypeIcon(dir.name)} {getDisplayText(dir)} - {new Date(dir.date).toLocaleString('pl-PL', {
+                                                        timeZone: 'Europe/Warsaw',
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit'
+                                                    })}{index === 0 && filteredDirectories[0].name === dir.name && ' 🆕 (Latest)'}
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </select>
                 </div>
 
