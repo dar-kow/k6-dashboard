@@ -11,14 +11,60 @@ import AreaChart from '../components/charts/AreaChart';
 import MultiLineChart from '../components/charts/MultiLineChart';
 import TestRunSelector from '../components/TestRunSelector';
 import TestRunComparison from '../components/TestRunComparison';
+import EnhancedTestSelector from '../components/EnhancedTestSelector';
+import PerformanceSummary from '../components/PerformanceSummary';
 import { useTestResults } from '../context/TestResultContext';
 import ExportPDFButton from '../context/ExportPDFButton';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
     const { directories, loading, error } = useTestResults();
+    const navigate = useNavigate();
     const [selectedTestRun, setSelectedTestRun] = useState<string | null>(null);
     const [latestResults, setLatestResults] = useState<Record<string, TestResult>>({});
     const [latestResultsLoading, setLatestResultsLoading] = useState<boolean>(true);
+
+    // Helper function to get formatted test name like in TestResults
+    const getFormattedTestName = (selectedDirectory: any) => {
+        if (selectedDirectory?.testName) {
+            return selectedDirectory.testName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        if (selectedDirectory?.name?.endsWith('.json')) {
+            const fileName = selectedDirectory.name.split('/').pop() || '';
+            const extractedTestName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+            return extractedTestName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // For sequential/parallel tests, return just the type (no UUID)
+        if (selectedDirectory?.name?.includes('sequential_')) {
+            return 'Sequential Test Run';
+        }
+
+        if (selectedDirectory?.name?.includes('parallel_')) {
+            return 'Parallel Test Run';
+        }
+
+        // Fallback for directory names
+        let cleanName = selectedDirectory?.name || '';
+        cleanName = cleanName.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//, '');
+        cleanName = cleanName.replace(/^\d{8}_\d{6}_/, '');
+        cleanName = cleanName.replace(/^(sequential_|parallel_)/, '');
+
+        return cleanName.replace(/_/g, ' ').split(' ')
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
 
     // Auto-select latest directory when directories load
     useEffect(() => {
@@ -45,7 +91,6 @@ const Dashboard: React.FC = () => {
                     console.log('📄 Virtual directory detected - loading single file result');
 
                     try {
-                        // Dla virtual directory, nazwa zawiera pełną ścieżkę: "repoId/timestamp_test.json"
                         const pathParts = selectedDir.name.split('/');
                         const fileName = pathParts[pathParts.length - 1];
                         const testKey = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
@@ -118,7 +163,6 @@ const Dashboard: React.FC = () => {
 
         loadLatestResults();
     }, [directories, selectedTestRun]);
-
 
     // Safe accessor function for metric values with proper type checking and defaults
     const getMetricValue = (metric: any, property: string, defaultValue: number = 0): number => {
@@ -217,7 +261,6 @@ const Dashboard: React.FC = () => {
                 return 'Invalid date';
             }
 
-            // Format in Polish timezone
             return date.toLocaleString("pl-PL", {
                 timeZone: "Europe/Warsaw",
                 year: 'numeric',
@@ -232,7 +275,6 @@ const Dashboard: React.FC = () => {
             return 'Date format error';
         }
     };
-
 
     // Prepare data for Response Time Comparison Chart
     const getResponseTimeComparisonData = () => {
@@ -289,12 +331,9 @@ const Dashboard: React.FC = () => {
     };
 
     const handleCompareWith = (compareRunId: string) => {
-        // For now, we'll just show an alert. In the future, this could open a comparison view
         alert(`Comparison feature coming soon!\n\nWould compare:\n• Current: ${selectedTestRun}\n• With: ${compareRunId}`);
-
-        // TODO: Implement comparison logic
-        // This could navigate to a comparison page or show side-by-side charts
     };
+
     const getCheckResultsData = () => {
         const checkData: { name: string, passes: number, fails: number }[] = [];
 
@@ -349,8 +388,8 @@ const Dashboard: React.FC = () => {
                 </div>
             ) : (
                 <>
-                    {/* Test Run Selector */}
-                    <TestRunSelector
+                    {/* Enhanced Test Run Selector */}
+                    <EnhancedTestSelector
                         directories={directories}
                         selectedDirectory={selectedTestRun}
                         onDirectoryChange={setSelectedTestRun}
@@ -395,19 +434,18 @@ const Dashboard: React.FC = () => {
                         <div className="flex justify-between items-start mb-4">
                             <h2 className="text-xl font-semibold">Selected Test Run Analysis</h2>
 
-                            {/* Test Run Type Badge */}
+                            {/* Enhanced Test Type Badge */}
                             {selectedTestRun && (
                                 <div className="flex items-center space-x-2">
-                                    {/* 🔧 POPRAWKA: Pokazuj typ testu na podstawie danych */}
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedTestRun.includes('sequential_') ? 'bg-blue-100 text-blue-800' :
                                         selectedTestRun.includes('parallel_') ? 'bg-green-100 text-green-800' :
                                             selectedTestRun.endsWith('.json') ? 'bg-purple-100 text-purple-800' :
                                                 'bg-gray-100 text-gray-800'
                                         }`}>
-                                        {selectedTestRun.includes('sequential_') ? '📋 Sequential' :
-                                            selectedTestRun.includes('parallel_') ? '⚡ Parallel' :
-                                                selectedTestRun.endsWith('.json') ? '🎯 Individual Test' :
-                                                    '📊 Test Run'}
+                                        {selectedTestRun.includes('sequential_') ? '📋 Sequential Tests' :
+                                            selectedTestRun.includes('parallel_') ? '⚡ Parallel Tests' :
+                                                selectedTestRun.endsWith('.json') ? '🎯 Single Test' :
+                                                    '📊 Test Suite'}
                                     </span>
 
                                     {selectedTestRun === directories[0]?.name && (
@@ -415,6 +453,10 @@ const Dashboard: React.FC = () => {
                                             🆕 Latest
                                         </span>
                                     )}
+
+                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                        {Object.keys(latestResults).length} test(s)
+                                    </span>
                                 </div>
                             )}
                         </div>
@@ -426,79 +468,32 @@ const Dashboard: React.FC = () => {
                                 </p>
 
                                 <p className="text-gray-600 mt-2">
-                                    <span className="font-medium">Repository:</span> {
+                                    <span className="font-medium">Repository:</span> <span className="text-green-600 font-medium">{
                                         selectedTestRun ? (() => {
                                             const selectedDir = directories.find(d => d.name === selectedTestRun);
-                                            console.log(`🔍 Dashboard repository lookup:`, {
-                                                selectedTestRun,
-                                                selectedDir: selectedDir ? {
-                                                    name: selectedDir.name,
-                                                    repositoryName: selectedDir.repositoryName,
-                                                    repositoryId: selectedDir.repositoryId,
-                                                    testName: selectedDir.testName
-                                                } : null
-                                            });
 
                                             if (selectedDir?.repositoryName) {
-                                                console.log(`✅ Using repository name: ${selectedDir.repositoryName}`);
                                                 return selectedDir.repositoryName;
                                             }
 
                                             if (selectedDir?.name.includes('/')) {
                                                 const parts = selectedDir.name.split('/');
                                                 const repoId = parts[0];
-                                                console.log(`⚠️ No repository name, using fallback for ID: ${repoId}`);
                                                 return `Repository ${repoId.substring(0, 8)}...`;
                                             }
 
-                                            console.log(`❌ No repository info available`);
-                                            return 'Default Tests';
+                                            return 'MAF K6 Test';
                                         })() : 'None selected'
-                                    }
+                                    }</span>
                                 </p>
 
                                 <p className="text-gray-600 mt-2">
-                                    <span className="font-medium">Test:</span> {
+                                    <span className="font-medium">Test:</span> <span className="text-blue-600">{
                                         selectedTestRun ? (() => {
                                             const selectedDir = directories.find(d => d.name === selectedTestRun);
-                                            console.log(`🔍 Dashboard test lookup:`, {
-                                                selectedTestRun,
-                                                selectedDir: selectedDir ? {
-                                                    name: selectedDir.name,
-                                                    testName: selectedDir.testName,
-                                                    isVirtual: selectedDir.name.endsWith('.json')
-                                                } : null
-                                            });
-
-                                            if (selectedDir?.testName) {
-                                                const formattedTestName = selectedDir.testName
-                                                    .replace(/-/g, ' ')
-                                                    .replace(/_/g, ' ')
-                                                    .split(' ')
-                                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                                                    .join(' ');
-                                                console.log(`✅ Using formatted test name: ${formattedTestName}`);
-                                                return formattedTestName;
-                                            }
-
-                                            if (selectedDir?.name.endsWith('.json')) {
-                                                const fileName = selectedDir.name.split('/').pop() || '';
-                                                const testName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
-                                                const formatted = testName
-                                                    .replace(/-/g, ' ')
-                                                    .replace(/_/g, ' ')
-                                                    .split(' ')
-                                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                                                    .join(' ');
-                                                console.log(`⚠️ Using fallback test name: ${formatted}`);
-                                                return formatted;
-                                            }
-
-                                            console.log(`❌ No test info available, using multiple tests`);
-                                            return 'Multiple Tests';
+                                            return getFormattedTestName(selectedDir);
                                         })() : 'None selected'
-                                    }
-
+                                    }</span>
                                 </p>
 
                                 <p className="text-gray-600 mt-2">
@@ -699,20 +694,11 @@ const Dashboard: React.FC = () => {
                             </>
                         )}
 
-                        <div className="bg-white rounded-lg shadow-md p-6">
-                            <Link
-                                to="/test-runner"
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                            >
-                                <span className="mr-2">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </span>
-                                Run New Tests
-                            </Link>
-                        </div>
+                        {/* Enhanced Performance Summary */}
+                        <PerformanceSummary
+                            results={latestResults}
+                            onRunNewTests={() => navigate('/test-runner')}
+                        />
                     </div>
                 </>
             )}

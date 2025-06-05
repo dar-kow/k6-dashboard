@@ -1,5 +1,29 @@
-import React from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useRepository } from '../context/RepositoryContext';
+
+// WebSocket Context for global status
+interface WebSocketContextType {
+    isConnected: boolean;
+    setIsConnected: (connected: boolean) => void;
+}
+
+const WebSocketContext = createContext<WebSocketContextType>({
+    isConnected: false,
+    setIsConnected: () => { },
+});
+
+export const useWebSocket = () => useContext(WebSocketContext);
+
+export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [isConnected, setIsConnected] = useState(false);
+
+    return (
+        <WebSocketContext.Provider value={{ isConnected, setIsConnected }}>
+            {children}
+        </WebSocketContext.Provider>
+    );
+};
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -7,15 +31,19 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
     const location = useLocation();
+    const { selectedRepository } = useRepository();
+    const { isConnected } = useWebSocket();
 
     return (
         <div className="flex h-screen bg-gray-100">
             {/* Sidebar */}
-            <div className="w-64 bg-gray-800 text-white">
+            <div className="w-64 bg-gray-800 text-white flex flex-col">
                 <div className="p-4">
                     <h1 className="text-2xl font-bold">K6 Dashboard</h1>
                 </div>
-                <nav className="mt-6">
+
+                {/* Navigation */}
+                <nav className="mt-6 flex-1">
                     <ul>
                         <li>
                             <Link
@@ -62,6 +90,49 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         </li>
                     </ul>
                 </nav>
+
+                {/* Status Panel at Bottom */}
+                <div className="p-4 border-t border-gray-700 bg-gray-900">
+                    {/* WebSocket Status */}
+                    <div className="mb-3">
+                        <div className="flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <span className="text-xs text-gray-300">
+                                WebSocket: {isConnected ? 'Connected' : 'Disconnected'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Repository Info */}
+                    <div className="border-t border-gray-700 pt-3">
+                        <div className="flex items-center space-x-2 mb-1">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2v0a2 2 0 012-2h6l2 2h6a2 2 0 012 2z" />
+                            </svg>
+                            <span className="text-xs text-gray-400">Repository</span>
+                        </div>
+
+                        {selectedRepository ? (
+                            <div className="text-xs">
+                                <div className="text-white font-medium truncate" title={selectedRepository.name}>
+                                    {selectedRepository.name}
+                                </div>
+                                <div className="text-gray-400 truncate" title={selectedRepository.url}>
+                                    {selectedRepository.branch} • {selectedRepository.url.replace('https://github.com/', '')}
+                                </div>
+                                {selectedRepository.needsSync && (
+                                    <div className="text-yellow-400 text-xs mt-1">
+                                        ⚠️ Needs sync
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-xs text-gray-400">
+                                Default Local Tests
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Main content */}

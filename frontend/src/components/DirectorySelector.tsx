@@ -48,11 +48,20 @@ const DirectorySelector: React.FC<DirectorySelectorProps> = ({
         }
     };
 
-    const getTestName = (directory: TestDirectory) => {
-        console.log(`🔍 DirectorySelector getTestName:`, {
+    const getCleanTestName = (directory: TestDirectory) => {
+        console.log(`🔍 DirectorySelector getCleanTestName:`, {
             directoryName: directory.name,
             testName: directory.testName
         });
+
+        // For sequential/parallel tests, return just the type (no UUID)
+        if (directory.name.includes('sequential_')) {
+            return 'Sequential Test Run';
+        }
+
+        if (directory.name.includes('parallel_')) {
+            return 'Parallel Test Run';
+        }
 
         if (directory.testName) {
             const formatted = directory.testName
@@ -65,43 +74,22 @@ const DirectorySelector: React.FC<DirectorySelectorProps> = ({
             return formatted;
         }
 
-        // Fallback dla starych danych
+        // For single tests - extract from filename
         if (directory.name.endsWith('.json')) {
-            const match = directory.name.match(/^\d{8}_\d{6}_(.+)\.json$/);
-            if (match) {
-                const result = match[1].replace(/-/g, ' ').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
-                console.log(`⚠️ Using fallback from filename: ${result}`);
-                return result;
-            }
+            const fileName = directory.name.split('/').pop() || '';
+            const extractedTestName = fileName.replace('.json', '').replace(/^\d{8}_\d{6}_/, '');
+            const formatted = extractedTestName
+                .replace(/-/g, ' ')
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            console.log(`⚠️ Using fallback from filename: ${formatted}`);
+            return formatted;
         }
 
         console.log(`❌ Using directory name as fallback: ${directory.name}`);
         return directory.name;
-    };
-
-    const getDisplayName = (directory: TestDirectory) => {
-        console.log(`🔍 DirectorySelector getDisplayName:`, {
-            directoryName: directory.name,
-            repositoryName: directory.repositoryName,
-            repositoryId: directory.repositoryId,
-            testName: directory.testName
-        });
-
-        if (directory.repositoryName && directory.testName) {
-            const result = `${directory.repositoryName} / ${getTestName(directory)}`;
-            console.log(`✅ Using repository + test name: ${result}`);
-            return result;
-        }
-
-        if (directory.repositoryName) {
-            const result = `${directory.repositoryName} - ${getTestTypeLabel(directory.name)}`;
-            console.log(`✅ Using repository name: ${result}`);
-            return result;
-        }
-
-        const result = getTestName(directory);
-        console.log(`⚠️ Using test name only: ${result}`);
-        return result;
     };
 
     // Group entries by type for better organization
@@ -134,7 +122,7 @@ const DirectorySelector: React.FC<DirectorySelectorProps> = ({
                         <optgroup label="🔄 Sequential & Parallel Test Runs">
                             {groupedDirectories.sequential.map((dir, index) => (
                                 <option key={dir.name} value={dir.name}>
-                                    {getTestTypeIcon(dir.name)} {getTestTypeLabel(dir.name)} - {formatDate(dir.date)}
+                                    {getTestTypeIcon(dir.name)} {getCleanTestName(dir)} - {formatDate(dir.date)}
                                     {index === 0 && ' 🆕 (Latest)'}
                                 </option>
                             ))}
@@ -146,19 +134,8 @@ const DirectorySelector: React.FC<DirectorySelectorProps> = ({
                         <optgroup label="🎯 Individual Test Results">
                             {groupedDirectories.individual.map((dir, index) => (
                                 <option key={dir.name} value={dir.name}>
-                                    {getTestTypeIcon(dir.name)} {getDisplayName(dir)} - {formatDate(dir.date)}
+                                    {getTestTypeIcon(dir.name)} {getCleanTestName(dir)} - {formatDate(dir.date)}
                                     {index === 0 && directories[0].name === dir.name && ' 🆕 (Latest)'}
-                                </option>
-                            ))}
-                        </optgroup>
-                    )}
-                    {/* Sequential/Parallel Runs */}
-                    {groupedDirectories.sequential && groupedDirectories.sequential.length > 0 && (
-                        <optgroup label="🔄 Sequential & Parallel Test Runs">
-                            {groupedDirectories.sequential.map((dir, index) => (
-                                <option key={dir.name} value={dir.name}>
-                                    {getTestTypeIcon(dir.name)} {getDisplayName(dir)} - {formatDate(dir.date)}
-                                    {index === 0 && ' 🆕 (Latest)'}
                                 </option>
                             ))}
                         </optgroup>
@@ -188,14 +165,14 @@ const DirectorySelector: React.FC<DirectorySelectorProps> = ({
                                     });
 
                                     if (dir) {
-                                        const displayName = getDisplayName(dir);
+                                        const displayName = getCleanTestName(dir);
                                         console.log(`✅ DirectorySelector display name: ${displayName}`);
                                         return displayName;
                                     } else {
                                         console.log(`❌ Directory not found, using fallback`);
                                         // Fallback
                                         const fallback = { name: selectedDirectory } as TestDirectory;
-                                        return getTestName(fallback);
+                                        return getCleanTestName(fallback);
                                     }
                                 })()}
                             </p>

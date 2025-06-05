@@ -122,3 +122,7 @@ backend-refactor.md
 logo.sh
 
 migration_script.sh
+
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
