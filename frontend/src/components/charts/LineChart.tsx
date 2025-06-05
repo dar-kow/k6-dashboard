@@ -1,5 +1,4 @@
 import React, { memo } from "react";
-import React from 'react';
 import {
     LineChart as RechartsLineChart,
     Line,
